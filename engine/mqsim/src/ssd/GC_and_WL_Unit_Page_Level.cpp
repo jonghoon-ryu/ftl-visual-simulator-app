@@ -209,7 +209,16 @@ namespace SSD_Components
 						if (block_manager->Is_page_valid(block, pageID)) {
 							Stats::Total_page_movements_for_gc++;
 							gc_candidate_address.PageID = pageID;
-							Simulation_Events::Notify_gc_page_migrated(block->Stream_id, gc_candidate_address);
+							// Notify_gc_page_migrated() used to fire right here, at GC's
+							// decision to migrate this page - before its read/write
+							// transactions were even submitted. Every valid page's
+							// notification fired synchronously in this one loop, all
+							// within the same simulator event-group, so a UI "one step"
+							// button could never separate them (see GC_and_WL_Unit_Base.cpp's
+							// handle_transaction_serviced_signal_from_PHY, READ case, where
+							// it now fires instead - once this page's migration read has
+							// actually completed, using that transaction's own address,
+							// which is this same source page).
 							if (use_copyback) {
 								gc_write = new NVM_Transaction_Flash_WR(Transaction_Source_Type::GC_WL, block->Stream_id, sector_no_per_page * SECTOR_SIZE_IN_BYTE,
 									NO_LPA, address_mapping_unit->Convert_address_to_ppa(gc_candidate_address), NULL, 0, NULL, 0, INVALID_TIME_STAMP);
