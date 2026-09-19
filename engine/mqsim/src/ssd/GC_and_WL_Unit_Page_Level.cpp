@@ -70,12 +70,35 @@ namespace SSD_Components
 				case SSD_Components::GC_Block_Selection_Policy_Type::RGA:
 				{
 					std::set<flash_block_ID_type> random_set;
-					while (random_set.size() < rga_set_size) {
+					// BUG FIX (this project, upstream MQSim): this loop had no bound
+					// at all - unlike every other policy below (RANDOM/RANDOM_P/
+					// RANDOM_PP all cap retries at block_no_per_plane), it just spun
+					// forever if fewer than rga_set_size distinct blocks were ever
+					// simultaneously safe. At real MQSim's intended scale (thousands
+					// of blocks per plane) that's effectively impossible; at this
+					// project's beginner-facing demo scale (as few as ~8 blocks,
+					// further split per chip once multi-chip is selected) it's a
+					// real, reachable hang - see /ftl-visual-simulator/reference/
+					// tweaked-code/ for how this was found. Bounded to
+					// block_no_per_plane^2 attempts (cheap even at max scale, and
+					// overwhelmingly enough draws to find every available candidate
+					// at this project's block counts) - if that's exhausted with
+					// fewer than rga_set_size found, proceed with whatever safe
+					// candidates *were* found rather than demanding the full set;
+					// if literally none were found, skip this GC opportunity
+					// entirely (see the empty-set return below) rather than ever
+					// falling through with a candidate that was never verified safe.
+					unsigned int rga_attempts = 0;
+					const unsigned int rga_max_attempts = block_no_per_plane * block_no_per_plane;
+					while (random_set.size() < rga_set_size && rga_attempts++ < rga_max_attempts) {
 						flash_block_ID_type block_id = random_generator.Uniform_uint(0, block_no_per_plane - 1);
 						if (pbke->Ongoing_erase_operations.find(block_id) == pbke->Ongoing_erase_operations.end()
 							&& is_safe_gc_wl_candidate(pbke, block_id)) {
 							random_set.insert(block_id);
 							}
+					}
+					if (random_set.empty()) {
+						return;
 					}
 					gc_candidate_block_id = *random_set.begin();
 					for(auto &block_id : random_set) {
