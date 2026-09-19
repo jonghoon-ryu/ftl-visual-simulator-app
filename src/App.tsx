@@ -189,11 +189,7 @@ function App() {
   const wearRows = wired && isWearPreset ? toWearRows(engine.state) : active.wearRows;
   const statItems = wired ? toStatItems(engine.state, events.counters) : active.stats;
   const logEntries = wired ? events.log : active.log;
-  const caption = wired
-    ? isWearPreset
-      ? '▶ 재생 버튼을 눌러 실제 MQSim 엔진으로 워크로드를 실행해보세요 - 아래 블록별 erase 횟수/통계가 실시간으로 갱신됩니다'
-      : '▶ 재생 버튼을 눌러 실제 MQSim 엔진으로 워크로드를 실행해보세요 - 아래 블록/매핑 테이블/통계가 실시간으로 갱신됩니다'
-    : active.caption;
+  const caption = wired ? '' : active.caption;
 
   return (
     <div className="sim-app">

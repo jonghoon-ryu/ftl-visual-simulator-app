@@ -34,14 +34,9 @@ export function toStatItems(state: MqsimState | null, counters: SimulationCounte
     {
       label: 'Valid page 비율',
       value: validPageRatio === null ? '-' : `${Math.round(validPageRatio * 100)}%`,
-      hint: '전체 페이지 중 아직 쓸모있는(valid) 비율 - 낮을수록 GC 가 정리할 게 많다는 뜻',
     },
     { label: 'GC 실행 횟수', value: String(state?.stats.gcExecutions ?? 0) },
     { label: 'WL 실행 횟수', value: String(state?.stats.wlExecutions ?? 0) },
-    {
-      label: 'Erase 횟수',
-      value: String(totalEraseCount),
-      hint: '블록이 지워진 총 횟수 - 너무 자주 지워지면 flash 수명이 빨리 닳아요',
-    },
+    { label: 'Erase 횟수', value: String(totalEraseCount) },
   ];
 }
