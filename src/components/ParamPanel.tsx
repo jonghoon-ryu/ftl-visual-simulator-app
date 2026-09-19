@@ -1,7 +1,7 @@
 import type { SsdParams } from '../data/mqsimConfigs';
 
 const PAGE_CAPACITY_OPTIONS: SsdParams['pageCapacityBytes'][] = [4096, 8192, 16384];
-const CHIP_COUNT_OPTIONS: SsdParams['chipCount'][] = [1, 2, 4, 8];
+const CHIP_COUNT_OPTIONS: SsdParams['chipCount'][] = [1, 2, 4];
 
 // GC_and_WL_Unit_Page_Level's max_ongoing_gc_reqs_per_plane doubles as
 // Stop_servicing_writes()'s hard threshold (free block pool size below this

@@ -8,6 +8,7 @@ export interface PageCell {
 export interface BlockRow {
   label: string;
   pages: PageCell[];
+  chip?: number;
 }
 
 export interface MappingRow {
