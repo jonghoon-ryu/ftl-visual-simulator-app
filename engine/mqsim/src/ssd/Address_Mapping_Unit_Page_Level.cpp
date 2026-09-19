@@ -6,6 +6,7 @@
 #include "Stats.h"
 #include "../utils/Logical_Address_Partitioning_Unit.h"
 #include "../exec/Simulation_Events.h"
+#include "../sim/Engine.h"
 
 namespace SSD_Components
 {
@@ -428,6 +429,14 @@ namespace SSD_Components
 
 	void Address_Mapping_Unit_Page_Level::Execute_simulator_event(MQSimEngine::Sim_Event* event)
 	{
+		switch ((AMU_Deferred_Event_Type)event->Type) {
+			case AMU_Deferred_Event_Type::RELEASE_WAITING_WRITE: {
+				Release_Waiting_Write_Params* params = (Release_Waiting_Write_Params*)event->Parameters;
+				release_one_waiting_write(params->Plane_address);
+				delete params;
+				break;
+			}
+		}
 	}
 
 	void Address_Mapping_Unit_Page_Level::Store_mapping_table_on_flash_at_start()
@@ -1959,24 +1968,51 @@ namespace SSD_Components
 		Write_transactions_for_overfull_planes[transaction->Address.ChannelID][transaction->Address.ChipID][transaction->Address.DieID][transaction->Address.PlaneID].insert((NVM_Transaction_Flash_WR*)transaction);
 	}
 
+	// Never does the release itself - always schedules it (see release_one_
+	// waiting_write() below and AMU_Deferred_Event_Type's doc comment in
+	// Address_Mapping_Unit_Page_Level.h) so that even the very first
+	// release, however this got called, lands in its own event-group/step
+	// rather than bunching with whatever triggered it.
 	void Address_Mapping_Unit_Page_Level::Start_servicing_writes_for_overfull_plane(const NVM::FlashMemory::Physical_Page_Address plane_address)
 	{
 		std::set<NVM_Transaction_Flash_WR*>& waiting_write_list = Write_transactions_for_overfull_planes[plane_address.ChannelID][plane_address.ChipID][plane_address.DieID][plane_address.PlaneID];
+		if (waiting_write_list.empty()) {
+			return;
+		}
+		Simulator->Register_sim_event(Simulator->Time() + 1, this,
+			new Release_Waiting_Write_Params{ plane_address }, (int)AMU_Deferred_Event_Type::RELEASE_WAITING_WRITE);
+	}
+
+	// The actual one-write release - see the doc comment on its declaration
+	// in Address_Mapping_Unit_Page_Level.h.
+	void Address_Mapping_Unit_Page_Level::release_one_waiting_write(const NVM::FlashMemory::Physical_Page_Address& plane_address)
+	{
+		std::set<NVM_Transaction_Flash_WR*>& waiting_write_list = Write_transactions_for_overfull_planes[plane_address.ChannelID][plane_address.ChipID][plane_address.DieID][plane_address.PlaneID];
+		if (waiting_write_list.empty()) {
+			return;
+		}
 
 		ftl->TSU->Prepare_for_transaction_submit();
 		auto program = waiting_write_list.begin();
-		while (program != waiting_write_list.end()) {
-			if (translate_lpa_to_ppa((*program)->Stream_id, *program)) {
-				ftl->TSU->Submit_transaction(*program);
-				if ((*program)->RelatedRead != NULL) {
-					ftl->TSU->Submit_transaction((*program)->RelatedRead);
-				}
-				waiting_write_list.erase(program++);
+		// Same as the original loop's own stopping condition: a translate
+		// failure means this (and by implication every later-queued write,
+		// same as upstream's own reasoning) is still blocked - don't keep
+		// retrying every event-group forever, just stop here and wait for
+		// whatever next calls Start_servicing_writes_for_overfull_plane()
+		// again (e.g. the next erase).
+		if (translate_lpa_to_ppa((*program)->Stream_id, *program)) {
+			ftl->TSU->Submit_transaction(*program);
+			if ((*program)->RelatedRead != NULL) {
+				ftl->TSU->Submit_transaction((*program)->RelatedRead);
 			}
-			else {
-				break;
-			}
+			waiting_write_list.erase(program);
+			ftl->TSU->Schedule();
+			// Chains the next release (if any writes remain) by going back
+			// through the public, always-defers entry point rather than
+			// recursing into this function directly.
+			Start_servicing_writes_for_overfull_plane(plane_address);
+		} else {
+			ftl->TSU->Schedule();
 		}
-		ftl->TSU->Schedule();
 	}
 }

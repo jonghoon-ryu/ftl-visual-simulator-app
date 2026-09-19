@@ -18,6 +18,22 @@ namespace SSD_Components
 
 	enum class CMTEntryStatus {FREE, WAITING, VALID};
 
+	// Start_servicing_writes_for_overfull_plane() used to release its whole
+	// backlog of previously-blocked writes (queued because the device had
+	// been full) synchronously in one loop - each release calls translate_
+	// lpa_to_ppa(), which fires that write's own Notify_mapping_updated, so
+	// releasing N backlogged writes at once bunched N UI-visible log lines
+	// into a single simulator event-group/step. Fixed the same way as
+	// GC_and_WL_Unit_Base.h's GC_Deferred_Event_Type: release exactly one
+	// write per call, and defer releasing the next (if any remain) to its
+	// own Sim_Event instead of looping - see Execute_simulator_event().
+	enum class AMU_Deferred_Event_Type { RELEASE_WAITING_WRITE };
+
+	struct Release_Waiting_Write_Params
+	{
+		NVM::FlashMemory::Physical_Page_Address Plane_address;
+	};
+
 	struct GTDEntryType //Entry type for the Global Translation Directory
 	{
 		MPPN_type MPPN;
@@ -191,6 +207,13 @@ namespace SSD_Components
 		void Remove_barrier_for_accessing_mvpn(stream_id_type stream_id, MVPN_type mpvn);
 		void Start_servicing_writes_for_overfull_plane(const NVM::FlashMemory::Physical_Page_Address plane_address);
 	private:
+		// The actual one-write release, run only from Execute_simulator_event()
+		// - Start_servicing_writes_for_overfull_plane() itself (above) only
+		// ever schedules this, never calls it directly, so that even its
+		// *first* release lands in its own event-group/step instead of
+		// bunching with whatever triggered it (e.g. the erase that just made
+		// room) - see AMU_Deferred_Event_Type's doc comment.
+		void release_one_waiting_write(const NVM::FlashMemory::Physical_Page_Address& plane_address);
 		static Address_Mapping_Unit_Page_Level* _my_instance;
 		unsigned int cmt_capacity;
 		AddressMappingDomain** domains;
