@@ -310,12 +310,29 @@ SSD_Device::SSD_Device(Device_Parameter_Set *parameters, std::vector<IO_Flow_Par
 		// practice by actually trying to tune Static_Wearleveling_Threshold away
 		// from 100 and observing no effect - see the static-WL feasibility
 		// writeup in this project's reference docs.
+		//
+		// SCALE TWEAK (this project, not a bug fix): max_ongoing_gc_reqs_per_plane
+		// was upstream MQSim's literal 10, unconfigurable from ssdconfig.xml.
+		// It has two jobs (see GC_and_WL_Unit_Base.h's comment on the field):
+		// max concurrent GC ops per plane, AND - the one that matters here - the
+		// free-block-pool floor that (a) hard-blocks all writes below it and (b)
+		// GC_and_WL_Unit_Base's constructor clamps GC's own configurable
+		// threshold to never go below. At real MQSim's intended scale (thousands
+		// of blocks per plane) 10 is a rounding error; at this project's
+		// beginner-facing demo scale (tens of blocks, so the flash grid fits on
+		// one screen) it was large enough to force GC's and the hard-block's
+		// thresholds to collide and permanently deadlock "GC 시연" - see
+		// /ftl-visual-simulator/plan/tweaked-code/ for the full writeup. Lowered
+		// to 4 - still >0 (so the safety brake and the "GC needs room to run
+		// concurrently" purpose it was designed for remain intact) but small
+		// enough that a beginner-friendly block count clears it, restoring the
+		// intended "GC threshold fires meaningfully before the hard brake" gap.
 		gcwl = new SSD_Components::GC_and_WL_Unit_Page_Level(ftl->ID() + ".GCandWLUnit", amu, fbm, tsu, (SSD_Components::NVM_PHY_ONFI *)device->PHY,
 															 parameters->GC_Block_Selection_Policy, parameters->GC_Exec_Threshold, parameters->Preemptible_GC_Enabled, parameters->GC_Hard_Threshold,
 															 parameters->Flash_Channel_Count, parameters->Chip_No_Per_Channel,
 															 parameters->Flash_Parameters.Die_No_Per_Chip, parameters->Flash_Parameters.Plane_No_Per_Die,
 															 parameters->Flash_Parameters.Block_No_Per_Plane, parameters->Flash_Parameters.Page_No_Per_Block,
-															 parameters->Flash_Parameters.Page_Capacity / SECTOR_SIZE_IN_BYTE, parameters->Use_Copyback_for_GC, max_rho, 10,
+															 parameters->Flash_Parameters.Page_Capacity / SECTOR_SIZE_IN_BYTE, parameters->Use_Copyback_for_GC, max_rho, 4,
 															 parameters->Dynamic_Wearleveling_Enabled, parameters->Static_Wearleveling_Enabled, parameters->Static_Wearleveling_Threshold,
 															 parameters->Seed++);
 		Simulator->AddObject(gcwl);

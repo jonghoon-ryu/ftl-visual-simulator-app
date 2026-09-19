@@ -33,15 +33,15 @@ import type { PresetId } from './types';
 // on every slider-drag tick) - see the effect below.
 const PARAM_APPLY_DEBOUNCE_MS = 400;
 
-// "GC 시연"'s workload needs ~950k event-groups to reach its first GC, and
-// "마모평준화 시연"'s needs ~2.8M to reach its one WL execution (both
-// measured via a native step-count harness - see buildGcWorkloadXml's/
-// buildWlWorkloadXml's doc comments) versus "매핑 기본"'s few dozen, so
-// they get much larger per-speed-unit multipliers. Only presets with a
-// real engine config need an entry here; anything else defaults to 1 in
-// useSimulationPlayback.
+// "GC 시연"'s workload needs ~2.3M event-groups to reach its first GC (see
+// buildGcWorkloadXml's doc comment for why this got bigger, not smaller,
+// after the deadlock fix), and "마모평준화 시연"'s needs ~2.8M to reach its
+// one WL execution (both measured via a WASM/native step-count harness)
+// versus "매핑 기본"'s few dozen, so they get much larger per-speed-unit
+// multipliers. Only presets with a real engine config need an entry here;
+// anything else defaults to 1 in useSimulationPlayback.
 const TICKS_MULTIPLIER: Partial<Record<PresetId, number>> = {
-  gc: 5000,
+  gc: 12000,
   'wear-leveling': 15000,
 };
 

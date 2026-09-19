@@ -252,13 +252,22 @@ export const DEFAULT_GC_PARAMS: SsdParams = {
 //   nothing for GC to usefully collect even once the free-block threshold
 //   is crossed). See the reconfigure-crash-bug writeup's companion
 //   investigation for how this was found.
-// - Stop_Time raised enough to let GC actually fire (measured via a
-//   native-CLI step-count harness: this config takes ~950k event-groups to
-//   reach Stop_Time, hence the much higher default playback speed App.tsx
-//   uses for this preset - see useSimulationPlayback's ticksMultiplier).
-//   How many times GC executes depends on DEFAULT_MAPPING_PARAMS' block
-//   count/page size (smaller geometry = less occupancy pressure = fewer
-//   GC runs before Stop_Time) - re-measure if those defaults change again.
+// - Stop_Time raised enough to let GC actually fire. Originally 2.5e9 (~950k
+//   event-groups) based on this project's own now-corrected assumption that
+//   GC would trigger well within that budget - it doesn't, and never did:
+//   MQSim's undocumented max_ongoing_gc_reqs_per_plane=10 clamps GC's own
+//   threshold (floor(0.5 * 16) = 8) up to 10, making it collide exactly with
+//   the same constant's hard write-block floor and permanently deadlocking
+//   this preset with 0 GC executions - see /ftl-visual-simulator/reference/
+//   tweaked-code/ for the engine-side fix (that constant lowered to 4).
+//   Even with that fixed, 2.5e9 still isn't long enough for occupancy to
+//   reach GC's threshold at all - raised to 6e9 (~2.3M event-groups,
+//   measured via a WASM harness), giving ~5 GC executions - hence the much
+//   higher default playback speed App.tsx uses for this preset (see
+//   useSimulationPlayback's ticksMultiplier). How many times GC executes
+//   depends on DEFAULT_MAPPING_PARAMS' block count/page size (smaller
+//   geometry = less occupancy pressure = fewer GC runs before Stop_Time) -
+//   re-measure if those defaults change again.
 export function buildGcWorkloadXml(params: SsdParams, workload: WorkloadParams = DEFAULT_WORKLOAD_PARAMS): string {
   return `<?xml version="1.0" encoding="us-ascii"?>
 <MQSim_IO_Scenarios>
@@ -284,7 +293,7 @@ export function buildGcWorkloadXml(params: SsdParams, workload: WorkloadParams =
 			<Seed>798</Seed>
 			<Average_No_of_Reqs_in_Queue>4</Average_No_of_Reqs_in_Queue>
 			<Intensity>32768</Intensity>
-			<Stop_Time>2500000000</Stop_Time>
+			<Stop_Time>6000000000</Stop_Time>
 			<Total_Requests_To_Generate>1000000</Total_Requests_To_Generate>
 		</IO_Flow_Parameter_Set_Synthetic>
 	</IO_Scenario>
