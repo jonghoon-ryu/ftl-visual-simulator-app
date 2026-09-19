@@ -3,16 +3,19 @@ import type { SsdParams } from '../data/mqsimConfigs';
 const PAGE_CAPACITY_OPTIONS: SsdParams['pageCapacityBytes'][] = [4096, 8192, 16384];
 const CHIP_COUNT_OPTIONS: SsdParams['chipCount'][] = [1, 2, 4, 8];
 
-// MQSim hardcodes GC_and_WL_Unit_Page_Level's max_ongoing_gc_reqs_per_plane
-// to 10 - it doubles as Stop_servicing_writes()'s hard threshold (free
-// block pool size below this blocks all writes). At <=12 blocks, the free
-// pool dips to/below 10 within the first few writes (frontier blocks alone
-// eat into it), writes get hard-blocked, and GC can't free anything yet
-// (nothing's been overwritten, so there's nothing invalid to reclaim) -
-// a permanent deadlock, confirmed empirically via the native CLI - exactly
-// 13 blocks works, 12 stalls, independent of OP ratio and pages-per-block.
-// 16 keeps a comfortable margin above that.
-const MIN_BLOCK_NO_PER_PLANE = 16;
+// GC_and_WL_Unit_Page_Level's max_ongoing_gc_reqs_per_plane doubles as
+// Stop_servicing_writes()'s hard threshold (free block pool size below this
+// blocks all writes). At too few blocks, the free pool dips to/below that
+// threshold within the first few writes (frontier blocks alone eat into
+// it), writes get hard-blocked, and GC can't free anything yet (nothing's
+// been overwritten, so there's nothing invalid to reclaim) - a permanent
+// deadlock. This constant used to be MQSim's unconfigurable upstream 10
+// (boundary: exactly 13 blocks worked, 12 stalled), but this project lowered
+// it to 4 - see /ftl-visual-simulator/reference/tweaked-code/ - which moved
+// the boundary down too: confirmed empirically (same method as the original
+// finding - native/WASM harness, independent of OP ratio and pages-per-
+// block) that 7 blocks works, 6 stalls. 8 keeps a small margin above that.
+const MIN_BLOCK_NO_PER_PLANE = 8;
 
 interface Props {
   params: SsdParams;
