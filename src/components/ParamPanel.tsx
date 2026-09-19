@@ -136,7 +136,7 @@ export function ParamPanel({ params, onChange, disabled }: Props) {
           className="param-slider"
           type="range"
           min={1}
-          max={30}
+          max={95}
           step={1}
           disabled={disabled}
           value={Math.round(params.gcExecThreshold * 100)}

@@ -73,15 +73,22 @@ function describeEvent(event: MqsimEvent): string | null {
 export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], ready: boolean) {
   const [log, setLog] = useState<LogEntry[]>([]);
   const [counters, setCounters] = useState<SimulationCounters>({ hostWrites: 0, hostReads: 0 });
+  // Per-LPA "was the most recent touch a read or a write" - MappingTable.tsx's
+  // 동작 column. Persists across steps (unlike the pending refs below, which
+  // are per-step batches) since it's "last known" state, not a delta.
+  const [lastOps, setLastOps] = useState<Map<bigint, boolean>>(new Map());
   const dynamicWlSeenRef = useRef(0);
   const pendingCountersRef = useRef({ hostWrites: 0, hostReads: 0 });
   const pendingLogRef = useRef<string[]>([]);
+  const pendingLastOpsRef = useRef<Map<bigint, boolean>>(new Map());
 
   const reset = () => {
     pendingCountersRef.current = { hostWrites: 0, hostReads: 0 };
     pendingLogRef.current = [];
+    pendingLastOpsRef.current = new Map();
     setLog([]);
     setCounters({ hostWrites: 0, hostReads: 0 });
+    setLastOps(new Map());
     dynamicWlSeenRef.current = 0;
   };
 
@@ -106,6 +113,16 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
       setLog((prev) => [...newEntries, ...prev].slice(0, MAX_LOG_ENTRIES));
       pendingLogRef.current = [];
     }
+
+    if (pendingLastOpsRef.current.size > 0) {
+      const pendingLastOps = pendingLastOpsRef.current;
+      setLastOps((prev) => {
+        const next = new Map(prev);
+        for (const [lpa, isWrite] of pendingLastOps) next.set(lpa, isWrite);
+        return next;
+      });
+      pendingLastOpsRef.current = new Map();
+    }
   }, []);
 
   useEffect(() => {
@@ -126,6 +143,7 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
       if (event.type === 'mapping_updated') {
         if (event.isWrite) pendingCountersRef.current.hostWrites += 1;
         else pendingCountersRef.current.hostReads += 1;
+        if (event.lpa !== undefined) pendingLastOpsRef.current.set(event.lpa, Boolean(event.isWrite));
       }
 
       let shouldLog = true;
@@ -142,5 +160,5 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
     });
   }, [subscribeEvents, ready]);
 
-  return { log, counters, reset, commit };
+  return { log, counters, lastOps, reset, commit };
 }

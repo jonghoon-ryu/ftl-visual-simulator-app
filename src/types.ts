@@ -14,7 +14,7 @@ export interface BlockRow {
 export interface MappingRow {
   lpa: string;
   ppa: string;
-  status: string;
+  op: 'read' | 'write';
 }
 
 export interface StatItem {

@@ -14,13 +14,13 @@ export function MappingTable({ rows }: { rows: MappingRow[] }) {
           <tr>
             <th>LPA</th>
             <th>PPA</th>
-            <th>상태</th>
+            <th>동작</th>
           </tr>
           {rows.map((r) => (
             <tr key={r.lpa}>
               <td>{r.lpa}</td>
               <td>{r.ppa}</td>
-              <td style={r.status === 'invalid' ? { color: '#f16d75' } : undefined}>{r.status}</td>
+              <td style={r.op === 'read' ? { color: '#4dabf7' } : undefined}>{r.op === 'write' ? '쓰기' : '읽기'}</td>
             </tr>
           ))}
         </tbody>

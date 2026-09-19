@@ -184,7 +184,7 @@ function App() {
   }, []);
 
   const isWearPreset = activeId === 'wear-leveling';
-  const mappingRows = wired && !isWearPreset ? toMappingRows(engine.state) : active.mapping;
+  const mappingRows = wired && !isWearPreset ? toMappingRows(engine.state, events.lastOps) : active.mapping;
   const blockRows = wired && !isWearPreset ? toBlockRows(engine.state, migrations.movingKeys) : active.blocks;
   const wearRows = wired && isWearPreset ? toWearRows(engine.state) : active.wearRows;
   const statItems = wired ? toStatItems(engine.state, events.counters) : active.stats;

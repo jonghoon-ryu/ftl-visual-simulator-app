@@ -62,7 +62,7 @@ export function FlashGrid({ blocks, caption }: Props) {
                 <div
                   key={i}
                   className={`cell ${page.state}`}
-                  style={multiChip ? { boxShadow: `inset 0 0 0 2px ${chipColor}` } : undefined}
+                  style={multiChip ? { boxShadow: `inset 0 0 0 1px ${chipColor}` } : undefined}
                   title={`Chip ${block.chip} · ${block.label} / Page ${i} — ${page.state}`}
                 >
                   {page.state === 'valid' ? 'V' : page.state === 'invalid' ? 'X' : page.state === 'moving' ? '→' : ''}
