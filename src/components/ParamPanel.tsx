@@ -32,8 +32,6 @@ interface Props {
 export function ParamPanel({ params, onChange, disabled }: Props) {
   return (
     <div className="sim-panel">
-      <div className="sim-panel-title">파라미터</div>
-
       <div className="param-row">
         <div className="param-label">
           <span>Page 크기</span>
