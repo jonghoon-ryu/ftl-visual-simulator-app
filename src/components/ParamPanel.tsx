@@ -75,7 +75,6 @@ export function ParamPanel({ params, onChange, disabled }: Props) {
             </label>
           ))}
         </div>
-        <div className="param-hint">칩이 여러 개면 read/write 가 칩들에 나뉘어 처리돼요 - block/wear 목록에 칩 번호가 붙어요</div>
       </div>
 
       <div className="param-row">
@@ -111,7 +110,6 @@ export function ParamPanel({ params, onChange, disabled }: Props) {
           value={params.pageNoPerBlock}
           onChange={(e) => onChange({ ...params, pageNoPerBlock: Number(e.target.value) })}
         />
-        <div className="param-hint">Block 하나를 지울 때 함께 지워지는 page 수</div>
       </div>
 
       <div className="param-row">
@@ -129,7 +127,6 @@ export function ParamPanel({ params, onChange, disabled }: Props) {
           value={Math.round(params.overprovisioningRatio * 100)}
           onChange={(e) => onChange({ ...params, overprovisioningRatio: Number(e.target.value) / 100 })}
         />
-        <div className="param-hint">여유 공간을 더 두면 GC 가 덜 급해져요</div>
       </div>
 
       <div className="param-row">
@@ -163,8 +160,6 @@ export function ParamPanel({ params, onChange, disabled }: Props) {
         </select>
         <div className="param-hint">Hybrid 는 MQSim 원본에도 미구현이라 이 시뮬레이터에서도 선택만 가능해요</div>
       </div>
-
-      {!disabled && <div className="param-apply-hint">값을 바꾸면 잠시 후 자동으로 적용돼요 (⏮ 재시작과 동일)</div>}
     </div>
   );
 }

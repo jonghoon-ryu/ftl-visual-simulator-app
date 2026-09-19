@@ -79,8 +79,6 @@ export function WorkloadPanel({ workload, onChange, disabled }: Props) {
         />
         <div className="param-hint">요청 한 번에 몰아서 쓰는 page 수 - 크면 한 번에 여러 block 을 건드려요</div>
       </div>
-
-      {!disabled && <div className="param-apply-hint">값을 바꾸면 잠시 후 자동으로 적용돼요 (⏮ 재시작과 동일)</div>}
     </div>
   );
 }

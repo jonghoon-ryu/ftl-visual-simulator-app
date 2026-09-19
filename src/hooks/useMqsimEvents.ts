@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LogEntry } from '../types';
 import type { MqsimEngine } from './useMqsimEngine';
 
@@ -57,16 +57,56 @@ function describeEvent(event: MqsimEvent): string | null {
 // flash-side write count getState().stats exposes) - so counting it here
 // is the correct WAF denominator, unlike a raw host I/O-request count (one
 // request can span several pages).
+//
+// Events arrive one worker `message` per event (see mqsim.worker.ts), and a
+// single play tick can carry tens of thousands of them (up to speed(8) *
+// ticksMultiplier(12000-15000) event-groups, each capable of firing several
+// events). Calling setState synchronously inside the listener - one commit
+// per *event* - made a single tick trigger thousands of separate React
+// renders, which is exactly the kind of main-thread storm that froze the
+// tab during "GC 시연"/"마모평준화 시연" playback (reproduced on an
+// unmodified checkout too, so this was always there, just never this
+// visible before). Fixed the same way as useMqsimMigrations: accumulate
+// into refs as events arrive, and only touch React state once, via
+// commit(), which the caller runs once per step/tick after refresh() - so
+// a whole tick's worth of events now costs one render, not thousands.
 export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], ready: boolean) {
   const [log, setLog] = useState<LogEntry[]>([]);
   const [counters, setCounters] = useState<SimulationCounters>({ hostWrites: 0, hostReads: 0 });
   const dynamicWlSeenRef = useRef(0);
+  const pendingCountersRef = useRef({ hostWrites: 0, hostReads: 0 });
+  const pendingLogRef = useRef<string[]>([]);
 
   const reset = () => {
+    pendingCountersRef.current = { hostWrites: 0, hostReads: 0 };
+    pendingLogRef.current = [];
     setLog([]);
     setCounters({ hostWrites: 0, hostReads: 0 });
     dynamicWlSeenRef.current = 0;
   };
+
+  // Call once right after a step's refresh() - flushes whatever accumulated
+  // during that step into render state in a single setCounters/setLog pair.
+  const commit = useCallback(() => {
+    const pendingCounters = pendingCountersRef.current;
+    if (pendingCounters.hostWrites > 0 || pendingCounters.hostReads > 0) {
+      setCounters((prev) => ({
+        hostWrites: prev.hostWrites + pendingCounters.hostWrites,
+        hostReads: prev.hostReads + pendingCounters.hostReads,
+      }));
+      pendingCountersRef.current = { hostWrites: 0, hostReads: 0 };
+    }
+
+    const pendingLog = pendingLogRef.current;
+    if (pendingLog.length > 0) {
+      // Accumulated in arrival order (oldest first); the log itself is
+      // newest-first, so reverse this batch before prepending it.
+      const time = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+      const newEntries = pendingLog.map((text) => ({ time, text })).reverse();
+      setLog((prev) => [...newEntries, ...prev].slice(0, MAX_LOG_ENTRIES));
+      pendingLogRef.current = [];
+    }
+  }, []);
 
   useEffect(() => {
     if (!ready) return;
@@ -84,9 +124,8 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
 
     return subscribeEvents((event) => {
       if (event.type === 'mapping_updated') {
-        setCounters((prev) =>
-          event.isWrite ? { ...prev, hostWrites: prev.hostWrites + 1 } : { ...prev, hostReads: prev.hostReads + 1 },
-        );
+        if (event.isWrite) pendingCountersRef.current.hostWrites += 1;
+        else pendingCountersRef.current.hostReads += 1;
       }
 
       let shouldLog = true;
@@ -99,10 +138,9 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
       const text = describeEvent(event);
       if (text === null) return;
 
-      const time = new Date().toLocaleTimeString('ko-KR', { hour12: false });
-      setLog((prev) => [{ time, text }, ...prev].slice(0, MAX_LOG_ENTRIES));
+      pendingLogRef.current.push(text);
     });
   }, [subscribeEvents, ready]);
 
-  return { log, counters, reset };
+  return { log, counters, reset, commit };
 }
