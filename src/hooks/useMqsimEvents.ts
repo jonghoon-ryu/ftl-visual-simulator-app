@@ -17,8 +17,17 @@ export interface SimulationCounters {
   hostReads: number;
 }
 
+// Block/page indices zero-padded to a fixed width (both ParamPanel sliders
+// cap at 64, so 2 digits always fits) so that "Chip N, Block NN, Page NN"
+// is the same length regardless of the actual numbers - otherwise a
+// shorter source address (e.g. "Block 0, Page 9") shifts everything after
+// it left of a longer one (e.g. "Block 15, Page 8"), and the destination
+// side of a "source -> destination" log line ends up in a different
+// column on every other row. Chip itself isn't padded - chip count tops
+// out at 4, so it's always exactly one digit already.
 function addressText(a: MqsimPageAddress): string {
-  return `Chip ${a.chip}, Block ${a.block}, Page ${a.page}`;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `Chip ${a.chip}, Block ${pad(a.block)}, Page ${pad(a.page)}`;
 }
 
 // `prevAddress` is this LPN's physical address just before this event, from
