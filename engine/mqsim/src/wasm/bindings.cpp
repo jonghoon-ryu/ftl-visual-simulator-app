@@ -20,6 +20,11 @@ namespace
 	// events as they happen. Undefined until JS registers one.
 	val g_event_callback = val::undefined();
 
+	// Set by forward_mapping_updated() and consumed by step_io() below - lets
+	// step_io() detect "a read or write just resolved" as it loops raw
+	// event-groups, without needing its own separate hook into the FTL layer.
+	bool g_mapping_updated_since_step_io_start = false;
+
 	void write_memfs_file(const std::string& path, const std::string& text)
 	{
 		std::ofstream out(path.c_str());
@@ -78,6 +83,7 @@ namespace
 	// it to a plain JS object and forwards to whatever JS registered.
 	void forward_mapping_updated(const Simulation_Events::Mapping_Updated_Event& event)
 	{
+		g_mapping_updated_since_step_io_start = true;
 		if (g_event_callback.isUndefined() || g_event_callback.isNull()) {
 			return;
 		}
@@ -310,6 +316,26 @@ bool run(int n)
 	return has_more;
 }
 
+// Runs event-groups until exactly one flash-level read or write has
+// resolved (a Mapping_Updated_Event - fired once per NVM_Transaction_Flash,
+// see Address_Mapping_Unit_Page_Level.cpp), or the queue empties - whichever
+// comes first. This project's goal is showing *how* read/write/GC work, not
+// measuring performance, so raw step() (one internal event-group - could be
+// a bus-timing tick far below anything visible in the UI) is too fine-
+// grained for a "step" a person presses a key/button for. GC/WL activity
+// that happens to fall between two such reads/writes still gets forwarded
+// to JS as it occurs (same event callback as run()/step()) even though the
+// loop's stopping condition is keyed on read/write only.
+bool step_io()
+{
+	g_mapping_updated_since_step_io_start = false;
+	bool has_more = true;
+	while (has_more && !g_mapping_updated_since_step_io_start) {
+		has_more = MQSim_Interface::Run_step(g_instance);
+	}
+	return has_more;
+}
+
 // Re-initializes with new config/workload text, discarding the current run -
 // same steps as init(), kept as a separate binding name to match the
 // documented parameter-change/reset use case.
@@ -323,6 +349,7 @@ EMSCRIPTEN_BINDINGS(mqsim_module)
 	function("init", &init);
 	function("step", &step);
 	function("run", &run);
+	function("stepIo", &step_io);
 	function("configure", &configure);
 	function("setEventCallback", &set_event_callback);
 	function("getState", &get_state);
