@@ -44,11 +44,29 @@ namespace SSD_Components
 	{
 		PlaneBookKeepingType *plane_record = &plane_manager[page_address.ChannelID][page_address.ChipID][page_address.DieID][page_address.PlaneID];
 		plane_record->Valid_pages_count++;
-		plane_record->Free_pages_count--;		
+		plane_record->Free_pages_count--;
 		page_address.BlockID = plane_record->GC_wf[stream_id]->BlockID;
 		page_address.PageID = plane_record->GC_wf[stream_id]->Current_page_write_index++;
+		// BUG FIX (this project, upstream MQSim): the sibling functions
+		// (Allocate_block_and_page_in_plane_for_user_write and even
+		// _for_translation_write's own GC path) call program_transaction_issued()
+		// right here so Ongoing_user_program_count reflects this page's write as
+		// still in flight - this function never did. Without it,
+		// is_safe_gc_wl_candidate()'s "no ongoing program" check is blind to a GC
+		// migration write that just filled this exact block. That matters because
+		// the very next lines, when this write happens to be the block's LAST
+		// page, immediately roll GC_wf over to a new block and synchronously call
+		// Check_gc_required() - which can then select this just-filled block as
+		// its own new GC victim before this page's physical write has actually
+		// reached the chip, since by then GC_wf no longer points at it either.
+		// Set_barrier_for_accessing_physical_block() then finds this page "valid"
+		// per Current_page_write_index but its on-chip metadata still unset
+		// (NO_LPA), and MQSim aborts: "Inconsistency in the global mapping table
+		// when locking an LPA!" - see /ftl-visual-simulator/reference/tweaked-code/
+		// for the full investigation. This call closes that race the same way it
+		// already does for regular user writes.
+		program_transaction_issued(page_address);
 
-		
 		//The current write frontier block is written to the end
 		if (plane_record->GC_wf[stream_id]->Current_page_write_index == pages_no_per_block) {
 			//Assign a new write frontier block

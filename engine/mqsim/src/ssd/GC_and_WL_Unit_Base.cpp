@@ -161,6 +161,13 @@ namespace SSD_Components
 					DEBUG(Simulator->Time() << ": LPA=" << (MVPN_type)transaction->LPA << " unlocked!!");
 				}
 				pbke->Blocks[((NVM_Transaction_Flash_WR*)transaction)->RelatedErase->Address.BlockID].Erase_transaction->Page_movement_activities.remove((NVM_Transaction_Flash_WR*)transaction);
+				// BUG FIX (this project, upstream MQSim): pairs with the
+				// program_transaction_issued() call added in Allocate_block_and_
+				// page_in_plane_for_gc_write() (Flash_Block_Manager.cpp) - without
+				// this, Ongoing_user_program_count would only ever increment for
+				// GC migration writes and never decrement, permanently blocking
+				// any block that ever received one from future GC candidacy.
+				_my_instance->block_manager->Program_transaction_serviced(transaction->Address);
 				break;
 			case Transaction_Type::ERASE:
 				if (pbke->Blocks[transaction->Address.BlockID].Is_wl_triggered) {
