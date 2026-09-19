@@ -37,14 +37,21 @@ export interface SsdParams {
 export const DEFAULT_MAPPING_PARAMS: SsdParams = {
   pageCapacityBytes: 4096,
   chipCount: 1,
-  // 8 is ParamPanel's MIN_BLOCK_NO_PER_PLANE (the safety margin above the
-  // 6-block deadlock boundary - see that constant's comment) - defaulting
-  // to it directly rather than some larger "roomier" value keeps the grid
-  // small by default, matching this preset's beginner-facing goal. Also
-  // DEFAULT_GC_PARAMS' default (spread from this) - confirmed via harness
-  // that "GC 시연" still fires GC (4 times) at this block count within its
-  // shipped Stop_Time.
-  blockNoPerPlane: 8,
+  // 16, not ParamPanel's MIN_BLOCK_NO_PER_PLANE(8) - "매핑 기본"'s own
+  // Stop_Time (below) is tiny, so at 8 blocks the device's own physical
+  // capacity (not Stop_Time) is what cuts the demo short: with
+  // Working_Set_Percentage=100, the workload keeps issuing writes only as
+  // fast as old ones complete (QUEUE_DEPTH is demand-driven), so once the
+  // device fills and hard-blocks further writes, no old request ever
+  // completes, no new one ever gets generated, and the whole scenario goes
+  // idle regardless of how large Stop_Time is - confirmed via harness
+  // (raising Stop_Time 10x-1000x at 8 blocks never grew past the same ~119
+  // mapped pages/49 event-groups). 16 blocks gives the device enough
+  // headroom that Stop_Time becomes the actual limiter again, so raising
+  // Stop_Time (below) has a real effect. Also DEFAULT_GC_PARAMS' default
+  // (spread from this) - confirmed via harness that "GC 시연" still fires
+  // GC (5 times) at this block count within its shipped Stop_Time.
+  blockNoPerPlane: 16,
   pageNoPerBlock: 16,
   overprovisioningRatio: 0.07,
   gcExecThreshold: 0.05,
@@ -158,11 +165,20 @@ export const DEFAULT_WORKLOAD_PARAMS: WorkloadParams = {
   burstSize: 8,
 };
 
-// One small synthetic write-heavy flow - enough requests to populate the
-// mapping table visibly within a couple of steps, small enough to run
-// instantly. Stop_Time/Total_Requests_To_Generate both bound it (belt and
-// suspenders - during testing only Stop_Time reliably capped a QUEUE_DEPTH
-// generator, but both are set here in case that varies by config).
+// One small synthetic write-heavy flow to populate the mapping table.
+// Total_Requests_To_Generate is set but doesn't actually do anything -
+// IO_Flow_Synthetic::Generate_next_request() only ever checks it in an
+// `else` branch that's unreachable whenever Stop_Time > 0 (which it always
+// is here) - Stop_Time is the only real limiter. It was raised from the
+// original 500000 (~15s of playback at DEFAULT_MAPPING_PARAMS' block count)
+// to 5000000 (~30s) since the original was deliberately "small enough to
+// run instantly", which ended up reading as "too short" - see
+// DEFAULT_MAPPING_PARAMS' own comment for why the block count needed to go
+// up too for this to have any effect (QUEUE_DEPTH is demand-driven: once
+// the device fills and hard-blocks writes, nothing ever completes to
+// trigger generating the next one, so the run goes idle regardless of how
+// large Stop_Time is - raising Stop_Time alone, confirmed via harness, did
+// nothing at the old block count).
 // Address_Alignment_Unit - see ioAddressAlignmentUnitSectors() below for why
 // this isn't simply pageNoPerBlock once chipCount > 1.
 export function buildMappingWorkloadXml(params: SsdParams, workload: WorkloadParams = DEFAULT_WORKLOAD_PARAMS): string {
@@ -190,7 +206,7 @@ export function buildMappingWorkloadXml(params: SsdParams, workload: WorkloadPar
 			<Seed>798</Seed>
 			<Average_No_of_Reqs_in_Queue>4</Average_No_of_Reqs_in_Queue>
 			<Intensity>32768</Intensity>
-			<Stop_Time>500000</Stop_Time>
+			<Stop_Time>5000000</Stop_Time>
 			<Total_Requests_To_Generate>200</Total_Requests_To_Generate>
 		</IO_Flow_Parameter_Set_Synthetic>
 	</IO_Scenario>
