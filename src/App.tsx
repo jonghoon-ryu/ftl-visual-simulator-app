@@ -205,6 +205,7 @@ function App() {
             disabled: !wired,
             onStepOnce: playback.stepOnce,
             onStepEventOnce: playback.stepEventOnce,
+            onStepEventMany: () => playback.stepEventMany(5),
             onTogglePlay: playback.togglePlay,
             onRestart: playback.restart,
             onSpeedChange: playback.setSpeed,

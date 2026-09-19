@@ -26,17 +26,21 @@ function describeEvent(event: MqsimEvent): string | null {
       return `LPA ${lpaHex} -> ${where}, ${event.isWrite ? 'Write' : 'Read'}`;
     }
     case 'gc_started':
-      return event.block ? `Block ${event.block.block}, GC Start` : null;
+      return event.block ? `Chip ${event.block.chip}, Block ${event.block.block}, GC Start` : null;
     case 'gc_page_migrated':
-      return event.block && 'page' in event.block ? `Block ${event.block.block}, Page ${event.block.page}, GC` : null;
+      return event.block && 'page' in event.block
+        ? `Chip ${event.block.chip}, Block ${event.block.block}, Page ${event.block.page}, GC`
+        : null;
     case 'gc_block_erased':
-      return event.block ? `Block ${event.block.block}, Erase` : null;
+      return event.block ? `Chip ${event.block.chip}, Block ${event.block.block}, Erase` : null;
     case 'wl_started':
-      return event.block ? `Block ${event.block.block}, WL Start` : null;
+      return event.block ? `Chip ${event.block.chip}, Block ${event.block.block}, WL Start` : null;
     case 'wl_page_migrated':
-      return event.block && 'page' in event.block ? `Block ${event.block.block}, Page ${event.block.page}, WL` : null;
+      return event.block && 'page' in event.block
+        ? `Chip ${event.block.chip}, Block ${event.block.block}, Page ${event.block.page}, WL`
+        : null;
     case 'wl_block_erased':
-      return event.block ? `Block ${event.block.block}, Erase` : null;
+      return event.block ? `Chip ${event.block.chip}, Block ${event.block.block}, Erase` : null;
     case 'dynamic_wl_block_allocated':
       return event.block ? `Block ${event.block.block} 이(가) 새 쓰기 프론티어로 할당됨 (erase count ${event.eraseCount})` : null;
     case 'dynamic_wl_block_freed':

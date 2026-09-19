@@ -1,5 +1,24 @@
 import type { LogEntry } from '../types';
 
+// describeEvent() (useMqsimEvents.ts) always puts the event keyword in the
+// last ", "-separated segment (e.g. "Chip 0, Block 0, Page 9, GC" or
+// "Chip 0, Block 0, Erase") - split on that rather than matching the
+// substring "GC" anywhere, which would also light up inside "GC Start".
+const DANGER_KEYWORDS = new Set(['GC Start', 'GC', 'Erase']);
+
+function renderLogText(text: string) {
+  const lastComma = text.lastIndexOf(', ');
+  if (lastComma === -1) return text;
+  const keyword = text.slice(lastComma + 2);
+  if (!DANGER_KEYWORDS.has(keyword)) return text;
+  return (
+    <>
+      {text.slice(0, lastComma + 2)}
+      <span className="log-keyword-danger">{keyword}</span>
+    </>
+  );
+}
+
 // Renders unconditionally (even with zero entries) so the log column stays
 // visible for the whole time a wired preset is selected, not just once the
 // engine actually has something to show.
@@ -21,7 +40,7 @@ export function MappingTable({ log }: { log: LogEntry[] }) {
         {log.map((e, i) => (
           <div className="log-entry" key={i}>
             <span className="log-time">{e.time}</span>
-            {e.text}
+            {renderLogText(e.text)}
           </div>
         ))}
       </div>

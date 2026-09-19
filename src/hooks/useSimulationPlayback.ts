@@ -71,6 +71,26 @@ export function useSimulationPlayback({ engine, onRefresh, onRestart, ticksMulti
     if (!more) setIsPlaying(false);
   }, [engine]);
 
+  // Backs the "5 steps" button - just stepEventOnce run n times in a row,
+  // sequentially awaited (not fired concurrently) so each call's worker
+  // round-trip and onRefresh complete before the next stepEvent() starts,
+  // same overlap concern tickInFlightRef guards against for the ▶ loop.
+  const stepEventMany = useCallback(
+    async (n: number) => {
+      if (!engine.ready) return;
+      for (let i = 0; i < n; i++) {
+        const more = await engine.stepEvent();
+        await latestRef.current.onRefresh();
+        setHasMore(more);
+        if (!more) {
+          setIsPlaying(false);
+          break;
+        }
+      }
+    },
+    [engine],
+  );
+
   const togglePlay = useCallback(() => {
     setIsPlaying((playing) => !playing);
   }, []);
@@ -103,5 +123,5 @@ export function useSimulationPlayback({ engine, onRefresh, onRestart, ticksMulti
     return () => clearInterval(id);
   }, [isPlaying, engine.ready, speed]);
 
-  return { isPlaying, speed, hasMore, setSpeed, stepOnce, stepEventOnce, togglePlay, restart };
+  return { isPlaying, speed, hasMore, setSpeed, stepOnce, stepEventOnce, stepEventMany, togglePlay, restart };
 }

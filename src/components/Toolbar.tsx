@@ -7,6 +7,7 @@ export interface PlaybackState {
   disabled: boolean; // true while the engine for the active preset isn't wired/ready yet
   onStepOnce: () => void;
   onStepEventOnce: () => void;
+  onStepEventMany: () => void;
   onTogglePlay: () => void;
   onRestart: () => void;
   onSpeedChange: (speed: number) => void;
@@ -20,8 +21,18 @@ interface Props {
 }
 
 export function Toolbar({ presets, activeId, onSelect, playback }: Props) {
-  const { isPlaying, speed, hasMore, disabled, onStepOnce, onStepEventOnce, onTogglePlay, onRestart, onSpeedChange } =
-    playback;
+  const {
+    isPlaying,
+    speed,
+    hasMore,
+    disabled,
+    onStepOnce,
+    onStepEventOnce,
+    onStepEventMany,
+    onTogglePlay,
+    onRestart,
+    onSpeedChange,
+  } = playback;
 
   return (
     <div className="sim-toolbar">
@@ -68,7 +79,16 @@ export function Toolbar({ presets, activeId, onSelect, playback }: Props) {
           disabled={disabled || !hasMore || isPlaying}
           onClick={onStepEventOnce}
         >
-          1줄
+          1 step
+        </button>
+        <button
+          type="button"
+          aria-label="로그 다섯 줄 실행"
+          title="1 step 을 다섯 번 실행해요"
+          disabled={disabled || !hasMore || isPlaying}
+          onClick={onStepEventMany}
+        >
+          5 steps
         </button>
         <span>속도</span>
         <input
