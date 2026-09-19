@@ -37,11 +37,14 @@ export interface SsdParams {
 export const DEFAULT_MAPPING_PARAMS: SsdParams = {
   pageCapacityBytes: 4096,
   chipCount: 1,
-  // 16 is ParamPanel's MIN_BLOCK_NO_PER_PLANE (the safety margin above the
-  // 13-block deadlock threshold - see that constant's comment) - defaulting
+  // 8 is ParamPanel's MIN_BLOCK_NO_PER_PLANE (the safety margin above the
+  // 6-block deadlock boundary - see that constant's comment) - defaulting
   // to it directly rather than some larger "roomier" value keeps the grid
-  // small by default, matching this preset's beginner-facing goal.
-  blockNoPerPlane: 16,
+  // small by default, matching this preset's beginner-facing goal. Also
+  // DEFAULT_GC_PARAMS' default (spread from this) - confirmed via harness
+  // that "GC 시연" still fires GC (4 times) at this block count within its
+  // shipped Stop_Time.
+  blockNoPerPlane: 8,
   pageNoPerBlock: 16,
   overprovisioningRatio: 0.07,
   gcExecThreshold: 0.05,
