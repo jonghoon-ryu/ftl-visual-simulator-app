@@ -88,11 +88,31 @@ namespace SSD_Components
 					// if literally none were found, skip this GC opportunity
 					// entirely (see the empty-set return below) rather than ever
 					// falling through with a candidate that was never verified safe.
+					// BUG FIX (this project, upstream MQSim): this sampling loop
+					// never required a candidate to actually be full
+					// (Current_page_write_index == pages_no_per_block) - only
+					// is_safe_gc_wl_candidate() (not-a-frontier, no ongoing op).
+					// RANDOM_P/RANDOM_PP just below both explicitly require a full
+					// block in their own retry condition; RGA is the one policy in
+					// this switch that didn't, even though its own "pick the best"
+					// loop further down already assumes full blocks (it only ever
+					// replaces the initial pick with one that's both more-invalid
+					// AND full). At real MQSim's intended scale, a block sampled
+					// once free space is genuinely low is essentially always
+					// already full (the device has cycled through nearly all its
+					// capacity many times over by then), so this went unnoticed;
+					// at this project's small demo scale, an empty (never-written)
+					// block can easily be "safe" too and get sampled instead of the
+					// one block that actually has garbage - wasting the one GC
+					// opportunity a short-lived demo gets. See
+					// /ftl-visual-simulator/reference/bug-list/ for the
+					// investigation this came from.
 					unsigned int rga_attempts = 0;
 					const unsigned int rga_max_attempts = block_no_per_plane * block_no_per_plane;
 					while (random_set.size() < rga_set_size && rga_attempts++ < rga_max_attempts) {
 						flash_block_ID_type block_id = random_generator.Uniform_uint(0, block_no_per_plane - 1);
-						if (pbke->Ongoing_erase_operations.find(block_id) == pbke->Ongoing_erase_operations.end()
+						if (pbke->Blocks[block_id].Current_page_write_index == pages_no_per_block
+							&& pbke->Ongoing_erase_operations.find(block_id) == pbke->Ongoing_erase_operations.end()
 							&& is_safe_gc_wl_candidate(pbke, block_id)) {
 							random_set.insert(block_id);
 							}
