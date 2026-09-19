@@ -394,16 +394,18 @@
   color: #c7cbe0;
   padding: 3px 0;
   border-bottom: 1px dashed #2d3142;
+  /* Preserves the literal spaces/newlines used to column-align a
+     "source -> destination" line's second "Chip" under the first - see
+     renderLogText() in MappingTable.tsx. */
+  white-space: pre-wrap;
 }
 
 .log-index {
   color: #5a5f70;
-  margin-right: 8px;
 }
 
 .log-time {
   color: #7d8296;
-  margin-right: 8px;
 }
 
 .log-keyword-danger {

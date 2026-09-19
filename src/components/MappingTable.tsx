@@ -6,7 +6,29 @@ import type { LogEntry } from '../types';
 // substring "GC" anywhere, which would also light up inside "GC Start".
 const DANGER_KEYWORDS = new Set(['GC Start', 'GC', 'Erase']);
 
-function renderLogText(text: string) {
+// "[0000] " (7 chars) + "12:34:56 " (9 chars) - the fixed-width index/time
+// columns that precede the log text itself on every line (see the render
+// below). Needed here so a wrapped "source -> destination" line's second
+// "Chip" can be padded to land in the same column as the first, not just
+// relative to where the text happens to start.
+const LOG_PREFIX_WIDTH = 16;
+
+// A "source -> destination" line (an LPN overwrite or a GC/WL migration)
+// is broken after "->" and the destination's "Chip" is padded onto its own
+// line so it lands in the same column as the source's "Chip" - otherwise
+// the two only line up when both halves happen to be the same length.
+function alignArrow(text: string): string {
+  const arrowIdx = text.indexOf(' -> Chip');
+  if (arrowIdx === -1) return text;
+  const before = text.slice(0, arrowIdx);
+  const after = text.slice(arrowIdx + 4); // skip " -> "
+  const chipCol = before.indexOf('Chip');
+  if (chipCol === -1) return text;
+  return `${before} ->\n${' '.repeat(LOG_PREFIX_WIDTH + chipCol)}${after}`;
+}
+
+function renderLogText(rawText: string) {
+  const text = alignArrow(rawText);
   const lastComma = text.lastIndexOf(', ');
   if (lastComma === -1) return text;
   const keyword = text.slice(lastComma + 2);
@@ -39,8 +61,8 @@ export function MappingTable({ log }: { log: LogEntry[] }) {
       <div className="log-list">
         {log.map((e) => (
           <div className="log-entry" key={e.index}>
-            <span className="log-index">[{String(e.index).padStart(4, '0')}]</span>
-            <span className="log-time">{e.time}</span>
+            <span className="log-index">{`[${String(e.index).padStart(4, '0')}] `}</span>
+            <span className="log-time">{`${e.time} `}</span>
             {renderLogText(e.text)}
           </div>
         ))}
