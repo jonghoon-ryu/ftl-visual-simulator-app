@@ -358,6 +358,21 @@
   color: #5a5f70;
 }
 
+.param-number {
+  font-family: inherit;
+  font-size: 11px;
+  background: #2d3142;
+  border: 1px solid #3e4358;
+  color: #d7dae0;
+  border-radius: 4px;
+  padding: 4px 8px;
+  width: 100%;
+}
+
+.param-number:disabled {
+  opacity: 0.5;
+}
+
 .param-apply-hint {
   font-size: 10px;
   color: #7d8296;

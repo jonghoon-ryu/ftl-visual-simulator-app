@@ -32,6 +32,17 @@ export interface SsdParams {
   // it as a visible-but-disabled choice, matching the plan's UI, but only
   // PAGE_LEVEL is ever actually generated here.
   addressMapping: 'PAGE_LEVEL';
+  // Device_Parameter_Set's own Seed - seeds MQSim's internal RNG (GC
+  // candidate sampling for RANDOM*/RGA policies, dynamic WL tie-breaks,
+  // etc.). Was a hardcoded literal 321 in buildSsdConfigXml for every
+  // preset until Ryu asked to make it adjustable - default here preserves
+  // that exact original value.
+  deviceSeed: number;
+  // IO_Flow_Parameter_Set_Synthetic's own Seed - seeds the synthetic
+  // workload generator (which LPAs get read/written, in what order). Was a
+  // hardcoded literal 798 in all three workload builders - default here
+  // preserves that exact original value.
+  workloadSeed: number;
 }
 
 export const DEFAULT_MAPPING_PARAMS: SsdParams = {
@@ -57,6 +68,8 @@ export const DEFAULT_MAPPING_PARAMS: SsdParams = {
   gcExecThreshold: 0.05,
   staticWlThreshold: 100,
   addressMapping: 'PAGE_LEVEL',
+  deviceSeed: 321,
+  workloadSeed: 798,
 };
 
 export function buildSsdConfigXml(params: SsdParams): string {
@@ -70,7 +83,7 @@ export function buildSsdConfigXml(params: SsdParams): string {
 		<ResponseTime_Logging_Period_Length>1000000</ResponseTime_Logging_Period_Length>
 	</Host_Parameter_Set>
 	<Device_Parameter_Set>
-		<Seed>321</Seed>
+		<Seed>${params.deviceSeed}</Seed>
 		<Enabled_Preconditioning>false</Enabled_Preconditioning>
 		<Memory_Type>FLASH</Memory_Type>
 		<HostInterface_Type>NVME</HostInterface_Type>
@@ -203,7 +216,7 @@ export function buildMappingWorkloadXml(params: SsdParams, workload: WorkloadPar
 			<Request_Size_Distribution>FIXED</Request_Size_Distribution>
 			<Average_Request_Size>${workload.burstSize}</Average_Request_Size>
 			<Variance_Request_Size>0</Variance_Request_Size>
-			<Seed>798</Seed>
+			<Seed>${params.workloadSeed}</Seed>
 			<Average_No_of_Reqs_in_Queue>4</Average_No_of_Reqs_in_Queue>
 			<Intensity>32768</Intensity>
 			<Stop_Time>5000000</Stop_Time>
@@ -335,7 +348,7 @@ export function buildGcWorkloadXml(params: SsdParams, workload: WorkloadParams =
 			<Request_Size_Distribution>FIXED</Request_Size_Distribution>
 			<Average_Request_Size>${workload.burstSize}</Average_Request_Size>
 			<Variance_Request_Size>0</Variance_Request_Size>
-			<Seed>798</Seed>
+			<Seed>${params.workloadSeed}</Seed>
 			<Average_No_of_Reqs_in_Queue>4</Average_No_of_Reqs_in_Queue>
 			<Intensity>32768</Intensity>
 			<Stop_Time>6000000000</Stop_Time>
@@ -407,7 +420,7 @@ export function buildWlWorkloadXml(params: SsdParams, workload: WorkloadParams =
 			<Request_Size_Distribution>FIXED</Request_Size_Distribution>
 			<Average_Request_Size>${workload.burstSize}</Average_Request_Size>
 			<Variance_Request_Size>0</Variance_Request_Size>
-			<Seed>798</Seed>
+			<Seed>${params.workloadSeed}</Seed>
 			<Average_No_of_Reqs_in_Queue>4</Average_No_of_Reqs_in_Queue>
 			<Intensity>32768</Intensity>
 			<Stop_Time>8000000000</Stop_Time>

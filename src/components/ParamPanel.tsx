@@ -155,6 +155,34 @@ export function ParamPanel({ params, onChange, disabled }: Props) {
         </select>
         <div className="param-hint">Hybrid 는 MQSim 원본에도 미구현</div>
       </div>
+
+      <div className="param-row">
+        <div className="param-label">
+          <span>엔진 시드</span>
+        </div>
+        <input
+          className="param-number"
+          type="number"
+          disabled={disabled}
+          value={params.deviceSeed}
+          onChange={(e) => onChange({ ...params, deviceSeed: Number(e.target.value) })}
+        />
+        <div className="param-hint">GC 후보 선택 등 엔진 내부 랜덤성의 시드</div>
+      </div>
+
+      <div className="param-row">
+        <div className="param-label">
+          <span>워크로드 시드</span>
+        </div>
+        <input
+          className="param-number"
+          type="number"
+          disabled={disabled}
+          value={params.workloadSeed}
+          onChange={(e) => onChange({ ...params, workloadSeed: Number(e.target.value) })}
+        />
+        <div className="param-hint">어떤 LPN 을 읽고 쓸지 정하는 워크로드 생성기의 시드</div>
+      </div>
     </div>
   );
 }
