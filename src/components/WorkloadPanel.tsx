@@ -38,7 +38,6 @@ export function WorkloadPanel({ workload, onChange, disabled }: Props) {
           <option value="RANDOM_UNIFORM">Random</option>
           <option value="STREAMING">Sequential</option>
         </select>
-        <div className="param-hint">주소를 순서대로 쓸지(Sequential), 무작위로 흩어서 쓸지(Random)</div>
       </div>
 
       <div className="param-row">
@@ -77,7 +76,6 @@ export function WorkloadPanel({ workload, onChange, disabled }: Props) {
           value={workload.burstSize}
           onChange={(e) => onChange({ ...workload, burstSize: Number(e.target.value) })}
         />
-        <div className="param-hint">요청 한 번에 몰아서 쓰는 page 수 - 크면 한 번에 여러 block 을 건드려요</div>
       </div>
     </div>
   );

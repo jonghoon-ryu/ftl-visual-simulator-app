@@ -35,7 +35,7 @@ export function FlashGrid({ blocks, caption }: Props) {
   return (
     <div className="sim-grid-panel">
       <div className="sim-panel-title">Flash Array — Block × Page</div>
-      <div className="sim-caption">{caption}</div>
+      {caption && <div className="sim-caption">{caption}</div>}
       <div className="grid-row grid-header-row">
         {multiChip && <div className="chip-badge chip-badge-spacer" aria-hidden="true" />}
         <div className="row-label">Page</div>

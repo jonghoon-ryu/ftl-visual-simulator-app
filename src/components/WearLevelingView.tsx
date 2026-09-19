@@ -9,7 +9,7 @@ export function WearLevelingView({ rows, caption }: Props) {
   return (
     <div className="sim-grid-panel">
       <div className="sim-panel-title">Block 별 Erase Count ( 마모 평준화 대상 )</div>
-      <div className="sim-caption">{caption}</div>
+      {caption && <div className="sim-caption">{caption}</div>}
       {rows.map((row) => (
         <div className="wl-row" key={row.label}>
           <div className="wl-label">{row.label}</div>
