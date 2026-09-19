@@ -22,6 +22,7 @@ type Request =
   | { id: number; type: 'step' }
   | { id: number; type: 'run'; n: number }
   | { id: number; type: 'stepIo' }
+  | { id: number; type: 'stepEvent' }
   | { id: number; type: 'getState' };
 
 type Response =
@@ -67,6 +68,9 @@ ctx.onmessage = async (e) => {
         break;
       case 'stepIo':
         result = mod.stepIo();
+        break;
+      case 'stepEvent':
+        result = mod.stepEvent();
         break;
       case 'getState':
         result = mod.getState();

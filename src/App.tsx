@@ -204,6 +204,7 @@ function App() {
             hasMore: playback.hasMore,
             disabled: !wired,
             onStepOnce: playback.stepOnce,
+            onStepEventOnce: playback.stepEventOnce,
             onTogglePlay: playback.togglePlay,
             onRestart: playback.restart,
             onSpeedChange: playback.setSpeed,

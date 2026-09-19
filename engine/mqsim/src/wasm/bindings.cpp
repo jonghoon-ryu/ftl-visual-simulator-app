@@ -25,6 +25,16 @@ namespace
 	// event-groups, without needing its own separate hook into the FTL layer.
 	bool g_mapping_updated_since_step_io_start = false;
 
+	// Set by every forward_* function whose event describeEvent() (the JS
+	// side, useMqsimEvents.ts) actually turns into a log line - i.e.
+	// everything except the two dynamic_wl_block_* events, which are
+	// deliberately sampled/suppressed there as too frequent to be a
+	// meaningful "one step" boundary. Consumed by step_event() below, the
+	// same way g_mapping_updated_since_step_io_start is consumed by
+	// step_io() - a single flag set from several call sites, read-and-reset
+	// by the one loop that cares.
+	bool g_loggable_event_since_step_event_start = false;
+
 	void write_memfs_file(const std::string& path, const std::string& text)
 	{
 		std::ofstream out(path.c_str());
@@ -84,6 +94,7 @@ namespace
 	void forward_mapping_updated(const Simulation_Events::Mapping_Updated_Event& event)
 	{
 		g_mapping_updated_since_step_io_start = true;
+		g_loggable_event_since_step_event_start = true;
 		if (g_event_callback.isUndefined() || g_event_callback.isNull()) {
 			return;
 		}
@@ -101,6 +112,7 @@ namespace
 
 	void forward_gc_started(const Simulation_Events::GC_Started_Event& event)
 	{
+		g_loggable_event_since_step_event_start = true;
 		if (g_event_callback.isUndefined() || g_event_callback.isNull()) {
 			return;
 		}
@@ -113,6 +125,7 @@ namespace
 
 	void forward_gc_page_migrated(const Simulation_Events::GC_Page_Migrated_Event& event)
 	{
+		g_loggable_event_since_step_event_start = true;
 		if (g_event_callback.isUndefined() || g_event_callback.isNull()) {
 			return;
 		}
@@ -127,6 +140,7 @@ namespace
 
 	void forward_gc_block_erased(const Simulation_Events::GC_Block_Erased_Event& event)
 	{
+		g_loggable_event_since_step_event_start = true;
 		if (g_event_callback.isUndefined() || g_event_callback.isNull()) {
 			return;
 		}
@@ -138,6 +152,7 @@ namespace
 
 	void forward_wl_started(const Simulation_Events::WL_Started_Event& event)
 	{
+		g_loggable_event_since_step_event_start = true;
 		if (g_event_callback.isUndefined() || g_event_callback.isNull()) {
 			return;
 		}
@@ -150,6 +165,7 @@ namespace
 
 	void forward_wl_page_migrated(const Simulation_Events::WL_Page_Migrated_Event& event)
 	{
+		g_loggable_event_since_step_event_start = true;
 		if (g_event_callback.isUndefined() || g_event_callback.isNull()) {
 			return;
 		}
@@ -164,6 +180,7 @@ namespace
 
 	void forward_wl_block_erased(const Simulation_Events::WL_Block_Erased_Event& event)
 	{
+		g_loggable_event_since_step_event_start = true;
 		if (g_event_callback.isUndefined() || g_event_callback.isNull()) {
 			return;
 		}
@@ -336,6 +353,27 @@ bool step_io()
 	return has_more;
 }
 
+// Runs event-groups until exactly one loggable event has fired (anything
+// describeEvent() in useMqsimEvents.ts turns into a log line: a read/write
+// resolving, or one GC/WL sub-step - started, one page migrated, or the
+// erase completing), or the queue empties - whichever comes first. Unlike
+// step_io() (which only stops on a read/write and silently swallows any
+// GC/WL activity that happens to fall between two of those into the same
+// call), this is what backs the UI's per-log-line step button: press it
+// once, get exactly one new log line, whatever kind it is. Deliberately
+// does *not* stop on dynamic_wl_block_allocated/freed - those are excluded
+// from "loggable" up in g_loggable_event_since_step_event_start's own
+// comment, for the same reason the JS-side log already samples them.
+bool step_event()
+{
+	g_loggable_event_since_step_event_start = false;
+	bool has_more = true;
+	while (has_more && !g_loggable_event_since_step_event_start) {
+		has_more = MQSim_Interface::Run_step(g_instance);
+	}
+	return has_more;
+}
+
 // Re-initializes with new config/workload text, discarding the current run -
 // same steps as init(), kept as a separate binding name to match the
 // documented parameter-change/reset use case.
@@ -350,6 +388,7 @@ EMSCRIPTEN_BINDINGS(mqsim_module)
 	function("step", &step);
 	function("run", &run);
 	function("stepIo", &step_io);
+	function("stepEvent", &step_event);
 	function("configure", &configure);
 	function("setEventCallback", &set_event_callback);
 	function("getState", &get_state);

@@ -6,6 +6,7 @@ export interface PlaybackState {
   hasMore: boolean; // false once the workload's event queue is empty
   disabled: boolean; // true while the engine for the active preset isn't wired/ready yet
   onStepOnce: () => void;
+  onStepEventOnce: () => void;
   onTogglePlay: () => void;
   onRestart: () => void;
   onSpeedChange: (speed: number) => void;
@@ -19,7 +20,8 @@ interface Props {
 }
 
 export function Toolbar({ presets, activeId, onSelect, playback }: Props) {
-  const { isPlaying, speed, hasMore, disabled, onStepOnce, onTogglePlay, onRestart, onSpeedChange } = playback;
+  const { isPlaying, speed, hasMore, disabled, onStepOnce, onStepEventOnce, onTogglePlay, onRestart, onSpeedChange } =
+    playback;
 
   return (
     <div className="sim-toolbar">
@@ -58,6 +60,15 @@ export function Toolbar({ presets, activeId, onSelect, playback }: Props) {
           onClick={onStepOnce}
         >
           ⏭
+        </button>
+        <button
+          type="button"
+          aria-label="로그 한 줄씩 실행"
+          title="write/read 한 번, GC/WL 의 시작·페이지 이동·소거 완료 중 하나 - 로그에 한 줄이 새로 생길 때까지만 실행해요"
+          disabled={disabled || !hasMore || isPlaying}
+          onClick={onStepEventOnce}
+        >
+          1줄
         </button>
         <span>속도</span>
         <input

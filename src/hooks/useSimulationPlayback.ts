@@ -8,7 +8,7 @@ import type { MqsimEngine } from './useMqsimEngine';
 const TICK_INTERVAL_MS = 300;
 
 interface Options {
-  engine: Pick<MqsimEngine, 'ready' | 'step' | 'run' | 'stepIo' | 'configure'>;
+  engine: Pick<MqsimEngine, 'ready' | 'step' | 'run' | 'stepIo' | 'stepEvent' | 'configure'>;
   onRefresh: () => void;
   onRestart: () => void;
   // How many event-groups one "speed" unit (1-8, Toolbar's slider) is worth
@@ -58,6 +58,19 @@ export function useSimulationPlayback({ engine, onRefresh, onRestart, ticksMulti
     if (!more) setIsPlaying(false);
   }, [engine]);
 
+  // One *loggable event* (Ryu: "버튼 하나를 누르면 한 동작이 이루어져야
+  // 함" - pressing the button once should show exactly one 로그 line) -
+  // finer than stepOnce (⏭, which can silently bundle a whole GC cycle's
+  // worth of migrations/erase into the one read/write it stops on). See
+  // step_event()'s doc comment in bindings.cpp for exactly what counts.
+  const stepEventOnce = useCallback(async () => {
+    if (!engine.ready) return;
+    const more = await engine.stepEvent();
+    await latestRef.current.onRefresh();
+    setHasMore(more);
+    if (!more) setIsPlaying(false);
+  }, [engine]);
+
   const togglePlay = useCallback(() => {
     setIsPlaying((playing) => !playing);
   }, []);
@@ -90,5 +103,5 @@ export function useSimulationPlayback({ engine, onRefresh, onRestart, ticksMulti
     return () => clearInterval(id);
   }, [isPlaying, engine.ready, speed]);
 
-  return { isPlaying, speed, hasMore, setSpeed, stepOnce, togglePlay, restart };
+  return { isPlaying, speed, hasMore, setSpeed, stepOnce, stepEventOnce, togglePlay, restart };
 }
