@@ -266,6 +266,27 @@
   opacity: 0.5;
 }
 
+.param-radio-group {
+  display: flex;
+  gap: 12px;
+}
+
+.param-radio-option {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: #d7dae0;
+}
+
+.param-radio-option input {
+  accent-color: #4a6cf7;
+}
+
+.param-radio-option:has(input:disabled) {
+  opacity: 0.5;
+}
+
 .param-select {
   font-size: 11px;
   background: #2d3142;

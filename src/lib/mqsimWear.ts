@@ -12,12 +12,14 @@ export function toWearRows(state: MqsimState | null): WearRow[] {
   if (!state) return [];
 
   const maxEraseCount = Math.max(1, ...state.blocks.map((block) => block.eraseCount));
+  // See toBlockRows() in mqsimBlocks.ts - same per-chip label collision fix.
+  const multiChip = new Set(state.blocks.map((block) => block.chip)).size > 1;
 
   return state.blocks.map((block) => {
     const ratio = block.eraseCount / maxEraseCount;
     const level: WearRow['level'] = ratio >= 0.8 ? 'hot' : ratio <= 0.3 ? 'cool' : 'warm';
     return {
-      label: `Block ${block.block}`,
+      label: multiChip ? `Chip ${block.chip} · Block ${block.block}` : `Block ${block.block}`,
       eraseCount: block.eraseCount,
       maxEraseCount,
       level,
