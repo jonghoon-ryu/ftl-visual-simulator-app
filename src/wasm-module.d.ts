@@ -38,7 +38,17 @@ type MqsimBlockStatus = 'idle' | 'user' | 'gc_wl';
 
 interface MqsimBlockSnapshot extends MqsimBlockAddress {
   eraseCount: number;
+  // Always 'idle' - Block_Service_Status is only ever initialized in the
+  // engine, never updated. Use hasOngoingGcWl below for real GC/WL state.
   status: MqsimBlockStatus;
+  // True for the whole span between GC/WL picking this block as its victim
+  // and its erase completing - the engine's own real race-condition flag
+  // (Has_ongoing_gc_wl), unlike `status` above.
+  hasOngoingGcWl: boolean;
+  // True if this block is currently the host write frontier (Data_wf) for
+  // some stream - where new user writes are actively landing, as opposed
+  // to GC's migration destination or the mapping-table write frontier.
+  isWriteFrontier: boolean;
   pages: MqsimPageState[]; // length == pages_no_per_block, indexed by page id
 }
 

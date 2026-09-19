@@ -211,6 +211,14 @@ namespace SSD_Components
 								(flash_plane_ID_type)plane, (flash_block_ID_type)block);
 							entry.EraseCount = slot.Erase_count;
 							entry.Status = slot.Current_status;
+							entry.Has_ongoing_gc_wl = slot.Has_ongoing_gc_wl;
+							entry.Is_write_frontier = false;
+							for (unsigned int stream_cntr = 0; stream_cntr < total_concurrent_streams_no; stream_cntr++) {
+								if (plane_record->Data_wf[stream_cntr] == &slot) {
+									entry.Is_write_frontier = true;
+									break;
+								}
+							}
 							entry.Pages.reserve(pages_no_per_block);
 							for (unsigned int page = 0; page < pages_no_per_block; page++) {
 								if (page >= (unsigned int)slot.Current_page_write_index) {

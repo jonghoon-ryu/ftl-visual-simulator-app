@@ -66,6 +66,8 @@ export function FlashGrid({ blocks, caption }: Props) {
                 </div>
               ))}
             </div>
+            {block.gcActive && <span className="row-flag row-flag-gc">GC</span>}
+            {block.writeFrontier && <span className="row-flag row-flag-active">active block</span>}
           </div>
         );
       })}

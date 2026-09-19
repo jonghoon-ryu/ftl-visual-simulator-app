@@ -301,6 +301,8 @@ val get_state()
 			val row = address_to_val(entry.Address);
 			row.set("eraseCount", entry.EraseCount);
 			row.set("status", block_status_to_string(entry.Status));
+			row.set("hasOngoingGcWl", entry.Has_ongoing_gc_wl);
+			row.set("isWriteFrontier", entry.Is_write_frontier);
 			val pages = val::array();
 			for (const auto& page_state : entry.Pages) {
 				pages.call<void>("push", std::string(page_state_to_string(page_state)));

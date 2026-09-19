@@ -152,6 +152,20 @@
   border-radius: 3px;
 }
 
+/* Sits right after a row's last page cell (.grid-row's own flex gap does
+   the spacing) - real point-in-time block status/write-frontier flags,
+   not a one-step overlay, so these stay up for as long as the condition
+   holds rather than clearing after the next step. */
+.row-flag {
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.row-flag-gc { color: #f16d75; }
+.row-flag-active { color: #4a6cf7; }
+
 .chip-badge {
   width: 20px;
   height: 20px;

@@ -43,8 +43,27 @@ namespace SSD_Components
 	{
 		NVM::FlashMemory::Physical_Page_Address Address; // PageID is unused (0)
 		unsigned int EraseCount;
+		// NOTE: Block_Pool_Slot_Type::Current_status is only ever set once,
+		// at construction (IDLE) - see Flash_Block_Manager_Base.cpp - and
+		// never updated anywhere else in the engine, upstream or otherwise.
+		// It's included here for completeness/future use but always reads
+		// IDLE; anything wanting "is GC/WL actually active on this block
+		// right now" needs Has_ongoing_gc_wl below instead (the field the
+		// rest of the engine's own race-condition checks actually use).
 		Block_Service_Status Status;
+		// True for the whole span between GC_WL_started() (GC/WL just picked
+		// this block as its victim) and GC_WL_finished() (its erase just
+		// completed) - unlike Status above, this one is real and live.
+		bool Has_ongoing_gc_wl;
 		std::vector<Block_Page_State> Pages; // size == pages_no_per_block
+		// True if this block is currently some stream's Data_wf (the write
+		// frontier host writes are actively landing on) - checked across
+		// every configured stream, though this project's demo workloads only
+		// ever use one. Deliberately Data_wf only, not GC_wf/Translation_wf -
+		// a UI wanting "where is user data being written right now" means
+		// the host write frontier specifically, not GC's migration
+		// destination or the mapping-table write frontier.
+		bool Is_write_frontier;
 	};
 
 	class Block_Pool_Slot_Type

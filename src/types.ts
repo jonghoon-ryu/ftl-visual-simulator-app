@@ -21,6 +21,14 @@ export interface BlockRow {
   // completed - outlines the row so the just-erased block is easy to spot
   // instead of blending into every other block full of plain 'free' cells.
   erasing?: boolean;
+  // True for as long as this block currently has a GC/WL operation in
+  // flight (mqsim's real point-in-time block status, not a one-step
+  // overlay like `erasing` above - stays true across the whole migration
+  // span, not just the erase instant).
+  gcActive?: boolean;
+  // True for as long as this block is the current host write frontier -
+  // where new user writes are actively landing.
+  writeFrontier?: boolean;
 }
 
 export interface StatItem {
