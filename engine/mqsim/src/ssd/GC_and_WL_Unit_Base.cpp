@@ -145,9 +145,9 @@ namespace SSD_Components
 						((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->RelatedRead = NULL;
 						_my_instance->address_mapping_unit->Allocate_new_page_for_gc(((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite, pbke->Blocks[transaction->Address.BlockID].Holds_mapping_data);
 						if (is_wl) {
-							Simulation_Events::Notify_wl_page_migrated(transaction->Stream_id, transaction->Address, ((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->Address);
+							Simulation_Events::Notify_wl_page_migrated(transaction->Stream_id, transaction->LPA, transaction->Address, ((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->Address);
 						} else {
-							Simulation_Events::Notify_gc_page_migrated(transaction->Stream_id, transaction->Address, ((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->Address);
+							Simulation_Events::Notify_gc_page_migrated(transaction->Stream_id, transaction->LPA, transaction->Address, ((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->Address);
 						}
 						_my_instance->tsu->Submit_transaction(((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite);
 						_my_instance->tsu->Schedule();
@@ -165,9 +165,9 @@ namespace SSD_Components
 						((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->RelatedRead = NULL;
 						_my_instance->address_mapping_unit->Allocate_new_page_for_gc(((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite, pbke->Blocks[transaction->Address.BlockID].Holds_mapping_data);
 						if (is_wl) {
-							Simulation_Events::Notify_wl_page_migrated(transaction->Stream_id, transaction->Address, ((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->Address);
+							Simulation_Events::Notify_wl_page_migrated(transaction->Stream_id, transaction->LPA, transaction->Address, ((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->Address);
 						} else {
-							Simulation_Events::Notify_gc_page_migrated(transaction->Stream_id, transaction->Address, ((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->Address);
+							Simulation_Events::Notify_gc_page_migrated(transaction->Stream_id, transaction->LPA, transaction->Address, ((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->Address);
 						}
 						_my_instance->tsu->Submit_transaction(((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite);
 						_my_instance->tsu->Schedule();

@@ -178,6 +178,14 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
       if (event.type === 'mapping_updated' && event.isWrite && event.lpa !== undefined && event.address) {
         lpaToAddressRef.current.set(event.lpa, event.address);
       }
+      // A GC/WL migration moves an LPA's data too, but never fires
+      // mapping_updated (it goes through Allocate_new_page_for_gc(), not
+      // translate_lpa_to_ppa()) - without this, an LPA migrated out of a
+      // block that's since been erased would still show its old,
+      // now-freed address as "previous location" on its next overwrite.
+      if ((event.type === 'gc_page_migrated' || event.type === 'wl_page_migrated') && event.lpa !== undefined && event.newBlock) {
+        lpaToAddressRef.current.set(event.lpa, event.newBlock);
+      }
       if (text === null) return;
 
       pendingLogRef.current.push(text);

@@ -18,7 +18,13 @@ import type { MqsimEngine } from './useMqsimEngine';
 //    both the *source* page (`block`) and the *destination* page
 //    (`newBlock`) directly (see GC_and_WL_Unit_Base.cpp - fired once both
 //    are known, right after the destination is allocated), no LPA-tracking
-//    needed for either side.
+//    needed to outline either side of the migration itself. The same
+//    events' `lpa` field IS still used, though, to keep this hook's own
+//    LPA -> page-key map (used for case 1 above) in sync - a migration
+//    moves an LPA's data too, but never fires mapping_updated, so without
+//    this an LPA migrated out of a block that's since been erased would
+//    still point at that stale, now-free page as its "previous" location
+//    on a later overwrite.
 // 3. A GC/WL block erase: gc_block_erased/wl_block_erased names the whole
 //    block, fired at the erase transaction's actual completion.
 //
@@ -41,6 +47,9 @@ export function useMqsimOverwrites(subscribeEvents: MqsimEngine['subscribeEvents
         }
         if (event.newBlock) {
           pendingPagesRef.current.add(pageKey(event.newBlock.chip, event.newBlock.block, event.newBlock.page));
+          if (event.lpa !== undefined) {
+            lpaToPageKeyRef.current.set(event.lpa, pageKey(event.newBlock.chip, event.newBlock.block, event.newBlock.page));
+          }
         }
         return;
       }

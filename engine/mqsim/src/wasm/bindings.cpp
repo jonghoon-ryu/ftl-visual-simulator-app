@@ -132,6 +132,7 @@ namespace
 		val payload = val::object();
 		payload.set("type", std::string("gc_page_migrated"));
 		payload.set("streamId", event.Stream_id);
+		payload.set("lpa", event.Lpa);
 		val block = address_to_val(event.Page_address);
 		block.set("page", event.Page_address.PageID);
 		payload.set("block", block);
@@ -175,6 +176,7 @@ namespace
 		val payload = val::object();
 		payload.set("type", std::string("wl_page_migrated"));
 		payload.set("streamId", event.Stream_id);
+		payload.set("lpa", event.Lpa);
 		val block = address_to_val(event.Page_address);
 		block.set("page", event.Page_address.PageID);
 		payload.set("block", block);

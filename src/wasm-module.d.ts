@@ -67,6 +67,10 @@ interface MqsimState {
 interface MqsimEvent {
   type: string;
   streamId?: number;
+  // mapping_updated: the LPA just translated. gc_page_migrated/
+  // wl_page_migrated: the LPA this migration is moving - needed to keep a
+  // "where does this LPA currently live" tracking map in sync with GC/WL
+  // moves, not just host writes (a migration never fires mapping_updated).
   lpa?: bigint;
   ppa?: bigint;
   isWrite?: boolean;

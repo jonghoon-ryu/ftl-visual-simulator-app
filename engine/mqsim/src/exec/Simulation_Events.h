@@ -74,20 +74,27 @@ namespace Simulation_Events
 	// (GC_and_WL_Unit_Base::handle_transaction_serviced_signal_from_PHY's
 	// READ case, right after Allocate_new_page_for_gc() determines the
 	// destination). Page_address is the *source* (the victim block page
-	// being vacated); New_page_address is where its data is headed.
+	// being vacated); New_page_address is where its data is headed. Lpa is
+	// the logical page this physical migration is moving - a UI tracking
+	// "where does LPA X currently live" (e.g. to show an overwrite's
+	// previous location) needs this to keep that mapping in sync with GC/WL
+	// moves, not just host writes (mapping_updated is never fired for a GC/
+	// WL migration - it goes through Allocate_new_page_for_gc(), not
+	// translate_lpa_to_ppa()).
 	struct GC_Page_Migrated_Event
 	{
 		stream_id_type Stream_id;
+		LPA_type Lpa;
 		NVM::FlashMemory::Physical_Page_Address Page_address;
 		NVM::FlashMemory::Physical_Page_Address New_page_address;
 	};
 
 	extern void (*On_gc_page_migrated)(const GC_Page_Migrated_Event&);
 
-	inline void Notify_gc_page_migrated(stream_id_type stream_id, const NVM::FlashMemory::Physical_Page_Address& page_address, const NVM::FlashMemory::Physical_Page_Address& new_page_address)
+	inline void Notify_gc_page_migrated(stream_id_type stream_id, LPA_type lpa, const NVM::FlashMemory::Physical_Page_Address& page_address, const NVM::FlashMemory::Physical_Page_Address& new_page_address)
 	{
 		if (On_gc_page_migrated) {
-			GC_Page_Migrated_Event event{ stream_id, page_address, new_page_address };
+			GC_Page_Migrated_Event event{ stream_id, lpa, page_address, new_page_address };
 			On_gc_page_migrated(event);
 		}
 	}
@@ -138,16 +145,17 @@ namespace Simulation_Events
 	struct WL_Page_Migrated_Event
 	{
 		stream_id_type Stream_id;
+		LPA_type Lpa;
 		NVM::FlashMemory::Physical_Page_Address Page_address;
 		NVM::FlashMemory::Physical_Page_Address New_page_address;
 	};
 
 	extern void (*On_wl_page_migrated)(const WL_Page_Migrated_Event&);
 
-	inline void Notify_wl_page_migrated(stream_id_type stream_id, const NVM::FlashMemory::Physical_Page_Address& page_address, const NVM::FlashMemory::Physical_Page_Address& new_page_address)
+	inline void Notify_wl_page_migrated(stream_id_type stream_id, LPA_type lpa, const NVM::FlashMemory::Physical_Page_Address& page_address, const NVM::FlashMemory::Physical_Page_Address& new_page_address)
 	{
 		if (On_wl_page_migrated) {
-			WL_Page_Migrated_Event event{ stream_id, page_address, new_page_address };
+			WL_Page_Migrated_Event event{ stream_id, lpa, page_address, new_page_address };
 			On_wl_page_migrated(event);
 		}
 	}
