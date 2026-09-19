@@ -39,7 +39,7 @@ export function MappingTable({ log }: { log: LogEntry[] }) {
       <div className="log-list">
         {log.map((e) => (
           <div className="log-entry" key={e.index}>
-            <span className="log-index">{String(e.index).padStart(4, '0')}</span>
+            <span className="log-index">[{String(e.index).padStart(4, '0')}]</span>
             <span className="log-time">{e.time}</span>
             {renderLogText(e.text)}
           </div>
