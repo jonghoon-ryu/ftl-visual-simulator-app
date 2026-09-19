@@ -8,7 +8,7 @@ import type { MqsimEngine } from './useMqsimEngine';
 const TICK_INTERVAL_MS = 300;
 
 interface Options {
-  engine: Pick<MqsimEngine, 'ready' | 'step' | 'run' | 'configure'>;
+  engine: Pick<MqsimEngine, 'ready' | 'step' | 'run' | 'stepIo' | 'configure'>;
   onRefresh: () => void;
   onRestart: () => void;
   // How many event-groups one "speed" unit (1-8, Toolbar's slider) is worth
@@ -47,11 +47,12 @@ export function useSimulationPlayback({ engine, onRefresh, onRestart, ticksMulti
 
   const stepOnce = useCallback(async () => {
     if (!engine.ready) return;
-    // Treated as "one tick's worth" (not a literal single event-group) so
-    // manual stepping and play advance the sim by the same amount - a
-    // literal single step() would be imperceptible at a multiplier like
-    // GC 시연's.
-    const more = await engine.run(latestRef.current.ticksMultiplier);
+    // One real read or write, not "one tick's worth of event-groups" - this
+    // project's goal is showing *how* read/write/GC work, not throughput, so
+    // manual stepping (⏭ button or → key) should always land on a boundary
+    // meaningful to watch, regardless of a preset's ticksMultiplier (which
+    // only scales the ▶ play loop's per-tick pace).
+    const more = await engine.stepIo();
     await latestRef.current.onRefresh();
     setHasMore(more);
     if (!more) setIsPlaying(false);

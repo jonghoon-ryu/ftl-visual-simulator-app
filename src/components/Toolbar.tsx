@@ -52,7 +52,8 @@ export function Toolbar({ presets, activeId, onSelect, playback }: Props) {
         </button>
         <button
           type="button"
-          aria-label="한 단계씩 실행"
+          aria-label="한 단계씩 실행 (→ 키로도 가능)"
+          title="한 번의 read/write 를 실행해요 - → 키를 눌러도 똑같이 동작해요"
           disabled={disabled || !hasMore || isPlaying}
           onClick={onStepOnce}
         >

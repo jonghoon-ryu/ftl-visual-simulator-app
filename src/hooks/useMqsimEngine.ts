@@ -85,6 +85,7 @@ export function useMqsimEngine(ssdConfigXml: string, workloadXml: string) {
 
   const step = useCallback(() => call<boolean>({ type: 'step' }), [call]);
   const run = useCallback((n: number) => call<boolean>({ type: 'run', n }), [call]);
+  const stepIo = useCallback(() => call<boolean>({ type: 'stepIo' }), [call]);
   const configure = useCallback(
     () => call<void>({ type: 'configure', ssdConfigXml, workloadXml }),
     [call, ssdConfigXml, workloadXml],
@@ -113,7 +114,7 @@ export function useMqsimEngine(ssdConfigXml: string, workloadXml: string) {
     };
   }, []);
 
-  return { ready, error, state, refresh, step, run, configure, subscribeEvents };
+  return { ready, error, state, refresh, step, run, stepIo, configure, subscribeEvents };
 }
 
 export type MqsimEngine = ReturnType<typeof useMqsimEngine>;

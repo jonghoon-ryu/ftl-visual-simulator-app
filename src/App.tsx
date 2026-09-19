@@ -152,6 +152,28 @@ function App() {
   }, [ssdConfigXml, workloadXml, engine.ready]);
 
   const wired = Boolean(WIRED_PRESET_DEFAULTS[activeId]) && engine.ready;
+
+  // → advances one read/write, same as clicking ⏭ (Toolbar.tsx) - matches
+  // the ⏭ button's own enabled condition exactly. Skipped while focus is on
+  // an <input>/<select> (a param slider, the chip-count radios, the speed
+  // slider) so ArrowRight keeps doing that control's own native thing
+  // (nudging a slider/radio) instead of being hijacked into a step.
+  const stepShortcutRef = useRef({ canStep: false, stepOnce: playback.stepOnce });
+  useEffect(() => {
+    stepShortcutRef.current = { canStep: wired && playback.hasMore && !playback.isPlaying, stepOnce: playback.stepOnce };
+  });
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowRight' || e.repeat || !stepShortcutRef.current.canStep) return;
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+      e.preventDefault();
+      void stepShortcutRef.current.stepOnce();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   const isWearPreset = activeId === 'wear-leveling';
   const mappingRows = wired && !isWearPreset ? toMappingRows(engine.state) : active.mapping;
   const blockRows = wired && !isWearPreset ? toBlockRows(engine.state) : active.blocks;

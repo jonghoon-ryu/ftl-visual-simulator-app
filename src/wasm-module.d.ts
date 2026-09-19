@@ -77,6 +77,7 @@ interface MqsimModule {
   configure(ssdConfigXml: string, workloadXml: string): void;
   step(): boolean;
   run(n: number): boolean;
+  stepIo(): boolean;
   getState(): MqsimState;
   setEventCallback(callback: ((event: MqsimEvent) => void) | null): void;
 }
