@@ -78,6 +78,7 @@ interface MqsimModule {
   step(): boolean;
   run(n: number): boolean;
   stepIo(): boolean;
+  stepEvent(): boolean;
   getState(): MqsimState;
   setEventCallback(callback: ((event: MqsimEvent) => void) | null): void;
 }
