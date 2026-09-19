@@ -9,6 +9,14 @@
 // ParamPanel.tsx can regenerate this text and reconfigure() the engine.
 export interface SsdParams {
   pageCapacityBytes: 4096 | 8192 | 16384;
+  // Chip_No_Per_Channel - kept to these 4 options (radio buttons in
+  // ParamPanel, not a free slider) since the point is showing a beginner
+  // that a "chip" is a unit the FTL spreads work across, not letting them
+  // dial in an arbitrary SSD geometry. Channel/die/plane stay hardcoded at
+  // 1 (see buildSsdConfigXml) - multi-chip alone is enough to show the
+  // per-chip block/wear grouping without also multiplying the flash grid
+  // by die/plane counts too.
+  chipCount: 1 | 2 | 4 | 8;
   blockNoPerPlane: number;
   pageNoPerBlock: number;
   overprovisioningRatio: number; // 0..1
@@ -28,6 +36,7 @@ export interface SsdParams {
 
 export const DEFAULT_MAPPING_PARAMS: SsdParams = {
   pageCapacityBytes: 4096,
+  chipCount: 1,
   // 16 is ParamPanel's MIN_BLOCK_NO_PER_PLANE (the safety margin above the
   // 13-block deadlock threshold - see that constant's comment) - defaulting
   // to it directly rather than some larger "roomier" value keeps the grid
@@ -87,7 +96,7 @@ export function buildSsdConfigXml(params: SsdParams): string {
 		<Flash_Channel_Count>1</Flash_Channel_Count>
 		<Flash_Channel_Width>1</Flash_Channel_Width>
 		<Channel_Transfer_Rate>333</Channel_Transfer_Rate>
-		<Chip_No_Per_Channel>1</Chip_No_Per_Channel>
+		<Chip_No_Per_Channel>${params.chipCount}</Chip_No_Per_Channel>
 		<Flash_Comm_Protocol>NVDDR2</Flash_Comm_Protocol>
 		<Flash_Parameter_Set>
 			<Flash_Technology>MLC</Flash_Technology>
@@ -151,8 +160,8 @@ export const DEFAULT_WORKLOAD_PARAMS: WorkloadParams = {
 // instantly. Stop_Time/Total_Requests_To_Generate both bound it (belt and
 // suspenders - during testing only Stop_Time reliably capped a QUEUE_DEPTH
 // generator, but both are set here in case that varies by config).
-// Address_Alignment_Unit tracks pageNoPerBlock so a write still lands on
-// exactly one page regardless of the chosen block/page geometry.
+// Address_Alignment_Unit - see ioAddressAlignmentUnitSectors() below for why
+// this isn't simply pageNoPerBlock once chipCount > 1.
 export function buildMappingWorkloadXml(params: SsdParams, workload: WorkloadParams = DEFAULT_WORKLOAD_PARAMS): string {
   return `<?xml version="1.0" encoding="us-ascii"?>
 <MQSim_IO_Scenarios>
@@ -161,7 +170,7 @@ export function buildMappingWorkloadXml(params: SsdParams, workload: WorkloadPar
 			<Priority_Class>HIGH</Priority_Class>
 			<Device_Level_Data_Caching_Mode>WRITE_CACHE</Device_Level_Data_Caching_Mode>
 			<Channel_IDs>0</Channel_IDs>
-			<Chip_IDs>0</Chip_IDs>
+			<Chip_IDs>${chipIdsXml(params)}</Chip_IDs>
 			<Die_IDs>0</Die_IDs>
 			<Plane_IDs>0</Plane_IDs>
 			<Initial_Occupancy_Percentage>0</Initial_Occupancy_Percentage>
@@ -171,7 +180,7 @@ export function buildMappingWorkloadXml(params: SsdParams, workload: WorkloadPar
 			<Address_Distribution>${workload.addressDistribution}</Address_Distribution>
 			<Percentage_of_Hot_Region>0</Percentage_of_Hot_Region>
 			<Generated_Aligned_Addresses>true</Generated_Aligned_Addresses>
-			<Address_Alignment_Unit>${params.pageNoPerBlock}</Address_Alignment_Unit>
+			<Address_Alignment_Unit>${ioAddressAlignmentUnitSectors(params)}</Address_Alignment_Unit>
 			<Request_Size_Distribution>FIXED</Request_Size_Distribution>
 			<Average_Request_Size>${workload.burstSize}</Average_Request_Size>
 			<Variance_Request_Size>0</Variance_Request_Size>
@@ -184,6 +193,38 @@ export function buildMappingWorkloadXml(params: SsdParams, workload: WorkloadPar
 	</IO_Scenario>
 </MQSim_IO_Scenarios>
 `;
+}
+
+// Every workload builder below restricts its IO flow to Chip_IDs "0" - fine
+// while chipCount was always 1, but with multi-chip support that would
+// leave chips 1..N-1 completely idle (Chip_IDs is a resource-partitioning
+// list, not a count - see IO_Flow_Parameter_Set.cpp). Spread the flow across
+// every configured chip so multi-chip actually shows blocks/erases on more
+// than just chip 0.
+function chipIdsXml(params: SsdParams): string {
+  return Array.from({ length: params.chipCount }, (_, i) => i).join(',');
+}
+
+// IO_Flow_Synthetic.cpp's Address_Alignment_Unit is in *sectors*
+// (SECTOR_SIZE_IN_BYTE=512, see FTL::Convert_host_logical_address_to_
+// device_address()'s lha/page_size_in_sectors division), not pages - a real
+// unit mismatch that was invisible with a single chip (Address_Mapping_
+// Unit_Page_Level.cpp's CWDP scheme always picks Chip_ids[lpn % 1] = index
+// 0 regardless of lpn's value) but breaks multi-chip: aligning to
+// pageNoPerBlock *sectors* forces every generated LPA to a multiple of
+// pageNoPerBlock/sectorsPerPage pages (e.g. every-other page at the default
+// 4KB/16-page config), so `lpn % chipCount` only ever lands on the even
+// residues - verified via a WASM harness that chipCount=2/4/8 all left
+// exactly half their chips permanently empty. Aligning to exactly one page
+// (sectorsPerPage sectors) instead removes that forced stride, and was
+// confirmed via the same harness to reach every configured chip.
+// Left at the original pageNoPerBlock-sector value for chipCount 1 (its
+// only value before today) so "GC 시연"/"마모평준화 시연"'s already-tuned,
+// native-harness-verified trigger counts stay exactly reproducible - this
+// unit fix only ever changes behavior for the brand new chipCount>1 case.
+function ioAddressAlignmentUnitSectors(params: SsdParams): number {
+  if (params.chipCount === 1) return params.pageNoPerBlock;
+  return params.pageCapacityBytes / 512;
 }
 
 // Backwards-compatible fixed exports for any code that hasn't moved to the
@@ -226,7 +267,7 @@ export function buildGcWorkloadXml(params: SsdParams, workload: WorkloadParams =
 			<Priority_Class>HIGH</Priority_Class>
 			<Device_Level_Data_Caching_Mode>WRITE_CACHE</Device_Level_Data_Caching_Mode>
 			<Channel_IDs>0</Channel_IDs>
-			<Chip_IDs>0</Chip_IDs>
+			<Chip_IDs>${chipIdsXml(params)}</Chip_IDs>
 			<Die_IDs>0</Die_IDs>
 			<Plane_IDs>0</Plane_IDs>
 			<Initial_Occupancy_Percentage>0</Initial_Occupancy_Percentage>
@@ -236,7 +277,7 @@ export function buildGcWorkloadXml(params: SsdParams, workload: WorkloadParams =
 			<Address_Distribution>${workload.addressDistribution}</Address_Distribution>
 			<Percentage_of_Hot_Region>0</Percentage_of_Hot_Region>
 			<Generated_Aligned_Addresses>true</Generated_Aligned_Addresses>
-			<Address_Alignment_Unit>${params.pageNoPerBlock}</Address_Alignment_Unit>
+			<Address_Alignment_Unit>${ioAddressAlignmentUnitSectors(params)}</Address_Alignment_Unit>
 			<Request_Size_Distribution>FIXED</Request_Size_Distribution>
 			<Average_Request_Size>${workload.burstSize}</Average_Request_Size>
 			<Variance_Request_Size>0</Variance_Request_Size>
@@ -298,7 +339,7 @@ export function buildWlWorkloadXml(params: SsdParams, workload: WorkloadParams =
 			<Priority_Class>HIGH</Priority_Class>
 			<Device_Level_Data_Caching_Mode>WRITE_CACHE</Device_Level_Data_Caching_Mode>
 			<Channel_IDs>0</Channel_IDs>
-			<Chip_IDs>0</Chip_IDs>
+			<Chip_IDs>${chipIdsXml(params)}</Chip_IDs>
 			<Die_IDs>0</Die_IDs>
 			<Plane_IDs>0</Plane_IDs>
 			<Initial_Occupancy_Percentage>0</Initial_Occupancy_Percentage>
@@ -308,7 +349,7 @@ export function buildWlWorkloadXml(params: SsdParams, workload: WorkloadParams =
 			<Address_Distribution>${workload.addressDistribution}</Address_Distribution>
 			<Percentage_of_Hot_Region>0</Percentage_of_Hot_Region>
 			<Generated_Aligned_Addresses>true</Generated_Aligned_Addresses>
-			<Address_Alignment_Unit>${params.pageNoPerBlock}</Address_Alignment_Unit>
+			<Address_Alignment_Unit>${ioAddressAlignmentUnitSectors(params)}</Address_Alignment_Unit>
 			<Request_Size_Distribution>FIXED</Request_Size_Distribution>
 			<Average_Request_Size>${workload.burstSize}</Average_Request_Size>
 			<Variance_Request_Size>0</Variance_Request_Size>

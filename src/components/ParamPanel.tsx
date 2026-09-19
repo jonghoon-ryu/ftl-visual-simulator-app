@@ -1,6 +1,7 @@
 import type { SsdParams } from '../data/mqsimConfigs';
 
 const PAGE_CAPACITY_OPTIONS: SsdParams['pageCapacityBytes'][] = [4096, 8192, 16384];
+const CHIP_COUNT_OPTIONS: SsdParams['chipCount'][] = [1, 2, 4, 8];
 
 // MQSim hardcodes GC_and_WL_Unit_Page_Level's max_ongoing_gc_reqs_per_plane
 // to 10 - it doubles as Stop_servicing_writes()'s hard threshold (free
@@ -50,6 +51,28 @@ export function ParamPanel({ params, onChange, disabled }: Props) {
           ))}
         </select>
         <div className="param-hint">한 페이지에 담기는 데이터 크기</div>
+      </div>
+
+      <div className="param-row">
+        <div className="param-label">
+          <span>칩(Chip) 개수</span>
+          <span>{params.chipCount}</span>
+        </div>
+        <div className="param-radio-group" role="radiogroup" aria-label="칩 개수">
+          {CHIP_COUNT_OPTIONS.map((count) => (
+            <label key={count} className="param-radio-option">
+              <input
+                type="radio"
+                name="chip-count"
+                disabled={disabled}
+                checked={params.chipCount === count}
+                onChange={() => onChange({ ...params, chipCount: count })}
+              />
+              {count}
+            </label>
+          ))}
+        </div>
+        <div className="param-hint">칩이 여러 개면 read/write 가 칩들에 나뉘어 처리돼요 - block/wear 목록에 칩 번호가 붙어요</div>
       </div>
 
       <div className="param-row">
