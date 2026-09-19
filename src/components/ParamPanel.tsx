@@ -56,7 +56,6 @@ export function ParamPanel({ params, onChange, disabled }: Props) {
       <div className="param-row">
         <div className="param-label">
           <span>칩(Chip) 개수</span>
-          <span>{params.chipCount}</span>
         </div>
         <div className="param-radio-group" role="radiogroup" aria-label="칩 개수">
           {CHIP_COUNT_OPTIONS.map((count) => (

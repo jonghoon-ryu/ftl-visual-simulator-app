@@ -11,12 +11,6 @@ export interface BlockRow {
   chip?: number;
 }
 
-export interface MappingRow {
-  lpa: string;
-  ppa: string;
-  op: 'read' | 'write';
-}
-
 export interface StatItem {
   label: string;
   value: string;
@@ -51,7 +45,6 @@ export interface PresetScenario {
   caption: string;
   blocks?: BlockRow[];
   wearRows?: WearRow[];
-  mapping: MappingRow[];
   params: ParamItem[];
   stats: StatItem[];
   log: LogEntry[];

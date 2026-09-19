@@ -24,7 +24,6 @@ import { useMqsimEvents } from './hooks/useMqsimEvents';
 import { useMqsimMigrations } from './hooks/useMqsimMigrations';
 import { useSimulationPlayback } from './hooks/useSimulationPlayback';
 import { toBlockRows } from './lib/mqsimBlocks';
-import { toMappingRows } from './lib/mqsimMapping';
 import { toStatItems } from './lib/mqsimStats';
 import { toWearRows } from './lib/mqsimWear';
 import type { PresetId } from './types';
@@ -183,16 +182,10 @@ function App() {
   }, []);
 
   const isWearPreset = activeId === 'wear-leveling';
-  const mappingRows = wired && !isWearPreset ? toMappingRows(engine.state, events.lastOps) : active.mapping;
   const blockRows = wired && !isWearPreset ? toBlockRows(engine.state, migrations.movingKeys) : active.blocks;
   const wearRows = wired && isWearPreset ? toWearRows(engine.state) : active.wearRows;
   const statItems = wired ? toStatItems(engine.state, events.counters) : active.stats;
   const logEntries = wired ? events.log : active.log;
-  // MappingTable's 로그 only wants GC start/end, not the full event stream
-  // (mapping_updated, WL, dynamic-WL frontier churn, ...) - text-matched
-  // against describeEvent's exact gc_started/gc_block_erased wording in
-  // useMqsimEvents.ts.
-  const gcLog = logEntries.filter((e) => e.text.includes('GC 시작') || e.text.includes('소거 완료 (GC)'));
   const caption = wired ? '' : active.caption;
 
   return (
@@ -219,15 +212,19 @@ function App() {
         <div className="sim-body">
           {blockRows && <FlashGrid blocks={blockRows} caption={caption} />}
           {wearRows && <WearLevelingView rows={wearRows} caption={caption} />}
-          {/* Only 매핑 기본/GC 시연 have a mapping table at all (마모평준화
-              시연 never does) - keyed off which presets are wired, not off
-              whether mappingRows currently has anything in it, so the
-              column (and its "재생을 눌러보세요" empty state) stays visible
-              from the moment the preset is selected, not just after the
-              first write actually lands. */}
-          {wired && !isWearPreset && (
+          {/* All three wired presets get the 로그 column now - previously
+              마모평준화 시연 was excluded (it never had a mapping table),
+              but once 로그 became a general chronological event log rather
+              than an LPA/PPA snapshot table, there's no reason to withhold
+              it there too - it also keeps the sidebar/stats column widths
+              consistent across all three presets instead of only the other
+              two having a 4th column competing for space. Keyed off `wired`
+              alone (not whether logEntries currently has anything in it) so
+              the column - and its "재생을 눌러보세요" empty state - stays
+              visible from the moment a preset is selected. */}
+          {wired && (
             <div className="sim-mapping-col">
-              <MappingTable rows={mappingRows} gcLog={gcLog} />
+              <MappingTable log={logEntries} />
             </div>
           )}
           <div className="sim-sidebar">
@@ -241,6 +238,8 @@ function App() {
               onChange={(next) => setWorkloadByPreset((prev) => ({ ...prev, [configKey]: next }))}
               disabled={!wired}
             />
+          </div>
+          <div className="sim-stats-col">
             <StatsPanel stats={statItems} />
           </div>
         </div>

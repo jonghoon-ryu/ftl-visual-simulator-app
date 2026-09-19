@@ -1,51 +1,30 @@
-import type { LogEntry, MappingRow } from '../types';
+import type { LogEntry } from '../types';
 
-interface Props {
-  rows: MappingRow[];
-  gcLog: LogEntry[];
-}
-
-// Renders unconditionally (even with zero rows) so the mapping column
-// stays visible for the whole time a wired preset is selected, not just
-// once the engine actually has something to show - App.tsx decides
-// whether this preset gets a mapping column at all (마모평준화 시연 never
-// does), this component just handles "no writes yet" within that column.
+// Renders unconditionally (even with zero entries) so the log column stays
+// visible for the whole time a wired preset is selected, not just once the
+// engine actually has something to show.
 //
-// `gcLog` is App.tsx's `logEntries` pre-filtered down to just GC 시작/소거
-// completion lines - the standalone "이벤트 로그" panel (every event type,
-// full width) was removed in favor of this narrower GC-only log living
-// right under the mapping table it renders next to.
-export function MappingTable({ rows, gcLog }: Props) {
+// Used to be a snapshot table (LPA/PPA/상태→동작 columns) with GC 시작/종료
+// split into a separate list below it. Ryu wanted the LPA/PPA/동작 column
+// framing gone and everything - mapping writes/reads and GC/WL events alike
+// - merged into one chronologically-ordered line-per-entry log instead,
+// which is exactly what `log` (App.tsx's `logEntries`, from useMqsimEvents)
+// already is: each mapping_updated event is already rendered as one
+// sentence ("LPA 0x0.. 이(가) Block.. Page.. 에 매핑됨 (쓰기/읽기)")
+// interleaved newest-first with gc_started/gc_block_erased/wl_* lines.
+export function MappingTable({ log }: { log: LogEntry[] }) {
   return (
     <div className="sim-panel">
       <div className="sim-panel-title">로그</div>
-      <table className="mini-table">
-        <tbody>
-          <tr>
-            <th>LPA</th>
-            <th>PPA</th>
-            <th>동작</th>
-          </tr>
-          {rows.map((r) => (
-            <tr key={r.lpa}>
-              <td>{r.lpa}</td>
-              <td>{r.ppa}</td>
-              <td style={r.op === 'read' ? { color: '#4dabf7' } : undefined}>{r.op === 'write' ? '쓰기' : '읽기'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {rows.length === 0 && <div className="mini-table-empty">아직 매핑된 데이터가 없어요 - 재생 버튼을 눌러보세요</div>}
-      {gcLog.length > 0 && (
-        <div className="mapping-gc-log">
-          {gcLog.map((e, i) => (
-            <div className="log-entry" key={i}>
-              <span className="log-time">{e.time}</span>
-              {e.text}
-            </div>
-          ))}
-        </div>
-      )}
+      {log.length === 0 && <div className="mini-table-empty">아직 기록된 로그가 없어요 - 재생 버튼을 눌러보세요</div>}
+      <div className="log-list">
+        {log.map((e, i) => (
+          <div className="log-entry" key={i}>
+            <span className="log-time">{e.time}</span>
+            {e.text}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
