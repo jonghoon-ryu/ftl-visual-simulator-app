@@ -15,11 +15,6 @@ export const presets: PresetScenario[] = [
       { label: 'Block 0', pages: row('VVVFFFFFFFFFFFFF') },
       { label: 'Block 1', pages: row('FFFFFFFFFFFFFFFF') },
     ],
-    mapping: [
-      { lpa: '0x001', ppa: 'B0·P0', op: 'write' },
-      { lpa: '0x002', ppa: 'B0·P1', op: 'write' },
-      { lpa: '0x003', ppa: 'B0·P2', op: 'write' },
-    ],
     params: [
       { label: 'Over-provisioning', value: '7%', hint: '여유 공간을 더 두면 GC 가 덜 급해져요', kind: 'slider', percent: 30 },
       { label: '매핑 방식', value: 'Page-level', hint: 'Hybrid 로 바꾸면 log-block 방식으로 동작', kind: 'select' },
@@ -41,12 +36,6 @@ export const presets: PresetScenario[] = [
       { label: 'Block 2', pages: row('VVVVVMMXMMXXXXXX') },
       { label: 'Block 3', pages: row('XVFVVFVXVXFXFVXX') },
       { label: 'Block 5 (GC 대상)', pages: row('FFFFFFFVFFFVFVFF') },
-    ],
-    mapping: [
-      { lpa: '0x0F2', ppa: 'B0·P5', op: 'write' },
-      { lpa: '0x0F3', ppa: 'B5·P7', op: 'write' },
-      { lpa: '0x0F4', ppa: 'B0·P4', op: 'read' },
-      { lpa: '0x0F5', ppa: 'B3·P1', op: 'write' },
     ],
     params: [
       { label: 'Over-provisioning', value: '7%', hint: '여유 공간을 더 두면 GC 가 덜 급해져요', kind: 'slider', percent: 30 },
@@ -77,7 +66,6 @@ export const presets: PresetScenario[] = [
       { label: 'Block 4', eraseCount: 30, maxEraseCount: 120, level: 'cool' },
       { label: 'Block 5', eraseCount: 9, maxEraseCount: 120, level: 'cool' },
     ],
-    mapping: [],
     params: [
       { label: 'Static WL 임계값', value: 'erase count 차이 100', hint: '이 차이를 넘으면 cold 데이터를 강제로 옮김', kind: 'slider', percent: 70 },
     ],
