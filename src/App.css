@@ -83,7 +83,7 @@
 }
 
 .sim-grid-panel {
-  flex: 1 1 480px;
+  flex: 2 1 480px;
   padding: 14px;
   border-right: 1px solid #33374a;
   /* A block row can have up to 64 pages (ParamPanel's max) - rather than
@@ -240,7 +240,7 @@
 }
 
 .sim-sidebar {
-  flex: 3 1 220px;
+  flex: 2 1 220px;
   display: flex;
   flex-direction: column;
 }

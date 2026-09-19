@@ -8,7 +8,7 @@ import type { MqsimEngine } from './useMqsimEngine';
 const TICK_INTERVAL_MS = 300;
 
 interface Options {
-  engine: Pick<MqsimEngine, 'ready' | 'step' | 'run' | 'stepIo' | 'stepEvent' | 'configure'>;
+  engine: Pick<MqsimEngine, 'ready' | 'step' | 'run' | 'stepEvent' | 'configure'>;
   onRefresh: () => void;
   onRestart: () => void;
   // How many event-groups one "speed" unit (1-8, Toolbar's slider) is worth
@@ -45,24 +45,14 @@ export function useSimulationPlayback({ engine, onRefresh, onRestart, ticksMulti
   // in principle if the engine were ever slow.
   const tickInFlightRef = useRef(false);
 
-  const stepOnce = useCallback(async () => {
-    if (!engine.ready) return;
-    // One real read or write, not "one tick's worth of event-groups" - this
-    // project's goal is showing *how* read/write/GC work, not throughput, so
-    // manual stepping (⏭ button or → key) should always land on a boundary
-    // meaningful to watch, regardless of a preset's ticksMultiplier (which
-    // only scales the ▶ play loop's per-tick pace).
-    const more = await engine.stepIo();
-    await latestRef.current.onRefresh();
-    setHasMore(more);
-    if (!more) setIsPlaying(false);
-  }, [engine]);
-
   // One *loggable event* (Ryu: "버튼 하나를 누르면 한 동작이 이루어져야
   // 함" - pressing the button once should show exactly one 로그 line) -
-  // finer than stepOnce (⏭, which can silently bundle a whole GC cycle's
-  // worth of migrations/erase into the one read/write it stops on). See
-  // step_event()'s doc comment in bindings.cpp for exactly what counts.
+  // this is the → key / "1 step" button's action. See step_event()'s doc
+  // comment in bindings.cpp for exactly what counts. A coarser stepOnce()
+  // (⏭, one real read/write, silently bundling any GC/WL cycle that fell
+  // inside it) used to sit alongside this - removed since it only ever
+  // behaved differently from this one during a GC/WL cycle, which made it
+  // a confusing near-duplicate the rest of the time.
   const stepEventOnce = useCallback(async () => {
     if (!engine.ready) return;
     const more = await engine.stepEvent();
@@ -123,5 +113,5 @@ export function useSimulationPlayback({ engine, onRefresh, onRestart, ticksMulti
     return () => clearInterval(id);
   }, [isPlaying, engine.ready, speed]);
 
-  return { isPlaying, speed, hasMore, setSpeed, stepOnce, stepEventOnce, stepEventMany, togglePlay, restart };
+  return { isPlaying, speed, hasMore, setSpeed, stepEventOnce, stepEventMany, togglePlay, restart };
 }

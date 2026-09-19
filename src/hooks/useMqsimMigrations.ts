@@ -9,7 +9,7 @@ import type { MqsimEngine } from './useMqsimEngine';
 // *during* a step()/run() call, strictly before that call's own RPC
 // response (mqsim.worker.ts posts each event synchronously off the same
 // embind callback, before the final { id, ok, result } message) - so by
-// the time stepOnce()/a play tick resolves, every migration event for that
+// the time stepEventOnce()/a play tick resolves, every migration event for that
 // step has already reached subscribeEvents. This hook accumulates those
 // page addresses and hands the caller a stable snapshot to overlay on the
 // next render, so "GC 시연" actually shows the yellow 'moving' cells during

@@ -5,7 +5,6 @@ export interface PlaybackState {
   speed: number; // event-groups executed per playback tick, 1-8
   hasMore: boolean; // false once the workload's event queue is empty
   disabled: boolean; // true while the engine for the active preset isn't wired/ready yet
-  onStepOnce: () => void;
   onStepEventOnce: () => void;
   onStepEventMany: () => void;
   onTogglePlay: () => void;
@@ -26,7 +25,6 @@ export function Toolbar({ presets, activeId, onSelect, playback }: Props) {
     speed,
     hasMore,
     disabled,
-    onStepOnce,
     onStepEventOnce,
     onStepEventMany,
     onTogglePlay,
@@ -63,15 +61,6 @@ export function Toolbar({ presets, activeId, onSelect, playback }: Props) {
         >
           {isPlaying ? '⏸' : '▶'}
         </button>
-        <button
-          type="button"
-          aria-label="한 단계씩 실행 (→ 키로도 가능)"
-          title="한 번의 read/write 를 실행해요 - → 키를 눌러도 똑같이 동작해요"
-          disabled={disabled || !hasMore || isPlaying}
-          onClick={onStepOnce}
-        >
-          ⏭
-        </button>
         <span>속도</span>
         <input
           className="sim-speed-slider"
@@ -87,8 +76,8 @@ export function Toolbar({ presets, activeId, onSelect, playback }: Props) {
         <span>{speed}×</span>
         <button
           type="button"
-          aria-label="로그 한 줄씩 실행"
-          title="write/read 한 번, GC/WL 의 시작·페이지 이동·소거 완료 중 하나 - 로그에 한 줄이 새로 생길 때까지만 실행해요"
+          aria-label="로그 한 줄씩 실행 (→ 키로도 가능)"
+          title="write/read 한 번, GC/WL 의 시작·페이지 이동·소거 완료 중 하나 - 로그에 한 줄이 새로 생길 때까지만 실행해요. → 키를 눌러도 똑같이 동작해요"
           disabled={disabled || !hasMore || isPlaying}
           onClick={onStepEventOnce}
         >

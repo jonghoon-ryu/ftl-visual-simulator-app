@@ -164,14 +164,17 @@ function App() {
 
   const wired = Boolean(WIRED_PRESET_DEFAULTS[activeId]) && engine.ready;
 
-  // → advances one read/write, same as clicking ⏭ (Toolbar.tsx) - matches
-  // the ⏭ button's own enabled condition exactly. Skipped while focus is on
-  // an <input>/<select> (a param slider, the chip-count radios, the speed
-  // slider) so ArrowRight keeps doing that control's own native thing
-  // (nudging a slider/radio) instead of being hijacked into a step.
-  const stepShortcutRef = useRef({ canStep: false, stepOnce: playback.stepOnce });
+  // → advances one loggable event, same as clicking "1 step" (Toolbar.tsx) -
+  // matches that button's own enabled condition exactly. Skipped while
+  // focus is on an <input>/<select> (a param slider, the chip-count radios,
+  // the speed slider) so ArrowRight keeps doing that control's own native
+  // thing (nudging a slider/radio) instead of being hijacked into a step.
+  const stepShortcutRef = useRef({ canStep: false, stepEventOnce: playback.stepEventOnce });
   useEffect(() => {
-    stepShortcutRef.current = { canStep: wired && playback.hasMore && !playback.isPlaying, stepOnce: playback.stepOnce };
+    stepShortcutRef.current = {
+      canStep: wired && playback.hasMore && !playback.isPlaying,
+      stepEventOnce: playback.stepEventOnce,
+    };
   });
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -179,7 +182,7 @@ function App() {
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
       e.preventDefault();
-      void stepShortcutRef.current.stepOnce();
+      void stepShortcutRef.current.stepEventOnce();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -210,7 +213,6 @@ function App() {
             speed: playback.speed,
             hasMore: playback.hasMore,
             disabled: !wired,
-            onStepOnce: playback.stepOnce,
             onStepEventOnce: playback.stepEventOnce,
             onStepEventMany: () => playback.stepEventMany(5),
             onTogglePlay: playback.togglePlay,
