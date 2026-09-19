@@ -190,14 +190,6 @@ function App() {
     <div className="sim-app">
       <header className="sim-app-header">
         <h1>FTL Visual Simulator</h1>
-        <p>
-          세 프리셋 모두 실제 MQSim WASM 엔진과 연동되어 있어요 - 재생 버튼으로 시뮬레이션을 진행해보세요.
-          &apos;마모평준화 시연&apos;은 재생 시간 동안 마모 평준화(WL)가 한 번만 발동해요 - 여러 번 반복해서
-          보여주기엔 실제 MQSim 의 동작 특성상 시간이 오래 걸려요.
-        </p>
-        <p style={{ fontSize: '0.85em', opacity: 0.8 }}>
-          엔진 상태 (개발용): {engine.error ? `오류 - ${engine.error}` : engine.ready ? '준비 완료' : '로딩 중...'}
-        </p>
       </header>
       <div className="sim-mockup">
         <Toolbar

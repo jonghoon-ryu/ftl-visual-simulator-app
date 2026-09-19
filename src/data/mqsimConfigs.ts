@@ -16,7 +16,7 @@ export interface SsdParams {
   // 1 (see buildSsdConfigXml) - multi-chip alone is enough to show the
   // per-chip block/wear grouping without also multiplying the flash grid
   // by die/plane counts too.
-  chipCount: 1 | 2 | 4 | 8;
+  chipCount: 1 | 2 | 4;
   blockNoPerPlane: number;
   pageNoPerBlock: number;
   overprovisioningRatio: number; // 0..1
@@ -162,7 +162,7 @@ export interface WorkloadParams {
 export const DEFAULT_WORKLOAD_PARAMS: WorkloadParams = {
   addressDistribution: 'RANDOM_UNIFORM',
   readPercentage: 0,
-  burstSize: 8,
+  burstSize: 1,
 };
 
 // One small synthetic write-heavy flow to populate the mapping table.

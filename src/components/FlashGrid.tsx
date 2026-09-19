@@ -14,6 +14,11 @@ const LABELS: Record<string, string> = {
 // them).
 const ALL_STATES: (keyof typeof LABELS)[] = ['valid', 'invalid', 'moving', 'free'];
 
+// One accent per chip - ParamPanel currently caps chip count at 4, so 4 is
+// enough; indexed with % so a larger chip count still degrades gracefully
+// instead of going undefined.
+const CHIP_COLORS = ['#4dabf7', '#b980f0', '#ff8ac2', '#4ecdc4'];
+
 interface Props {
   blocks: BlockRow[];
   caption: string;
@@ -23,12 +28,16 @@ export function FlashGrid({ blocks, caption }: Props) {
   // All blocks share the same page count in every preset - take it from
   // the first one so the header row lines up with each column below.
   const pageCount = blocks[0]?.pages.length ?? 0;
+  // Only badge/tint by chip once there's more than one chip to tell apart -
+  // with a single chip every row would just get the same accent for nothing.
+  const multiChip = new Set(blocks.map((block) => block.chip)).size > 1;
 
   return (
     <div className="sim-grid-panel">
       <div className="sim-panel-title">Flash Array — Block × Page</div>
       <div className="sim-caption">{caption}</div>
       <div className="grid-row grid-header-row">
+        {multiChip && <div className="chip-badge chip-badge-spacer" aria-hidden="true" />}
         <div className="row-label">Page</div>
         <div className="row-cells">
           {Array.from({ length: pageCount }, (_, i) => (
@@ -38,22 +47,31 @@ export function FlashGrid({ blocks, caption }: Props) {
           ))}
         </div>
       </div>
-      {blocks.map((block) => (
-        <div className="grid-row" key={block.label}>
-          <div className="row-label">{block.label}</div>
-          <div className="row-cells">
-            {block.pages.map((page, i) => (
-              <div
-                key={i}
-                className={`cell ${page.state}`}
-                title={`${block.label} / Page ${i} — ${page.state}`}
-              >
-                {page.state === 'valid' ? 'V' : page.state === 'invalid' ? 'X' : page.state === 'moving' ? '→' : ''}
+      {blocks.map((block) => {
+        const chipColor = CHIP_COLORS[(block.chip ?? 0) % CHIP_COLORS.length];
+        return (
+          <div className="grid-row" key={`${block.chip ?? 0}-${block.label}`}>
+            {multiChip && (
+              <div className="chip-badge" style={{ background: chipColor }}>
+                {block.chip}
               </div>
-            ))}
+            )}
+            <div className="row-label">{block.label}</div>
+            <div className="row-cells">
+              {block.pages.map((page, i) => (
+                <div
+                  key={i}
+                  className={`cell ${page.state}`}
+                  style={multiChip ? { boxShadow: `inset 0 0 0 2px ${chipColor}` } : undefined}
+                  title={`Chip ${block.chip} · ${block.label} / Page ${i} — ${page.state}`}
+                >
+                  {page.state === 'valid' ? 'V' : page.state === 'invalid' ? 'X' : page.state === 'moving' ? '→' : ''}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       <div className="sim-legend">
         {ALL_STATES.map((state) => (
           <span key={state}>
