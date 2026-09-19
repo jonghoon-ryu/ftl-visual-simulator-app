@@ -17,36 +17,41 @@ export interface SimulationCounters {
   hostReads: number;
 }
 
-function formatAddress(a: MqsimBlockAddress, page?: number): string {
-  return page === undefined ? `Block ${a.block}` : `Block ${a.block} · Page ${page}`;
-}
-
 function describeEvent(event: MqsimEvent): string | null {
   switch (event.type) {
     case 'mapping_updated': {
       const lpaHex = `0x${(event.lpa ?? 0n).toString(16).padStart(3, '0')}`;
-      const where = event.address ? formatAddress(event.address, event.address.page) : '';
-      return `LPA ${lpaHex} 이(가) ${where} 에 매핑됨 (${event.isWrite ? '쓰기' : '읽기'})`;
+      const a = event.address;
+      const where = a ? `Chip ${a.chip}, Block ${a.block}, Page ${a.page}` : '';
+      return `LPA ${lpaHex} -> ${where}, ${event.isWrite ? 'Write' : 'Read'}`;
     }
     case 'gc_started':
-      return `${event.block ? formatAddress(event.block) : ''} GC 시작`;
+      return event.block ? `Block ${event.block.block}, GC Start` : null;
     case 'gc_page_migrated':
-      return `${event.block ? formatAddress(event.block, 'page' in event.block ? event.block.page : undefined) : ''} 의 유효 페이지를 GC 로 이동`;
+      return event.block && 'page' in event.block ? `Block ${event.block.block}, Page ${event.block.page}, GC` : null;
     case 'gc_block_erased':
-      return `${event.block ? formatAddress(event.block) : ''} 소거 완료 (GC)`;
+      return event.block ? `Block ${event.block.block}, Erase` : null;
     case 'wl_started':
-      return `${event.block ? formatAddress(event.block) : ''} 정적 마모평준화(WL) 시작`;
+      return event.block ? `Block ${event.block.block}, WL Start` : null;
     case 'wl_page_migrated':
-      return `${event.block ? formatAddress(event.block, 'page' in event.block ? event.block.page : undefined) : ''} 의 데이터를 WL 로 이동`;
+      return event.block && 'page' in event.block ? `Block ${event.block.block}, Page ${event.block.page}, WL` : null;
     case 'wl_block_erased':
-      return `${event.block ? formatAddress(event.block) : ''} 소거 완료 (WL)`;
+      return event.block ? `Block ${event.block.block}, Erase` : null;
     case 'dynamic_wl_block_allocated':
-      return `${event.block ? formatAddress(event.block) : ''} 이(가) 새 쓰기 프론티어로 할당됨 (erase count ${event.eraseCount})`;
+      return event.block ? `Block ${event.block.block} 이(가) 새 쓰기 프론티어로 할당됨 (erase count ${event.eraseCount})` : null;
     case 'dynamic_wl_block_freed':
-      return `${event.block ? formatAddress(event.block) : ''} 이(가) free pool 로 반환됨 (erase count ${event.eraseCount})`;
+      return event.block ? `Block ${event.block.block} 이(가) free pool 로 반환됨 (erase count ${event.eraseCount})` : null;
     default:
       return null;
   }
+}
+
+// Ryu asked for plain "HH:MM:SS" (colon-separated, no 시/분/초) instead of
+// toLocaleTimeString('ko-KR')'s "17시 48분 22초" - built manually rather
+// than trusting a locale string's exact punctuation to stay that shape.
+function formatClockTime(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 // Subscribes to the worker-forwarded event stream (see useMqsimEngine's
@@ -101,7 +106,7 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
     if (pendingLog.length > 0) {
       // Accumulated in arrival order (oldest first); the log itself is
       // newest-first, so reverse this batch before prepending it.
-      const time = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+      const time = formatClockTime(new Date());
       const newEntries = pendingLog.map((text) => ({ time, text })).reverse();
       setLog((prev) => [...newEntries, ...prev].slice(0, MAX_LOG_ENTRIES));
       pendingLogRef.current = [];
