@@ -37,7 +37,7 @@ export function FlashGrid({ blocks, caption }: Props) {
       <div className="sim-panel-title">Flash Array — Block × Page</div>
       {caption && <div className="sim-caption">{caption}</div>}
       <div className="grid-row grid-header-row">
-        {multiChip && <div className="chip-badge chip-badge-spacer" aria-hidden="true" />}
+        {multiChip && <div className="chip-badge chip-badge-spacer">Chip</div>}
         <div className="row-label">Page</div>
         <div className="row-cells">
           {Array.from({ length: pageCount }, (_, i) => (
@@ -62,7 +62,6 @@ export function FlashGrid({ blocks, caption }: Props) {
                 <div
                   key={i}
                   className={`cell ${page.state}`}
-                  style={multiChip ? { boxShadow: `inset 0 0 0 1px ${chipColor}` } : undefined}
                   title={`Chip ${block.chip} · ${block.label} / Page ${i} — ${page.state}`}
                 >
                   {page.state === 'valid' ? 'V' : page.state === 'invalid' ? 'X' : page.state === 'moving' ? '→' : ''}

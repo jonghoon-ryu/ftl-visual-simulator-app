@@ -55,10 +55,6 @@ export function WorkloadPanel({ workload, onChange, disabled }: Props) {
           value={workload.readPercentage}
           onChange={(e) => onChange({ ...workload, readPercentage: Number(e.target.value) })}
         />
-        <div className="param-hint">
-          요청 중 read 비율 (나머지는 write) - {MAX_READ_PERCENTAGE}% 초과는 막아뒀어요: 아직 한 번도 쓰지 않은
-          주소를 read 하면 MQSim 엔진이 멈춰버려서(네이티브 CLI로 확인된 실제 한계), 안전 여유를 두고 제한했어요
-        </div>
       </div>
 
       <div className="param-row">

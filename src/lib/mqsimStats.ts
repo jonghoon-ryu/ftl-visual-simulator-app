@@ -29,7 +29,7 @@ export function toStatItems(state: MqsimState | null, counters: SimulationCounte
     {
       label: 'WAF',
       value: waf === null ? '-' : `${waf.toFixed(2)}×`,
-      hint: waf === null ? '아직 쓰기가 없어요' : '1 번 쓰려고 실제로는 몇 번 write 했는지 - 낮을수록 좋음',
+      hint: waf === null ? '아직 쓰기가 없어요' : '1 번 쓰기 위한 실제 write 횟수',
     },
     {
       label: 'Valid page 비율',

@@ -237,12 +237,28 @@ function chipIdsXml(params: SsdParams): string {
 // exactly half their chips permanently empty. Aligning to exactly one page
 // (sectorsPerPage sectors) instead removes that forced stride, and was
 // confirmed via the same harness to reach every configured chip.
-// Left at the original pageNoPerBlock-sector value for chipCount 1 (its
-// only value before today) so "GC 시연"/"마모평준화 시연"'s already-tuned,
-// native-harness-verified trigger counts stay exactly reproducible - this
-// unit fix only ever changes behavior for the brand new chipCount>1 case.
+// Was left at the pageNoPerBlock-sector value for chipCount 1 for a while
+// (see git history) specifically to avoid re-tuning "GC 시연"/"마모평준화
+// 시연"'s already-verified trigger counts - that was the wrong call to
+// leave standing: aligning to pageNoPerBlock (16) sectors at the default
+// 4KB page (8 sectors/page) meant every host-generated address landed on
+// an *even* page only, so half of every block's pages were only ever
+// reachable via a GC/WL migration copy, never a fresh host write. Fixed to
+// always align to exactly one page's worth of sectors, chipCount
+// regardless. Re-swept both GC-driven presets via the native CLI with this
+// fix (same ssdconfig.xml/workload.xml this project always uses for that -
+// see run-regression-tests.sh) since finer-grained addressing changes how
+// often RANDOM_UNIFORM writes collide within each preset's working set:
+// - "매핑 기본" (100% working set): 0 GC/0 WL both before and after -
+//   unaffected, no re-tuning needed.
+// - "GC 시연": 12 → 31 GC executions, avg page movement/execution 5.08 →
+//   7.19 (see DEFAULT_GC_PARAMS' doc comment - those were this session's
+//   just-established numbers, now superseded).
+// - "마모평준화 시연": 29 → 92 GC executions (avg page movement 0.0 → 0.65,
+//   i.e. some of these now do real migrations too, previously none did),
+//   WL executions unchanged at exactly 1 (avg movement 0.0 both times) -
+//   see DEFAULT_WL_PARAMS' doc comment, that specific invariant still holds.
 function ioAddressAlignmentUnitSectors(params: SsdParams): number {
-  if (params.chipCount === 1) return params.pageNoPerBlock;
   return params.pageCapacityBytes / 512;
 }
 
@@ -256,18 +272,15 @@ export const mappingBasicWorkloadXml = buildMappingWorkloadXml(DEFAULT_MAPPING_P
 // default 0.05 needs the pool down to its last 1-2 blocks before GC ever
 // looks at firing, unreachable in a demo-sized run).
 //
-// 0.5 (50%) reliably fires GC (6 executions) but - swept via the native CLI
-// against this exact config - every single one always reclaims an already
-// 100%-invalid block (Average_Page_Movement_For_GC = 0.000000): at 50% free
-// blocks, GC's own RGA victim-selection only ever gets to a block late
-// enough that this project's narrow 25%-working-set workload (see
-// buildGcWorkloadXml below) has already fully overwritten it elsewhere.
-// Raised to 0.8 (80%) - GC now fires *while a candidate block still has a
-// few live pages left* (12 executions, avg 5.08 page movements/execution),
-// so the moving-page highlight (useMqsimMigrations) actually has something
-// to show. Swept 0.5/0.6/0.7/0.8/0.9/0.95 - 0.8 is the first value with a
-// real migration ratio, and 0.9+ plateaus at the same 12/5.08 as 0.8, so
-// there's no benefit to going higher.
+// Raised to 0.8 (80%) so GC fires *while a candidate block still has a few
+// live pages left*, giving the moving-page highlight (useMqsimMigrations)
+// something to show - re-swept via the native CLI (0.5/0.6/0.7/0.8/0.9/0.95)
+// after fixing ioAddressAlignmentUnitSectors() below (that fix alone
+// already makes even the original 0.5 default produce some migrations,
+// unlike before): 0.7+ all plateau at the same 31 executions/avg 7.19 page
+// movements, so 0.8 remains a fine choice (within the plateau, no
+// regression) even though it's no longer the *first* value with a nonzero
+// migration ratio the way it was pre-alignment-fix.
 export const DEFAULT_GC_PARAMS: SsdParams = {
   ...DEFAULT_MAPPING_PARAMS,
   gcExecThreshold: 0.8,
