@@ -3,6 +3,7 @@
 #include "Flash_Block_Manager.h"
 #include "Stats.h"
 #include "../exec/Simulation_Events.h"
+#include "../sim/Engine.h"
 
 namespace SSD_Components
 {
@@ -34,7 +35,12 @@ namespace SSD_Components
 			NVM::FlashMemory::Physical_Page_Address wf_address(page_address);
 			wf_address.BlockID = plane_record->Data_wf[stream_id]->BlockID;
 			Simulation_Events::Notify_dynamic_wl_block_allocated(stream_id, wf_address, plane_record->Data_wf[stream_id]->Erase_count, false);
-			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(), page_address);
+			// Deferred (not called directly) so this write's own Notify_
+			// mapping_updated and any GC/WL cycle this triggers land in
+			// separate simulator event-groups / UI steps - see the
+			// GC_Deferred_Event_Type doc comment in GC_and_WL_Unit_Base.h.
+			Simulator->Register_sim_event(Simulator->Time() + 1, gc_and_wl_unit,
+				new Check_Gc_Required_Params{ plane_record->Get_free_block_pool_size(), page_address }, (int)GC_Deferred_Event_Type::CHECK_GC_REQUIRED);
 		}
 
 		plane_record->Check_bookkeeping_correctness(page_address);
@@ -74,7 +80,8 @@ namespace SSD_Components
 			NVM::FlashMemory::Physical_Page_Address wf_address(page_address);
 			wf_address.BlockID = plane_record->GC_wf[stream_id]->BlockID;
 			Simulation_Events::Notify_dynamic_wl_block_allocated(stream_id, wf_address, plane_record->GC_wf[stream_id]->Erase_count, false);
-			gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(), page_address);
+			Simulator->Register_sim_event(Simulator->Time() + 1, gc_and_wl_unit,
+				new Check_Gc_Required_Params{ plane_record->Get_free_block_pool_size(), page_address }, (int)GC_Deferred_Event_Type::CHECK_GC_REQUIRED);
 		}
 		plane_record->Check_bookkeeping_correctness(page_address);
 	}
@@ -133,7 +140,8 @@ namespace SSD_Components
 			wf_address.BlockID = plane_record->Translation_wf[streamID]->BlockID;
 			Simulation_Events::Notify_dynamic_wl_block_allocated(streamID, wf_address, plane_record->Translation_wf[streamID]->Erase_count, true);
 			if (!is_for_gc) {
-				gc_and_wl_unit->Check_gc_required(plane_record->Get_free_block_pool_size(), page_address);
+				Simulator->Register_sim_event(Simulator->Time() + 1, gc_and_wl_unit,
+					new Check_Gc_Required_Params{ plane_record->Get_free_block_pool_size(), page_address }, (int)GC_Deferred_Event_Type::CHECK_GC_REQUIRED);
 			}
 		}
 		plane_record->Check_bookkeeping_correctness(page_address);

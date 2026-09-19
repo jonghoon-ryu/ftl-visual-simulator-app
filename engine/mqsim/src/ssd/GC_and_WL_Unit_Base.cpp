@@ -1,5 +1,6 @@
 #include "GC_and_WL_Unit_Base.h"
 #include "../exec/Simulation_Events.h"
+#include "../sim/Engine.h"
 
 namespace SSD_Components
 {
@@ -61,54 +62,15 @@ namespace SSD_Components
 				}
 				if (_my_instance->block_manager->Block_has_ongoing_gc_wl(transaction->Address)) {
 					if (_my_instance->block_manager->Can_execute_gc_wl(transaction->Address)) {
-						NVM::FlashMemory::Physical_Page_Address gc_wl_candidate_address(transaction->Address);
-						Block_Pool_Slot_Type* block = &pbke->Blocks[transaction->Address.BlockID];
-						bool is_wl = block->Is_wl_triggered;
-						Stats::Total_gc_executions++;
-						if (is_wl) {
-							Simulation_Events::Notify_wl_started(block->Stream_id, gc_wl_candidate_address);
-						} else {
-							Simulation_Events::Notify_gc_started(block->Stream_id, gc_wl_candidate_address);
-						}
-						_my_instance->tsu->Prepare_for_transaction_submit();
-						NVM_Transaction_Flash_ER* gc_wl_erase_tr = new NVM_Transaction_Flash_ER(Transaction_Source_Type::GC_WL, block->Stream_id, gc_wl_candidate_address);
-						
-						//If there are some valid pages in block, then prepare flash transactions for page movement
-						if (block->Current_page_write_index - block->Invalid_page_count > 0) {
-							//address_mapping_unit->Lock_physical_block_for_gc(gc_candidate_address);//Lock the block, so no user request can intervene while the GC is progressing
-							NVM_Transaction_Flash_RD* gc_wl_read = NULL;
-							NVM_Transaction_Flash_WR* gc_wl_write = NULL;
-							for (flash_page_ID_type pageID = 0; pageID < block->Current_page_write_index; pageID++) {
-								if (_my_instance->block_manager->Is_page_valid(block, pageID)) {
-									Stats::Total_page_movements_for_gc++;
-									gc_wl_candidate_address.PageID = pageID;
-									// Notify_*_page_migrated() moved to this function's own
-									// READ completion case below, fired once this page's
-									// migration read has actually finished - see the matching
-									// comment in GC_and_WL_Unit_Page_Level.cpp's Check_gc_required
-									// for why (was bunching every page of a GC/WL cycle into one
-									// simulator event-group here).
-									if (_my_instance->use_copyback) {
-										gc_wl_write = new NVM_Transaction_Flash_WR(Transaction_Source_Type::GC_WL, block->Stream_id, _my_instance->sector_no_per_page * SECTOR_SIZE_IN_BYTE,
-											NO_LPA, _my_instance->address_mapping_unit->Convert_address_to_ppa(gc_wl_candidate_address), NULL, 0, NULL, 0, INVALID_TIME_STAMP);
-										gc_wl_write->ExecutionMode = WriteExecutionModeType::COPYBACK;
-										_my_instance->tsu->Submit_transaction(gc_wl_write);
-									} else {
-										gc_wl_read = new NVM_Transaction_Flash_RD(Transaction_Source_Type::GC_WL, block->Stream_id, _my_instance->sector_no_per_page * SECTOR_SIZE_IN_BYTE,
-											NO_LPA, _my_instance->address_mapping_unit->Convert_address_to_ppa(gc_wl_candidate_address), gc_wl_candidate_address, NULL, 0, NULL, 0, INVALID_TIME_STAMP);
-										gc_wl_write = new NVM_Transaction_Flash_WR(Transaction_Source_Type::GC_WL, block->Stream_id, _my_instance->sector_no_per_page * SECTOR_SIZE_IN_BYTE,
-											NO_LPA, NO_PPA, gc_wl_candidate_address, NULL, 0, gc_wl_read, 0, INVALID_TIME_STAMP);
-										gc_wl_write->ExecutionMode = WriteExecutionModeType::SIMPLE;
-										gc_wl_write->RelatedErase = gc_wl_erase_tr;
-										gc_wl_read->RelatedWrite = gc_wl_write;
-										_my_instance->tsu->Submit_transaction(gc_wl_read);//Only the read transaction would be submitted. The Write transaction is submitted when the read transaction is finished and the LPA of the target page is determined
-									}
-									gc_wl_erase_tr->Page_movement_activities.push_back(gc_wl_write);
-								}
-							}
-						}
-						block->Erase_transaction = gc_wl_erase_tr;
-						_my_instance->tsu->Schedule();
+						// Deferred rather than executed here directly - this
+						// runs as a side effect of transaction's own
+						// completion (an unrelated read/write), so doing it
+						// in-line would bunch that transaction's own
+						// notification with this block's GC/WL start into
+						// one event-group/UI step - see EXECUTE_PARKED_GC_WL's
+						// doc comment in GC_and_WL_Unit_Base.h.
+						Simulator->Register_sim_event(Simulator->Time() + 1, _my_instance,
+							new Execute_Parked_Gc_Wl_Params{ transaction->Address }, (int)GC_Deferred_Event_Type::EXECUTE_PARKED_GC_WL);
 					}
 				}
 
@@ -204,15 +166,75 @@ namespace SSD_Components
 				_my_instance->block_manager->Add_erased_block_to_pool(transaction->Address);
 				_my_instance->block_manager->GC_WL_finished(transaction->Address);
 				if (_my_instance->check_static_wl_required(transaction->Address)) {
-					_my_instance->run_static_wearleveling(transaction->Address);
+					Simulator->Register_sim_event(Simulator->Time() + 1, _my_instance,
+						new Run_Static_Wl_Params{ transaction->Address }, (int)GC_Deferred_Event_Type::RUN_STATIC_WEARLEVELING);
 				}
 				_my_instance->address_mapping_unit->Start_servicing_writes_for_overfull_plane(transaction->Address);//Must be inovked after above statements since it may lead to flash page consumption for waiting program transactions
 
 				if (_my_instance->Stop_servicing_writes(transaction->Address)) {
-					_my_instance->Check_gc_required(pbke->Get_free_block_pool_size(), transaction->Address);
+					Simulator->Register_sim_event(Simulator->Time() + 1, _my_instance,
+						new Check_Gc_Required_Params{ pbke->Get_free_block_pool_size(), transaction->Address }, (int)GC_Deferred_Event_Type::CHECK_GC_REQUIRED);
 				}
 				break;
 			} //switch (transaction->Type)
+	}
+
+	// Extracted verbatim from handle_transaction_serviced_signal_from_PHY's
+	// own top section (see EXECUTE_PARKED_GC_WL's doc comment in
+	// GC_and_WL_Unit_Base.h) - re-derives everything from block_address
+	// instead of the transaction whose completion originally triggered this,
+	// since by the time this deferred event fires that transaction is long
+	// gone.
+	void GC_and_WL_Unit_Base::execute_parked_gc_wl_if_ready(const NVM::FlashMemory::Physical_Page_Address& block_address)
+	{
+		PlaneBookKeepingType* pbke = &(block_manager->plane_manager[block_address.ChannelID][block_address.ChipID][block_address.DieID][block_address.PlaneID]);
+		if (!block_manager->Block_has_ongoing_gc_wl(block_address) || !block_manager->Can_execute_gc_wl(block_address)) {
+			return;
+		}
+		NVM::FlashMemory::Physical_Page_Address gc_wl_candidate_address(block_address);
+		Block_Pool_Slot_Type* block = &pbke->Blocks[block_address.BlockID];
+		bool is_wl = block->Is_wl_triggered;
+		Stats::Total_gc_executions++;
+		if (is_wl) {
+			Simulation_Events::Notify_wl_started(block->Stream_id, gc_wl_candidate_address);
+		} else {
+			Simulation_Events::Notify_gc_started(block->Stream_id, gc_wl_candidate_address);
+		}
+		tsu->Prepare_for_transaction_submit();
+		NVM_Transaction_Flash_ER* gc_wl_erase_tr = new NVM_Transaction_Flash_ER(Transaction_Source_Type::GC_WL, block->Stream_id, gc_wl_candidate_address);
+
+		//If there are some valid pages in block, then prepare flash transactions for page movement
+		if (block->Current_page_write_index - block->Invalid_page_count > 0) {
+			NVM_Transaction_Flash_RD* gc_wl_read = NULL;
+			NVM_Transaction_Flash_WR* gc_wl_write = NULL;
+			for (flash_page_ID_type pageID = 0; pageID < block->Current_page_write_index; pageID++) {
+				if (block_manager->Is_page_valid(block, pageID)) {
+					Stats::Total_page_movements_for_gc++;
+					gc_wl_candidate_address.PageID = pageID;
+					// Notify_*_page_migrated() fires from this class's own READ
+					// completion case above, once each page's migration read has
+					// actually finished - see that case's own comment for why.
+					if (use_copyback) {
+						gc_wl_write = new NVM_Transaction_Flash_WR(Transaction_Source_Type::GC_WL, block->Stream_id, sector_no_per_page * SECTOR_SIZE_IN_BYTE,
+							NO_LPA, address_mapping_unit->Convert_address_to_ppa(gc_wl_candidate_address), NULL, 0, NULL, 0, INVALID_TIME_STAMP);
+						gc_wl_write->ExecutionMode = WriteExecutionModeType::COPYBACK;
+						tsu->Submit_transaction(gc_wl_write);
+					} else {
+						gc_wl_read = new NVM_Transaction_Flash_RD(Transaction_Source_Type::GC_WL, block->Stream_id, sector_no_per_page * SECTOR_SIZE_IN_BYTE,
+							NO_LPA, address_mapping_unit->Convert_address_to_ppa(gc_wl_candidate_address), gc_wl_candidate_address, NULL, 0, NULL, 0, INVALID_TIME_STAMP);
+						gc_wl_write = new NVM_Transaction_Flash_WR(Transaction_Source_Type::GC_WL, block->Stream_id, sector_no_per_page * SECTOR_SIZE_IN_BYTE,
+							NO_LPA, NO_PPA, gc_wl_candidate_address, NULL, 0, gc_wl_read, 0, INVALID_TIME_STAMP);
+						gc_wl_write->ExecutionMode = WriteExecutionModeType::SIMPLE;
+						gc_wl_write->RelatedErase = gc_wl_erase_tr;
+						gc_wl_read->RelatedWrite = gc_wl_write;
+						tsu->Submit_transaction(gc_wl_read);//Only the read transaction would be submitted. The Write transaction is submitted when the read transaction is finished and the LPA of the target page is determined
+					}
+					gc_wl_erase_tr->Page_movement_activities.push_back(gc_wl_write);
+				}
+			}
+		}
+		block->Erase_transaction = gc_wl_erase_tr;
+		tsu->Schedule();
 	}
 
 	void GC_and_WL_Unit_Base::Start_simulation()
@@ -223,8 +245,33 @@ namespace SSD_Components
 	{
 	}
 
+	// Dispatches the deferred Check_gc_required()/run_static_wearleveling()
+	// calls scheduled by Flash_Block_Manager.cpp and this file's own ERASE-
+	// completion case - see the GC_Deferred_Event_Type doc comment in
+	// GC_and_WL_Unit_Base.h for why these are deferred events rather than
+	// direct calls.
 	void GC_and_WL_Unit_Base::Execute_simulator_event(MQSimEngine::Sim_Event* ev)
 	{
+		switch ((GC_Deferred_Event_Type)ev->Type) {
+			case GC_Deferred_Event_Type::CHECK_GC_REQUIRED: {
+				Check_Gc_Required_Params* params = (Check_Gc_Required_Params*)ev->Parameters;
+				Check_gc_required(params->Free_block_pool_size, params->Plane_address);
+				delete params;
+				break;
+			}
+			case GC_Deferred_Event_Type::RUN_STATIC_WEARLEVELING: {
+				Run_Static_Wl_Params* params = (Run_Static_Wl_Params*)ev->Parameters;
+				run_static_wearleveling(params->Plane_address);
+				delete params;
+				break;
+			}
+			case GC_Deferred_Event_Type::EXECUTE_PARKED_GC_WL: {
+				Execute_Parked_Gc_Wl_Params* params = (Execute_Parked_Gc_Wl_Params*)ev->Parameters;
+				execute_parked_gc_wl_if_ready(params->Block_address);
+				delete params;
+				break;
+			}
+		}
 	}
 
 	GC_Block_Selection_Policy_Type GC_and_WL_Unit_Base::Get_gc_policy()

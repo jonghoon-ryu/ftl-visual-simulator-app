@@ -32,6 +32,47 @@ namespace SSD_Components
 	class PlaneBookKeepingType;
 	class Block_Pool_Slot_Type;
 
+	// Check_gc_required()/run_static_wearleveling() used to be called
+	// directly (synchronously) from deep inside other operations' own
+	// processing - e.g. Flash_Block_Manager::Allocate_block_and_page_in_
+	// plane_for_user_write() calling Check_gc_required() the moment a host
+	// write happens to roll its write frontier over. Since that nested call
+	// runs within the SAME simulator event-group as the triggering
+	// operation's own notification (e.g. a write's Notify_mapping_updated),
+	// a UI "one step" boundary (which can only fall between event-groups,
+	// see bindings.cpp's step_event()) could never separate "a write
+	// happened" from "and it happened to also start a new GC/WL cycle" -
+	// both bunched into one step. Fixed by scheduling these as their own
+	// deferred Sim_Event (fired one simulated time-unit later, in the next
+	// event-group) instead of calling them in-line - see Execute_simulator_
+	// event() below and every former direct-call site.
+	// EXECUTE_PARKED_GC_WL is a fourth, separate case of the same problem:
+	// handle_transaction_serviced_signal_from_PHY's own top section (any
+	// USERIO/MAPPING/CACHE transaction's completion) checks whether the
+	// transaction's own block was already parked for GC/WL (Has_ongoing_
+	// gc_wl - set earlier by Check_gc_required()/run_static_wearleveling()
+	// when the block itself was a safe candidate but blocked by an
+	// in-flight op) and, if that block is now finally clear, synchronously
+	// starts the whole GC/WL cycle right there - as a side effect of an
+	// unrelated read/write's own completion, in the same event-group.
+	enum class GC_Deferred_Event_Type { CHECK_GC_REQUIRED, RUN_STATIC_WEARLEVELING, EXECUTE_PARKED_GC_WL };
+
+	struct Check_Gc_Required_Params
+	{
+		unsigned int Free_block_pool_size;
+		NVM::FlashMemory::Physical_Page_Address Plane_address;
+	};
+
+	struct Run_Static_Wl_Params
+	{
+		NVM::FlashMemory::Physical_Page_Address Plane_address;
+	};
+
+	struct Execute_Parked_Gc_Wl_Params
+	{
+		NVM::FlashMemory::Physical_Page_Address Block_address;
+	};
+
 	/*
 	* This class implements thet the Garbage Collection and Wear Leveling module of MQSim.
 	*/
@@ -70,6 +111,10 @@ namespace SSD_Components
 		double gc_threshold;//As the ratio of free pages to the total number of physical pages
 		unsigned int block_pool_gc_threshold;
 		static void handle_transaction_serviced_signal_from_PHY(NVM_Transaction_Flash* transaction);
+		// Extracted from handle_transaction_serviced_signal_from_PHY's own
+		// top section - see EXECUTE_PARKED_GC_WL's doc comment above for why
+		// this now runs as its own deferred event instead of inline there.
+		void execute_parked_gc_wl_if_ready(const NVM::FlashMemory::Physical_Page_Address& block_address);
 		bool is_safe_gc_wl_candidate(const PlaneBookKeepingType* pbke, const flash_block_ID_type gc_wl_candidate_block_id);//Checks if block_address is a safe candidate for gc execution, i.e., 1) it is not a write frontier, and 2) there is no ongoing program operation
 		bool check_static_wl_required(const NVM::FlashMemory::Physical_Page_Address plane_address);
 		void run_static_wearleveling(const NVM::FlashMemory::Physical_Page_Address plane_address);
