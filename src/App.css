@@ -62,9 +62,20 @@
 
 .sim-playback {
   display: flex;
+  flex: 1;
+  justify-content: flex-end;
   align-items: center;
   gap: 8px;
   color: #9aa0b0;
+}
+
+/* "1 step"/"5 steps", kept close to the ⏮/▶/속도 group before them (a
+   fixed gap, not flex-grown space) but still riding flex-end above to the
+   toolbar's right edge as one cluster. */
+.sim-step-buttons {
+  display: flex;
+  gap: 8px;
+  margin-left: 40px;
 }
 
 .sim-speed-slider {
@@ -227,7 +238,7 @@
 .swatch.moving { background: #f5b942; }
 
 /* Sits between the flash grid and the param/workload/stats sidebar, for
-   all three wired presets - widened so a log line like "LPA 0x016 ->
+   all three wired presets - widened so a log line like "LPN 0x016 ->
    Chip 0, Block 15, Page 15, Write" fits on one line without wrapping. */
 .sim-mapping-col {
   flex: 1 1 380px;

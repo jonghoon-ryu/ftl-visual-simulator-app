@@ -135,6 +135,9 @@ namespace
 		val block = address_to_val(event.Page_address);
 		block.set("page", event.Page_address.PageID);
 		payload.set("block", block);
+		val newBlock = address_to_val(event.New_page_address);
+		newBlock.set("page", event.New_page_address.PageID);
+		payload.set("newBlock", newBlock);
 		g_event_callback(payload);
 	}
 
@@ -175,6 +178,9 @@ namespace
 		val block = address_to_val(event.Page_address);
 		block.set("page", event.Page_address.PageID);
 		payload.set("block", block);
+		val newBlock = address_to_val(event.New_page_address);
+		newBlock.set("page", event.New_page_address.PageID);
+		payload.set("newBlock", newBlock);
 		g_event_callback(payload);
 	}
 

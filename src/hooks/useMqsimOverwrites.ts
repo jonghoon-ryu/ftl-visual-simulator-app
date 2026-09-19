@@ -14,9 +14,11 @@ import type { MqsimEngine } from './useMqsimEngine';
 //    write events, so a later write to the same LPA reveals which old page
 //    it just superseded. Reads never touch this map (they don't change a
 //    mapping).
-// 2. A GC/WL page migration: gc_page_migrated/wl_page_migrated already
-//    names the *source* page directly (see GC_and_WL_Unit_Base.cpp - fired
-//    at that page's migration-read completion), no LPA-tracking needed.
+// 2. A GC/WL page migration: gc_page_migrated/wl_page_migrated already name
+//    both the *source* page (`block`) and the *destination* page
+//    (`newBlock`) directly (see GC_and_WL_Unit_Base.cpp - fired once both
+//    are known, right after the destination is allocated), no LPA-tracking
+//    needed for either side.
 // 3. A GC/WL block erase: gc_block_erased/wl_block_erased names the whole
 //    block, fired at the erase transaction's actual completion.
 //
@@ -37,6 +39,9 @@ export function useMqsimOverwrites(subscribeEvents: MqsimEngine['subscribeEvents
         if (event.block && 'page' in event.block) {
           pendingPagesRef.current.add(pageKey(event.block.chip, event.block.block, event.block.page));
         }
+        if (event.newBlock) {
+          pendingPagesRef.current.add(pageKey(event.newBlock.chip, event.newBlock.block, event.newBlock.page));
+        }
         return;
       }
       if (event.type === 'gc_block_erased' || event.type === 'wl_block_erased') {
@@ -49,8 +54,12 @@ export function useMqsimOverwrites(subscribeEvents: MqsimEngine['subscribeEvents
       const lpa = event.lpa;
       const newKey = pageKey(event.address.chip, event.address.block, event.address.page);
       const oldKey = lpaToPageKeyRef.current.get(lpa);
+      // Only an overwrite (a previous PPA for this LPA existed) gets
+      // outlined - a first-ever write to an LPA has no "old" page to
+      // contrast it with, so it's just a plain write.
       if (oldKey !== undefined && oldKey !== newKey) {
         pendingPagesRef.current.add(oldKey);
+        pendingPagesRef.current.add(newKey);
       }
       lpaToPageKeyRef.current.set(lpa, newKey);
     });

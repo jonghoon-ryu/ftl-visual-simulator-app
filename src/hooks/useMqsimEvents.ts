@@ -17,19 +17,29 @@ export interface SimulationCounters {
   hostReads: number;
 }
 
-function describeEvent(event: MqsimEvent): string | null {
+function addressText(a: MqsimPageAddress): string {
+  return `Chip ${a.chip}, Block ${a.block}, Page ${a.page}`;
+}
+
+// `prevAddress` is this LPN's physical address just before this event, from
+// the caller's running LPN -> address map - undefined for a first-ever
+// write to that LPN (nothing to contrast it with).
+function describeEvent(event: MqsimEvent, prevAddress?: MqsimPageAddress): string | null {
   switch (event.type) {
     case 'mapping_updated': {
       const lpaHex = `0x${(event.lpa ?? 0n).toString(16).padStart(3, '0')}`;
       const a = event.address;
-      const where = a ? `Chip ${a.chip}, Block ${a.block}, Page ${a.page}` : '';
-      return `LPA ${lpaHex} -> ${where}, ${event.isWrite ? 'Write' : 'Read'}`;
+      if (!a) return null;
+      if (event.isWrite && prevAddress) {
+        return `LPN ${lpaHex}: ${addressText(prevAddress)} -> ${addressText(a)}, Write`;
+      }
+      return `LPN ${lpaHex} -> ${addressText(a)}, ${event.isWrite ? 'Write' : 'Read'}`;
     }
     case 'gc_started':
       return event.block ? `Chip ${event.block.chip}, Block ${event.block.block}, GC Start` : null;
     case 'gc_page_migrated':
       return event.block && 'page' in event.block
-        ? `Chip ${event.block.chip}, Block ${event.block.block}, Page ${event.block.page}, GC`
+        ? `${addressText(event.block)}${event.newBlock ? ` -> ${addressText(event.newBlock)}` : ''}, GC`
         : null;
     case 'gc_block_erased':
       return event.block ? `Chip ${event.block.chip}, Block ${event.block.block}, Erase` : null;
@@ -37,7 +47,7 @@ function describeEvent(event: MqsimEvent): string | null {
       return event.block ? `Chip ${event.block.chip}, Block ${event.block.block}, WL Start` : null;
     case 'wl_page_migrated':
       return event.block && 'page' in event.block
-        ? `Chip ${event.block.chip}, Block ${event.block.block}, Page ${event.block.page}, WL`
+        ? `${addressText(event.block)}${event.newBlock ? ` -> ${addressText(event.newBlock)}` : ''}, WL`
         : null;
     case 'wl_block_erased':
       return event.block ? `Chip ${event.block.chip}, Block ${event.block.block}, Erase` : null;
@@ -85,10 +95,17 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
   const dynamicWlSeenRef = useRef(0);
   const pendingCountersRef = useRef({ hostWrites: 0, hostReads: 0 });
   const pendingLogRef = useRef<string[]>([]);
+  // LPN -> its physical address just before the write currently being
+  // described - lets a "Write" log line show "old location -> new
+  // location" for an overwrite, same idea as useMqsimOverwrites' own copy
+  // of this map (kept separate rather than shared, since this one only
+  // needs read access one event at a time, not a one-step-overlay set).
+  const lpaToAddressRef = useRef(new Map<bigint, MqsimPageAddress>());
 
   const reset = () => {
     pendingCountersRef.current = { hostWrites: 0, hostReads: 0 };
     pendingLogRef.current = [];
+    lpaToAddressRef.current = new Map();
     setLog([]);
     setCounters({ hostWrites: 0, hostReads: 0 });
     dynamicWlSeenRef.current = 0;
@@ -144,7 +161,14 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
       }
       if (!shouldLog) return;
 
-      const text = describeEvent(event);
+      const prevAddress =
+        event.type === 'mapping_updated' && event.lpa !== undefined
+          ? lpaToAddressRef.current.get(event.lpa)
+          : undefined;
+      const text = describeEvent(event, prevAddress);
+      if (event.type === 'mapping_updated' && event.isWrite && event.lpa !== undefined && event.address) {
+        lpaToAddressRef.current.set(event.lpa, event.address);
+      }
       if (text === null) return;
 
       pendingLogRef.current.push(text);

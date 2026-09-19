@@ -74,24 +74,26 @@ export function Toolbar({ presets, activeId, onSelect, playback }: Props) {
           onChange={(e) => onSpeedChange(Number(e.target.value))}
         />
         <span>{speed}×</span>
-        <button
-          type="button"
-          aria-label="로그 한 줄씩 실행 (→ 키로도 가능)"
-          title="write/read 한 번, GC/WL 의 시작·페이지 이동·소거 완료 중 하나 - 로그에 한 줄이 새로 생길 때까지만 실행해요. → 키를 눌러도 똑같이 동작해요"
-          disabled={disabled || !hasMore || isPlaying}
-          onClick={onStepEventOnce}
-        >
-          1 step
-        </button>
-        <button
-          type="button"
-          aria-label="로그 다섯 줄 실행"
-          title="1 step 을 다섯 번 실행해요"
-          disabled={disabled || !hasMore || isPlaying}
-          onClick={onStepEventMany}
-        >
-          5 steps
-        </button>
+        <div className="sim-step-buttons">
+          <button
+            type="button"
+            aria-label="로그 한 줄씩 실행 (→ 키로도 가능)"
+            title="write/read 한 번, GC/WL 의 시작·페이지 이동·소거 완료 중 하나 - 로그에 한 줄이 새로 생길 때까지만 실행해요. → 키를 눌러도 똑같이 동작해요"
+            disabled={disabled || !hasMore || isPlaying}
+            onClick={onStepEventOnce}
+          >
+            1 step
+          </button>
+          <button
+            type="button"
+            aria-label="로그 다섯 줄 실행"
+            title="1 step 을 다섯 번 실행해요"
+            disabled={disabled || !hasMore || isPlaying}
+            onClick={onStepEventMany}
+          >
+            5 steps
+          </button>
+        </div>
       </div>
     </div>
   );

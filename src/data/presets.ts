@@ -10,7 +10,7 @@ export const presets: PresetScenario[] = [
     id: 'mapping',
     label: '매핑 기본',
     caption:
-      '🔵 LPA 0x001 을 처음 썼어요 — 비어있던 Block 0 · Page 0 에 매핑되고, 매핑 테이블에 새 항목이 생겨요',
+      '🔵 LPN 0x001 을 처음 썼어요 — 비어있던 Block 0 · Page 0 에 매핑되고, 매핑 테이블에 새 항목이 생겨요',
     blocks: [
       { label: 'Block 0', pages: row('VVVFFFFFFFFFFFFF') },
       { label: 'Block 1', pages: row('FFFFFFFFFFFFFFFF') },
@@ -23,7 +23,7 @@ export const presets: PresetScenario[] = [
       { label: 'WAF', value: '1.0×', hint: '아직 재기록이 없어서 이상적인 값' },
       { label: 'GC 실행 횟수', value: '0' },
     ],
-    log: [{ time: '00:00:01', text: 'LPA 0x001 이 Block 0 · Page 0 에 매핑됨' }],
+    log: [{ time: '00:00:01', text: 'LPN 0x001 이 Block 0 · Page 0 에 매핑됨' }],
   },
   {
     id: 'gc',
@@ -49,7 +49,7 @@ export const presets: PresetScenario[] = [
     ],
     log: [
       { time: '12:03:41', text: 'Block 2 의 valid page 4개를 Block 5 로 이동 시작 (GC)' },
-      { time: '12:03:40', text: 'LPA 0x0F4 에 새 데이터가 쓰이면서 기존 페이지가 invalid 로 표시됨' },
+      { time: '12:03:40', text: 'LPN 0x0F4 에 새 데이터가 쓰이면서 기존 페이지가 invalid 로 표시됨' },
       { time: '12:03:38', text: '빈 block 비율이 5% 아래로 떨어져 GC 트리거됨' },
     ],
   },

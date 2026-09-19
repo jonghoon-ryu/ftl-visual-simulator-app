@@ -127,23 +127,28 @@ namespace SSD_Components
 				// its own real simulated completion time, spread across separate
 				// simulator event-groups instead of bunched into one. transaction's
 				// own Address is still the *source* page (a read's address never
-				// gets reallocated, unlike RelatedWrite's), so this keeps notifying
-				// with the same victim-block address the UI already expects.
+				// gets reallocated, unlike RelatedWrite's) - fired *after*
+				// Allocate_new_page_for_gc() below, since that's the one call that
+				// determines RelatedWrite's destination address (it mutates
+				// RelatedWrite->Address in place via Allocate_block_and_page_in_
+				// plane_for_gc_write) - both addresses are only known together at
+				// that point, and only within this same synchronous handler (no
+				// separate event/simulated delay in between).
 				bool is_wl = pbke->Blocks[transaction->Address.BlockID].Is_wl_triggered;
 				if (pbke->Blocks[transaction->Address.BlockID].Holds_mapping_data) {
 					_my_instance->address_mapping_unit->Get_translation_mapping_info_for_gc(transaction->Stream_id, (MVPN_type)transaction->LPA, mppa, page_status_bitmap);
 					//There has been no write on the page since GC start, and it is still valid
 					if (mppa == transaction->PPA) {
-						if (is_wl) {
-							Simulation_Events::Notify_wl_page_migrated(transaction->Stream_id, transaction->Address);
-						} else {
-							Simulation_Events::Notify_gc_page_migrated(transaction->Stream_id, transaction->Address);
-						}
 						_my_instance->tsu->Prepare_for_transaction_submit();
 						((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->write_sectors_bitmap = FULL_PROGRAMMED_PAGE;
 						((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->LPA = transaction->LPA;
 						((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->RelatedRead = NULL;
 						_my_instance->address_mapping_unit->Allocate_new_page_for_gc(((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite, pbke->Blocks[transaction->Address.BlockID].Holds_mapping_data);
+						if (is_wl) {
+							Simulation_Events::Notify_wl_page_migrated(transaction->Stream_id, transaction->Address, ((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->Address);
+						} else {
+							Simulation_Events::Notify_gc_page_migrated(transaction->Stream_id, transaction->Address, ((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->Address);
+						}
 						_my_instance->tsu->Submit_transaction(((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite);
 						_my_instance->tsu->Schedule();
 					} else {
@@ -151,19 +156,19 @@ namespace SSD_Components
 					}
 				} else {
 					_my_instance->address_mapping_unit->Get_data_mapping_info_for_gc(transaction->Stream_id, transaction->LPA, ppa, page_status_bitmap);
-					
+
 					//There has been no write on the page since GC start, and it is still valid
 					if (ppa == transaction->PPA) {
-						if (is_wl) {
-							Simulation_Events::Notify_wl_page_migrated(transaction->Stream_id, transaction->Address);
-						} else {
-							Simulation_Events::Notify_gc_page_migrated(transaction->Stream_id, transaction->Address);
-						}
 						_my_instance->tsu->Prepare_for_transaction_submit();
 						((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->write_sectors_bitmap = page_status_bitmap;
 						((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->LPA = transaction->LPA;
 						((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->RelatedRead = NULL;
 						_my_instance->address_mapping_unit->Allocate_new_page_for_gc(((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite, pbke->Blocks[transaction->Address.BlockID].Holds_mapping_data);
+						if (is_wl) {
+							Simulation_Events::Notify_wl_page_migrated(transaction->Stream_id, transaction->Address, ((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->Address);
+						} else {
+							Simulation_Events::Notify_gc_page_migrated(transaction->Stream_id, transaction->Address, ((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite->Address);
+						}
 						_my_instance->tsu->Submit_transaction(((NVM_Transaction_Flash_RD*)transaction)->RelatedWrite);
 						_my_instance->tsu->Schedule();
 					} else {
@@ -330,7 +335,15 @@ namespace SSD_Components
 					if (block_manager->Is_page_valid(block, pageID)) {
 						Stats::Total_page_movements_for_gc++;
 						wl_candidate_address.PageID = pageID;
-						Simulation_Events::Notify_wl_page_migrated(block->Stream_id, wl_candidate_address);
+						// Notify_wl_page_migrated() fires from this function's own READ
+						// completion case (handle_transaction_serviced_signal_from_PHY,
+						// above) instead - see the matching comment in
+						// GC_and_WL_Unit_Page_Level.cpp's Check_gc_required for why
+						// (this eager decision-time loop bunched every page of a
+						// static-WL cycle into one simulator event-group; missed in the
+						// first pass at this fix since static WL's own entry point here
+						// is separate from Check_gc_required and this class's other
+						// eager loop).
 						if (use_copyback) {
 							wl_write = new NVM_Transaction_Flash_WR(Transaction_Source_Type::GC_WL, block->Stream_id, sector_no_per_page * SECTOR_SIZE_IN_BYTE,
 								NO_LPA, address_mapping_unit->Convert_address_to_ppa(wl_candidate_address), NULL, 0, NULL, 0, INVALID_TIME_STAMP);

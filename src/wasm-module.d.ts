@@ -67,6 +67,9 @@ interface MqsimEvent {
   // the others are block-wide (gc_started/gc_block_erased/wl_started/
   // wl_block_erased/dynamic_wl_block_allocated/dynamic_wl_block_freed).
   block?: MqsimBlockAddress | MqsimPageAddress;
+  // gc_page_migrated/wl_page_migrated only: the destination page this
+  // migration is writing to (`block` above is the source being vacated).
+  newBlock?: MqsimPageAddress;
   eraseCount?: number;
   forMappingData?: boolean;
   dynamicWlConsidered?: boolean;
