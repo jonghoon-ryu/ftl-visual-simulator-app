@@ -31,7 +31,7 @@ export function FlashGrid({ blocks, caption }: Props) {
 
   return (
     <div className="sim-grid-panel">
-      <div className="sim-panel-title">Flash Array — Block × Page</div>
+      <div className="sim-panel-title">Flash Array</div>
       {caption && <div className="sim-caption">{caption}</div>}
       <div className="grid-row grid-header-row">
         <div className="chip-badge chip-badge-spacer">Chip</div>
@@ -52,12 +52,15 @@ export function FlashGrid({ blocks, caption }: Props) {
               {block.chip}
             </div>
             <div className="row-label">{block.label}</div>
-            <div className="row-cells">
+            <div className={`row-cells${block.erasing ? ' erasing' : ''}`}>
               {block.pages.map((page, i) => (
                 <div
                   key={i}
-                  className={`cell ${page.state}`}
-                  title={`Chip ${block.chip} · ${block.label} / Page ${i} — ${page.state}`}
+                  className={`cell ${page.state}${page.superseded ? ' superseded' : ''}`}
+                  title={
+                    `Chip ${block.chip} · ${block.label} / Page ${i} — ${page.state}` +
+                    (page.superseded ? ' (다른 페이지로 옮겨짐 - 이전 데이터)' : '')
+                  }
                 >
                   {page.state === 'valid' ? 'V' : page.state === 'invalid' ? 'X' : page.state === 'moving' ? '→' : ''}
                 </div>

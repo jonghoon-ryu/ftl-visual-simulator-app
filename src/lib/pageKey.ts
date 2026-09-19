@@ -6,3 +6,10 @@
 export function pageKey(chip: number, block: number, page: number): string {
   return `${chip}:${block}:${page}`;
 }
+
+// Same idea as pageKey(), one level up - identifies a whole block (chip +
+// block, no page) so a gc_block_erased/wl_block_erased event can be
+// correlated with the matching block row.
+export function blockKey(chip: number, block: number): string {
+  return `${chip}:${block}`;
+}

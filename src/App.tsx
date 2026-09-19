@@ -22,6 +22,7 @@ import type { SsdParams, WorkloadParams } from './data/mqsimConfigs';
 import { useMqsimEngine } from './hooks/useMqsimEngine';
 import { useMqsimEvents } from './hooks/useMqsimEvents';
 import { useMqsimMigrations } from './hooks/useMqsimMigrations';
+import { useMqsimOverwrites } from './hooks/useMqsimOverwrites';
 import { useSimulationPlayback } from './hooks/useSimulationPlayback';
 import { toBlockRows } from './lib/mqsimBlocks';
 import { toStatItems } from './lib/mqsimStats';
@@ -102,16 +103,19 @@ function App() {
   const engine = useMqsimEngine(ssdConfigXml, workloadXml);
   const events = useMqsimEvents(engine.subscribeEvents, engine.ready);
   const migrations = useMqsimMigrations(engine.subscribeEvents, engine.ready);
+  const overwrites = useMqsimOverwrites(engine.subscribeEvents, engine.ready);
   const playback = useSimulationPlayback({
     engine,
     onRefresh: async () => {
       await engine.refresh();
       events.commit();
       migrations.commit();
+      overwrites.commit();
     },
     onRestart: () => {
       events.reset();
       migrations.reset();
+      overwrites.reset();
     },
     ticksMultiplier: TICKS_MULTIPLIER[activeId] ?? 1,
   });
@@ -182,7 +186,10 @@ function App() {
   }, []);
 
   const isWearPreset = activeId === 'wear-leveling';
-  const blockRows = wired && !isWearPreset ? toBlockRows(engine.state, migrations.movingKeys) : active.blocks;
+  const blockRows =
+    wired && !isWearPreset
+      ? toBlockRows(engine.state, migrations.movingKeys, overwrites.supersededKeys, overwrites.erasingBlockKeys)
+      : active.blocks;
   const wearRows = wired && isWearPreset ? toWearRows(engine.state) : active.wearRows;
   const statItems = wired ? toStatItems(engine.state, events.counters) : active.stats;
   const logEntries = wired ? events.log : active.log;

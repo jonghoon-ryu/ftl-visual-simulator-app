@@ -72,6 +72,19 @@ export function Toolbar({ presets, activeId, onSelect, playback }: Props) {
         >
           ⏭
         </button>
+        <span>속도</span>
+        <input
+          className="sim-speed-slider"
+          type="range"
+          aria-label="재생 속도"
+          min={1}
+          max={8}
+          step={1}
+          value={speed}
+          disabled={disabled}
+          onChange={(e) => onSpeedChange(Number(e.target.value))}
+        />
+        <span>{speed}×</span>
         <button
           type="button"
           aria-label="로그 한 줄씩 실행"
@@ -90,19 +103,6 @@ export function Toolbar({ presets, activeId, onSelect, playback }: Props) {
         >
           5 steps
         </button>
-        <span>속도</span>
-        <input
-          className="sim-speed-slider"
-          type="range"
-          aria-label="재생 속도"
-          min={1}
-          max={8}
-          step={1}
-          value={speed}
-          disabled={disabled}
-          onChange={(e) => onSpeedChange(Number(e.target.value))}
-        />
-        <span>{speed}×</span>
       </div>
     </div>
   );

@@ -27,10 +27,10 @@
 
 .sim-toolbar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 40px;
   padding: 10px 14px;
   background: #23263080;
   border-bottom: 1px solid #33374a;
@@ -133,6 +133,14 @@
   flex-wrap: nowrap;
 }
 
+/* Whole block just finished its erase transaction - outlined (not
+   bordered, so the row doesn't shift) for one render. */
+.row-cells.erasing {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
 .chip-badge {
   width: 20px;
   height: 20px;
@@ -169,6 +177,11 @@
 .cell.invalid { background: #f16d75; color: #3a0e10; }
 .cell.free { background: #383c4d; color: #383c4d; }
 .cell.moving { background: #f5b942; }
+
+/* Outline (not border) so it never shifts the tightly-packed 1px cell
+   grid - a page whose data was just copied elsewhere (host overwrite or
+   GC/WL migration), still showing its old 'invalid'/'moving' fill. */
+.cell.superseded { outline: 2px solid #ffffff; outline-offset: -2px; }
 
 .grid-header-row {
   margin-bottom: 6px;
