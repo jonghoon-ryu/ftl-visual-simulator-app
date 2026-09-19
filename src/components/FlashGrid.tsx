@@ -28,16 +28,13 @@ export function FlashGrid({ blocks, caption }: Props) {
   // All blocks share the same page count in every preset - take it from
   // the first one so the header row lines up with each column below.
   const pageCount = blocks[0]?.pages.length ?? 0;
-  // Only badge/tint by chip once there's more than one chip to tell apart -
-  // with a single chip every row would just get the same accent for nothing.
-  const multiChip = new Set(blocks.map((block) => block.chip)).size > 1;
 
   return (
     <div className="sim-grid-panel">
       <div className="sim-panel-title">Flash Array — Block × Page</div>
       {caption && <div className="sim-caption">{caption}</div>}
       <div className="grid-row grid-header-row">
-        {multiChip && <div className="chip-badge chip-badge-spacer">Chip</div>}
+        <div className="chip-badge chip-badge-spacer">Chip</div>
         <div className="row-label">Page</div>
         <div className="row-cells">
           {Array.from({ length: pageCount }, (_, i) => (
@@ -51,11 +48,9 @@ export function FlashGrid({ blocks, caption }: Props) {
         const chipColor = CHIP_COLORS[(block.chip ?? 0) % CHIP_COLORS.length];
         return (
           <div className="grid-row" key={`${block.chip ?? 0}-${block.label}`}>
-            {multiChip && (
-              <div className="chip-badge" style={{ background: chipColor }}>
-                {block.chip}
-              </div>
-            )}
+            <div className="chip-badge" style={{ background: chipColor }}>
+              {block.chip}
+            </div>
             <div className="row-label">{block.label}</div>
             <div className="row-cells">
               {block.pages.map((page, i) => (

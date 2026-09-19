@@ -1,5 +1,5 @@
 .sim-app {
-  max-width: 1320px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 32px 16px 64px;
 }
@@ -213,13 +213,12 @@
 .swatch.free { background: #383c4d; }
 .swatch.moving { background: #f5b942; }
 
-/* Sits between the flash grid and the param/workload/stats sidebar for the
-   two wired presets ("매핑 기본"·"GC 시연") - a fixed-ish width column
-   rather than flex-growing, since a mini-table doesn't benefit from extra
-   horizontal space the way the block grid does. */
+/* Sits between the flash grid and the param/workload/stats sidebar, for
+   all three wired presets - widened so a log line like "LPA 0x016 ->
+   Chip 0, Block 15, Page 15, Write" fits on one line without wrapping. */
 .sim-mapping-col {
-  flex: 1 1 280px;
-  max-width: 320px;
+  flex: 1 1 380px;
+  max-width: 440px;
   border-right: 1px solid #33374a;
 }
 
