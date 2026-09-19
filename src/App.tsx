@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import './App.css';
-import { EventLog } from './components/EventLog';
 import { FlashGrid } from './components/FlashGrid';
 import { MappingTable } from './components/MappingTable';
 import { ParamPanel } from './components/ParamPanel';
@@ -189,6 +188,11 @@ function App() {
   const wearRows = wired && isWearPreset ? toWearRows(engine.state) : active.wearRows;
   const statItems = wired ? toStatItems(engine.state, events.counters) : active.stats;
   const logEntries = wired ? events.log : active.log;
+  // MappingTable's 로그 only wants GC start/end, not the full event stream
+  // (mapping_updated, WL, dynamic-WL frontier churn, ...) - text-matched
+  // against describeEvent's exact gc_started/gc_block_erased wording in
+  // useMqsimEvents.ts.
+  const gcLog = logEntries.filter((e) => e.text.includes('GC 시작') || e.text.includes('소거 완료 (GC)'));
   const caption = wired ? '' : active.caption;
 
   return (
@@ -223,7 +227,7 @@ function App() {
               first write actually lands. */}
           {wired && !isWearPreset && (
             <div className="sim-mapping-col">
-              <MappingTable rows={mappingRows} />
+              <MappingTable rows={mappingRows} gcLog={gcLog} />
             </div>
           )}
           <div className="sim-sidebar">
@@ -240,7 +244,6 @@ function App() {
             <StatsPanel stats={statItems} />
           </div>
         </div>
-        <EventLog entries={logEntries} />
       </div>
     </div>
   );

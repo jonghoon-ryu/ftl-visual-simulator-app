@@ -51,7 +51,6 @@ export function ParamPanel({ params, onChange, disabled }: Props) {
             </option>
           ))}
         </select>
-        <div className="param-hint">한 페이지에 담기는 데이터 크기</div>
       </div>
 
       <div className="param-row">
@@ -90,7 +89,6 @@ export function ParamPanel({ params, onChange, disabled }: Props) {
           value={params.blockNoPerPlane}
           onChange={(e) => onChange({ ...params, blockNoPerPlane: Number(e.target.value) })}
         />
-        <div className="param-hint">Flash 배열에 들어있는 block 수 - 늘리면 grid 가 커져요</div>
       </div>
 
       <div className="param-row">
@@ -156,7 +154,7 @@ export function ParamPanel({ params, onChange, disabled }: Props) {
             Hybrid (구현 예정)
           </option>
         </select>
-        <div className="param-hint">Hybrid 는 MQSim 원본에도 미구현이라 이 시뮬레이터에서도 선택만 가능해요</div>
+        <div className="param-hint">Hybrid 는 MQSim 원본에도 미구현</div>
       </div>
     </div>
   );

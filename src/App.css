@@ -129,7 +129,7 @@
 
 .row-cells {
   display: flex;
-  gap: 2px;
+  gap: 1px;
   flex-wrap: nowrap;
 }
 
@@ -147,7 +147,10 @@
 }
 
 .chip-badge-spacer {
-  visibility: hidden;
+  font-size: 7px;
+  font-weight: 500;
+  color: #7d8296;
+  background: transparent;
 }
 
 .cell {
@@ -352,9 +355,9 @@
   color: #7d8296;
 }
 
-.sim-log {
-  padding: 12px 14px;
-  max-height: 160px;
+.mapping-gc-log {
+  margin-top: 8px;
+  max-height: 140px;
   overflow-y: auto;
 }
 
