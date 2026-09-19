@@ -255,9 +255,22 @@ export const mappingBasicWorkloadXml = buildMappingWorkloadXml(DEFAULT_MAPPING_P
 // (block_pool_gc_threshold = floor(gcExecThreshold * blockNoPerPlane) - the
 // default 0.05 needs the pool down to its last 1-2 blocks before GC ever
 // looks at firing, unreachable in a demo-sized run).
+//
+// 0.5 (50%) reliably fires GC (6 executions) but - swept via the native CLI
+// against this exact config - every single one always reclaims an already
+// 100%-invalid block (Average_Page_Movement_For_GC = 0.000000): at 50% free
+// blocks, GC's own RGA victim-selection only ever gets to a block late
+// enough that this project's narrow 25%-working-set workload (see
+// buildGcWorkloadXml below) has already fully overwritten it elsewhere.
+// Raised to 0.8 (80%) - GC now fires *while a candidate block still has a
+// few live pages left* (12 executions, avg 5.08 page movements/execution),
+// so the moving-page highlight (useMqsimMigrations) actually has something
+// to show. Swept 0.5/0.6/0.7/0.8/0.9/0.95 - 0.8 is the first value with a
+// real migration ratio, and 0.9+ plateaus at the same 12/5.08 as 0.8, so
+// there's no benefit to going higher.
 export const DEFAULT_GC_PARAMS: SsdParams = {
   ...DEFAULT_MAPPING_PARAMS,
-  gcExecThreshold: 0.5,
+  gcExecThreshold: 0.8,
 };
 
 // Same synthetic write flow as buildMappingWorkloadXml, but tuned to

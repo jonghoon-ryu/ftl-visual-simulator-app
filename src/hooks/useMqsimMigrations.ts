@@ -29,10 +29,16 @@ export function useMqsimMigrations(subscribeEvents: MqsimEngine['subscribeEvents
 
   // Call once right after a step's refresh() - promotes whatever migrated
   // during that step into render state, then starts a fresh empty set for
-  // the next one.
+  // the next one. Captures pendingRef.current into a local *before*
+  // resetting the ref - React doesn't call the setMovingKeys updater
+  // synchronously, so reading pendingRef.current lazily inside it (with the
+  // reset on the very next line) meant the updater always saw the
+  // already-emptied Set by the time it actually ran, and movingKeys never
+  // came out non-empty despite real migrations happening every run.
   const commit = useCallback(() => {
-    setMovingKeys((prev) => (pendingRef.current.size === 0 && prev.size === 0 ? prev : pendingRef.current));
+    const pending = pendingRef.current;
     pendingRef.current = new Set();
+    setMovingKeys((prev) => (pending.size === 0 && prev.size === 0 ? prev : pending));
   }, []);
 
   // Call on restart - clears both the in-flight accumulator and whatever
