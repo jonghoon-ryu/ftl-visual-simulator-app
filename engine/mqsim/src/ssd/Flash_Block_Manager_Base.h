@@ -64,6 +64,11 @@ namespace SSD_Components
 		// the host write frontier specifically, not GC's migration
 		// destination or the mapping-table write frontier.
 		bool Is_write_frontier;
+		// Same idea as Is_write_frontier above, but for GC_wf - the block
+		// GC/WL migration writes are currently landing on (the destination
+		// side of a migration, as opposed to Has_ongoing_gc_wl above, which
+		// marks the *victim* block being reclaimed).
+		bool Is_gc_write_frontier;
 	};
 
 	class Block_Pool_Slot_Type

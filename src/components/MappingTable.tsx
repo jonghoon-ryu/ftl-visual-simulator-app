@@ -37,8 +37,9 @@ export function MappingTable({ log }: { log: LogEntry[] }) {
       <div className="sim-panel-title">로그</div>
       {log.length === 0 && <div className="mini-table-empty">아직 기록된 로그가 없어요 - 재생 버튼을 눌러보세요</div>}
       <div className="log-list">
-        {log.map((e, i) => (
-          <div className="log-entry" key={i}>
+        {log.map((e) => (
+          <div className="log-entry" key={e.index}>
+            <span className="log-index">{String(e.index).padStart(4, '0')}</span>
             <span className="log-time">{e.time}</span>
             {renderLogText(e.text)}
           </div>

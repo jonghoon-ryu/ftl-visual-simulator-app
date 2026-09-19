@@ -213,10 +213,13 @@ namespace SSD_Components
 							entry.Status = slot.Current_status;
 							entry.Has_ongoing_gc_wl = slot.Has_ongoing_gc_wl;
 							entry.Is_write_frontier = false;
+							entry.Is_gc_write_frontier = false;
 							for (unsigned int stream_cntr = 0; stream_cntr < total_concurrent_streams_no; stream_cntr++) {
 								if (plane_record->Data_wf[stream_cntr] == &slot) {
 									entry.Is_write_frontier = true;
-									break;
+								}
+								if (plane_record->GC_wf[stream_cntr] == &slot) {
+									entry.Is_gc_write_frontier = true;
 								}
 							}
 							entry.Pages.reserve(pages_no_per_block);

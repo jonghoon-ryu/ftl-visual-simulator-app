@@ -31,7 +31,8 @@ export function toBlockRows(
     }),
     chip: block.chip,
     erasing: erasingBlockKeys?.has(blockKey(block.chip, block.block)) ?? false,
-    gcActive: block.hasOngoingGcWl,
+    isVictim: block.hasOngoingGcWl,
+    gcDestination: block.isGcWriteFrontier,
     writeFrontier: block.isWriteFrontier,
   }));
 }

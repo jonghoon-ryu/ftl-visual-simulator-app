@@ -110,11 +110,15 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
   // of this map (kept separate rather than shared, since this one only
   // needs read access one event at a time, not a one-step-overlay set).
   const lpaToAddressRef = useRef(new Map<bigint, MqsimPageAddress>());
+  // Next log index to hand out, in chronological order (0 for the very
+  // first event ever logged) - MappingTable.tsx shows it zero-padded.
+  const nextIndexRef = useRef(0);
 
   const reset = () => {
     pendingCountersRef.current = { hostWrites: 0, hostReads: 0 };
     pendingLogRef.current = [];
     lpaToAddressRef.current = new Map();
+    nextIndexRef.current = 0;
     setLog([]);
     setCounters({ hostWrites: 0, hostReads: 0 });
     dynamicWlSeenRef.current = 0;
@@ -135,9 +139,11 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
     const pendingLog = pendingLogRef.current;
     if (pendingLog.length > 0) {
       // Accumulated in arrival order (oldest first); the log itself is
-      // newest-first, so reverse this batch before prepending it.
+      // newest-first, so reverse this batch before prepending it. Indices
+      // assigned here, before the reverse, so they still increase in
+      // chronological (not display) order.
       const time = formatClockTime(new Date());
-      const newEntries = pendingLog.map((text) => ({ time, text })).reverse();
+      const newEntries = pendingLog.map((text) => ({ index: nextIndexRef.current++, time, text })).reverse();
       setLog((prev) => [...newEntries, ...prev].slice(0, MAX_LOG_ENTRIES));
       pendingLogRef.current = [];
     }

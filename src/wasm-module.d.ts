@@ -49,6 +49,10 @@ interface MqsimBlockSnapshot extends MqsimBlockAddress {
   // some stream - where new user writes are actively landing, as opposed
   // to GC's migration destination or the mapping-table write frontier.
   isWriteFrontier: boolean;
+  // True if this block is currently the GC/WL migration write frontier
+  // (GC_wf) for some stream - where migrated pages are actively landing,
+  // as opposed to hasOngoingGcWl above (the *victim* block being reclaimed).
+  isGcWriteFrontier: boolean;
   pages: MqsimPageState[]; // length == pages_no_per_block, indexed by page id
 }
 

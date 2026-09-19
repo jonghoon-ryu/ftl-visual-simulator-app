@@ -23,7 +23,7 @@ export const presets: PresetScenario[] = [
       { label: 'WAF', value: '1.0×', hint: '아직 재기록이 없어서 이상적인 값' },
       { label: 'GC 실행 횟수', value: '0' },
     ],
-    log: [{ time: '00:00:01', text: 'LPN 0x001 이 Block 0 · Page 0 에 매핑됨' }],
+    log: [{ index: 0, time: '00:00:01', text: 'LPN 0x001 이 Block 0 · Page 0 에 매핑됨' }],
   },
   {
     id: 'gc',
@@ -48,9 +48,9 @@ export const presets: PresetScenario[] = [
       { label: 'GC 실행 횟수', value: '14' },
     ],
     log: [
-      { time: '12:03:41', text: 'Block 2 의 valid page 4개를 Block 5 로 이동 시작 (GC)' },
-      { time: '12:03:40', text: 'LPN 0x0F4 에 새 데이터가 쓰이면서 기존 페이지가 invalid 로 표시됨' },
-      { time: '12:03:38', text: '빈 block 비율이 5% 아래로 떨어져 GC 트리거됨' },
+      { index: 2, time: '12:03:41', text: 'Block 2 의 valid page 4개를 Block 5 로 이동 시작 (GC)' },
+      { index: 1, time: '12:03:40', text: 'LPN 0x0F4 에 새 데이터가 쓰이면서 기존 페이지가 invalid 로 표시됨' },
+      { index: 0, time: '12:03:38', text: '빈 block 비율이 5% 아래로 떨어져 GC 트리거됨' },
     ],
   },
   {
@@ -74,8 +74,8 @@ export const presets: PresetScenario[] = [
       { label: 'WL 발동 횟수', value: '3' },
     ],
     log: [
-      { time: '12:05:02', text: 'Block 2 와 Block 5 의 erase count 차이(109)가 임계값을 넘어 static WL 트리거됨' },
-      { time: '12:05:03', text: 'Block 5 의 cold 데이터를 Block 2 로 이동 — Block 5 가 free pool 로 돌아감' },
+      { index: 0, time: '12:05:02', text: 'Block 2 와 Block 5 의 erase count 차이(109)가 임계값을 넘어 static WL 트리거됨' },
+      { index: 1, time: '12:05:03', text: 'Block 5 의 cold 데이터를 Block 2 로 이동 — Block 5 가 free pool 로 돌아감' },
     ],
   },
 ];

@@ -305,6 +305,7 @@ val get_state()
 			row.set("status", block_status_to_string(entry.Status));
 			row.set("hasOngoingGcWl", entry.Has_ongoing_gc_wl);
 			row.set("isWriteFrontier", entry.Is_write_frontier);
+			row.set("isGcWriteFrontier", entry.Is_gc_write_frontier);
 			val pages = val::array();
 			for (const auto& page_state : entry.Pages) {
 				pages.call<void>("push", std::string(page_state_to_string(page_state)));

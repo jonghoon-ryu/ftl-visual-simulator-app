@@ -24,8 +24,14 @@ export interface BlockRow {
   // True for as long as this block currently has a GC/WL operation in
   // flight (mqsim's real point-in-time block status, not a one-step
   // overlay like `erasing` above - stays true across the whole migration
-  // span, not just the erase instant).
-  gcActive?: boolean;
+  // span, not just the erase instant). Rendered as "Victim" - it's the
+  // block being reclaimed, not the one migrated pages land on (see
+  // `gcDestination` below for that).
+  isVictim?: boolean;
+  // True for as long as this block is the current GC/WL migration write
+  // frontier - where migrated pages are actively landing. Rendered as
+  // "GC block".
+  gcDestination?: boolean;
   // True for as long as this block is the current host write frontier -
   // where new user writes are actively landing.
   writeFrontier?: boolean;
@@ -38,6 +44,10 @@ export interface StatItem {
 }
 
 export interface LogEntry {
+  // 0-based, in chronological order (the very first event logged is 0) -
+  // MappingTable.tsx shows it zero-padded to 4 digits. Newest-first display
+  // order means the top of the list has the highest index.
+  index: number;
   time: string;
   text: string;
 }

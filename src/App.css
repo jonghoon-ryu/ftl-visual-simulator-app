@@ -163,7 +163,8 @@
   flex-shrink: 0;
 }
 
-.row-flag-gc { color: #f16d75; }
+.row-flag-victim { color: #f16d75; }
+.row-flag-gc-block { color: #f5b942; }
 .row-flag-active { color: #4a6cf7; }
 
 .chip-badge {
@@ -253,10 +254,12 @@
 
 /* Sits between the flash grid and the param/workload/stats sidebar, for
    all three wired presets - widened so a log line like "LPN 0x016 ->
-   Chip 0, Block 15, Page 15, Write" fits on one line without wrapping. */
+   Chip 0, Block 15, Page 15, Write" fits on one line without wrapping
+   (widened further once lines grew a 4-digit index prefix and
+   "source -> destination" GC/WL lines). */
 .sim-mapping-col {
-  flex: 1 1 380px;
-  max-width: 440px;
+  flex: 1.3 1 420px;
+  max-width: 500px;
   border-right: 1px solid #33374a;
 }
 
@@ -265,13 +268,13 @@
 }
 
 .sim-sidebar {
-  flex: 2 1 220px;
+  flex: 1.7 1 220px;
   display: flex;
   flex-direction: column;
 }
 
 .sim-stats-col {
-  flex: 2 1 160px;
+  flex: 1.7 1 160px;
   display: flex;
   flex-direction: column;
 }
@@ -391,6 +394,11 @@
   color: #c7cbe0;
   padding: 3px 0;
   border-bottom: 1px dashed #2d3142;
+}
+
+.log-index {
+  color: #5a5f70;
+  margin-right: 8px;
 }
 
 .log-time {
