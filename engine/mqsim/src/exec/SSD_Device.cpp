@@ -323,16 +323,19 @@ SSD_Device::SSD_Device(Device_Parameter_Set *parameters, std::vector<IO_Flow_Par
 		// one screen) it was large enough to force GC's and the hard-block's
 		// thresholds to collide and permanently deadlock "GC 시연" - see
 		// /ftl-visual-simulator/plan/tweaked-code/ for the full writeup. Lowered
-		// to 4 - still >0 (so the safety brake and the "GC needs room to run
-		// concurrently" purpose it was designed for remain intact) but small
-		// enough that a beginner-friendly block count clears it, restoring the
-		// intended "GC threshold fires meaningfully before the hard brake" gap.
+		// to 4, then to 3 (2026-09-20, alongside raising the default block count
+		// to 12 and Overprovisioning_Ratio to 10%) - the clamp this constant
+		// imposes on GC_Exec_Threshold was flattening its entire 0-50% range into
+		// one identical result at block=8 (floor(threshold*8) never exceeded 4
+		// until threshold passed 62.5%), making the slider's low end a no-op.
+		// Still >0 (so the safety brake and the "GC needs room to run
+		// concurrently" purpose it was designed for remain intact).
 		gcwl = new SSD_Components::GC_and_WL_Unit_Page_Level(ftl->ID() + ".GCandWLUnit", amu, fbm, tsu, (SSD_Components::NVM_PHY_ONFI *)device->PHY,
 															 parameters->GC_Block_Selection_Policy, parameters->GC_Exec_Threshold, parameters->Preemptible_GC_Enabled, parameters->GC_Hard_Threshold,
 															 parameters->Flash_Channel_Count, parameters->Chip_No_Per_Channel,
 															 parameters->Flash_Parameters.Die_No_Per_Chip, parameters->Flash_Parameters.Plane_No_Per_Die,
 															 parameters->Flash_Parameters.Block_No_Per_Plane, parameters->Flash_Parameters.Page_No_Per_Block,
-															 parameters->Flash_Parameters.Page_Capacity / SECTOR_SIZE_IN_BYTE, parameters->Use_Copyback_for_GC, max_rho, 4,
+															 parameters->Flash_Parameters.Page_Capacity / SECTOR_SIZE_IN_BYTE, parameters->Use_Copyback_for_GC, max_rho, 3,
 															 parameters->Dynamic_Wearleveling_Enabled, parameters->Static_Wearleveling_Enabled, parameters->Static_Wearleveling_Threshold,
 															 parameters->Seed++);
 		Simulator->AddObject(gcwl);

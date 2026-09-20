@@ -1,4 +1,5 @@
 import type { SsdParams } from '../data/mqsimConfigs';
+import type { PresetId } from '../types';
 
 const PAGE_CAPACITY_OPTIONS: SsdParams['pageCapacityBytes'][] = [4096, 8192, 16384];
 const CHIP_COUNT_OPTIONS: SsdParams['chipCount'][] = [1, 2, 4];
@@ -40,7 +41,24 @@ const GC_POLICY_LABELS: Record<SsdParams['gcBlockSelectionPolicy'], string> = {
 // block) that 7 blocks works, 6 stalls. 8 keeps a small margin above that.
 const MIN_BLOCK_NO_PER_PLANE = 8;
 
+// "매핑 기본" is deliberately tuned so GC never meaningfully fires (5%
+// threshold, 100% working set, short Stop_Time - see [[ftl_visual_simulator_project]]
+// memory for the full comparison against "GC 시연"'s opposite tuning). The
+// shared 1-95% slider range let a user push this preset's threshold well
+// past where "GC 시연" actually needs it, inviting exactly the confusion
+// Ryu ran into ("왜 매핑 기본과 GC 시연이 따로 있어야 하는지 모르겠다") -
+// a wide-open slider implies GC is this preset's concern too. Narrowed to
+// 1-10% here specifically so the range itself signals "not the focus of
+// this preset" - "GC 시연"/"마모평준화 시연" keep the full range, since
+// exploring where GC actually kicks in is the point there.
+const GC_THRESHOLD_RANGE: Record<PresetId, { min: number; max: number }> = {
+  mapping: { min: 1, max: 10 },
+  gc: { min: 1, max: 95 },
+  'wear-leveling': { min: 1, max: 95 },
+};
+
 interface Props {
+  presetId: PresetId;
   params: SsdParams;
   onChange: (next: SsdParams) => void;
   disabled: boolean;
@@ -52,7 +70,8 @@ interface Props {
 // a CSS-only slider). Editing a value here doesn't reconfigure the engine
 // by itself - App.tsx watches `params` and reconfigures after a short
 // debounce, reusing the same reset flow as the ⏮ restart button.
-export function ParamPanel({ params, onChange, disabled }: Props) {
+export function ParamPanel({ presetId, params, onChange, disabled }: Props) {
+  const gcThresholdRange = GC_THRESHOLD_RANGE[presetId];
   return (
     <div className="sim-panel">
       <div className="param-row">
@@ -159,14 +178,17 @@ export function ParamPanel({ params, onChange, disabled }: Props) {
         <input
           className="param-slider"
           type="range"
-          min={1}
-          max={95}
+          min={gcThresholdRange.min}
+          max={gcThresholdRange.max}
           step={1}
           disabled={disabled}
           value={Math.round(params.gcExecThreshold * 100)}
           onChange={(e) => onChange({ ...params, gcExecThreshold: Number(e.target.value) / 100 })}
         />
-        <div className="param-hint">빈 block 비율이 이 아래로 떨어지면 GC 시작</div>
+        <div className="param-hint">
+          빈 block 비율이 이 아래로 떨어지면 GC 시작
+          {presetId === 'mapping' && ' - 이 프리셋은 GC 가 거의 발동하지 않도록 설계돼 있어 범위를 좁혀뒀습니다'}
+        </div>
       </div>
 
       <div className="param-row">

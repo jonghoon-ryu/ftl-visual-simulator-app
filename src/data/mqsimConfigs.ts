@@ -77,19 +77,25 @@ export const DEFAULT_MAPPING_PARAMS: SsdParams = {
   // FlashGrid's per-chip badge/free-cell colors) by default rather than
   // only when manually switched on.
   chipCount: 2,
-  // 8 (ParamPanel's MIN_BLOCK_NO_PER_PLANE) - Ryu's explicit choice
-  // (2026-09-20) for a more compact grid, overriding the previous 16
-  // default. Known tradeoff (see the harness finding this replaces): at 8
-  // blocks + 100% working set, "매핑 기본"'s device fills and hard-blocks
-  // writes before its own tiny Stop_Time (below) elapses, so the demo ends
-  // when the device fills rather than when Stop_Time is reached - raising
-  // Stop_Time further would not extend it. Re-verify GC 시연's execution
-  // count against this block count if that preset's behavior ever looks
-  // off, since DEFAULT_GC_PARAMS spreads chipCount/blockNoPerPlane from
-  // this default too.
-  blockNoPerPlane: 8,
+  // 12, not 8 (2026-09-20, raised alongside Overprovisioning_Ratio 7%->10%
+  // and max_ongoing_gc_reqs_per_plane 4->3, see that constant's comment in
+  // SSD_Device.cpp) - at block=8 the GC_Exec_Threshold slider's entire
+  // 0-50% range collapsed into one identical result (the clamp dominated),
+  // making most of the slider a no-op; this combination gives it a real,
+  // distinguishable low end again. Originally 8 (ParamPanel's
+  // MIN_BLOCK_NO_PER_PLANE) for a more compact grid - known tradeoff at
+  // that size (see the harness finding this replaces): at 8 blocks + 100%
+  // working set, "매핑 기본"'s device fills and hard-blocks writes before
+  // its own tiny Stop_Time (below) elapses, so the demo ends when the
+  // device fills rather than when Stop_Time is reached - raising Stop_Time
+  // further would not extend it. Re-verify GC 시연's execution count
+  // against this block count if that preset's behavior ever looks off,
+  // since DEFAULT_GC_PARAMS spreads chipCount/blockNoPerPlane from this
+  // default too.
+  blockNoPerPlane: 12,
   pageNoPerBlock: 16,
-  overprovisioningRatio: 0.07,
+  // 10%, not 7% (2026-09-20, see blockNoPerPlane's comment above for why).
+  overprovisioningRatio: 0.1,
   gcExecThreshold: 0.05,
   staticWlThreshold: 100,
   addressMapping: 'PAGE_LEVEL',
@@ -234,7 +240,13 @@ const AVERAGE_REQUEST_SIZE_SECTORS = 1;
 // the device fills and hard-blocks writes, nothing ever completes to
 // trigger generating the next one, so the run goes idle regardless of how
 // large Stop_Time is - raising Stop_Time alone, confirmed via harness, did
-// nothing at the old block count).
+// nothing at the old block count). Raised again 10x, to 50000000
+// (2026-09-20, after DEFAULT_MAPPING_PARAMS' block count went to 12) -
+// Ryu found the number of pages actually written felt too small; confirmed
+// via native CLI this is genuinely Stop_Time-bound now (not capacity-bound
+// - block=12 leaves plenty of headroom below the ~345-logical-page usable
+// capacity), and 10x Stop_Time gave ~5.5x more writes (33->183 requests),
+// close to the 5x Ryu asked for.
 // Address_Alignment_Unit - see ioAddressAlignmentUnitSectors() below for why
 // this isn't simply pageNoPerBlock once chipCount > 1.
 export function buildMappingWorkloadXml(params: SsdParams, workload: WorkloadParams = DEFAULT_WORKLOAD_PARAMS): string {
@@ -262,7 +274,7 @@ export function buildMappingWorkloadXml(params: SsdParams, workload: WorkloadPar
 			<Seed>${params.workloadSeed}</Seed>
 			<Average_No_of_Reqs_in_Queue>4</Average_No_of_Reqs_in_Queue>
 			<Intensity>32768</Intensity>
-			<Stop_Time>5000000</Stop_Time>
+			<Stop_Time>50000000</Stop_Time>
 			<Total_Requests_To_Generate>200</Total_Requests_To_Generate>
 		</IO_Flow_Parameter_Set_Synthetic>
 	</IO_Scenario>
@@ -328,18 +340,20 @@ export const mappingBasicWorkloadXml = buildMappingWorkloadXml(DEFAULT_MAPPING_P
 // default 0.05 needs the pool down to its last 1-2 blocks before GC ever
 // looks at firing, unreachable in a demo-sized run).
 //
-// Raised to 0.8 (80%) so GC fires *while a candidate block still has a few
-// live pages left*, giving the moving-page highlight (useMqsimMigrations)
-// something to show - re-swept via the native CLI (0.5/0.6/0.7/0.8/0.9/0.95)
-// after fixing ioAddressAlignmentUnitSectors() below (that fix alone
-// already makes even the original 0.5 default produce some migrations,
-// unlike before): 0.7+ all plateau at the same 31 executions/avg 7.19 page
-// movements, so 0.8 remains a fine choice (within the plateau, no
-// regression) even though it's no longer the *first* value with a nonzero
-// migration ratio the way it was pre-alignment-fix.
+// 0.5 (50%), not the earlier 0.8 (2026-09-20, alongside raising
+// blockNoPerPlane to 12 and max_ongoing_gc_reqs_per_plane's clamp down to 3
+// - see those defaults' own comments). Re-swept via native CLI at this new
+// geometry: 5-30% all fire GC but with Average_Page_Movement_For_GC=0.0
+// (every execution just reclaims an already-fully-invalid block - no
+// migration ever visible, the same failure mode this preset's threshold
+// was raised to fix once before). Real migrations start at 40% (0.45 avg)
+// and become clearly visible from 50% (4.3 avg) onward - chosen as the
+// lowest value where the moving-page highlight (useMqsimMigrations)
+// reliably has something to show, while leaving the slider's low end
+// (previously a total no-op at block=8) genuinely explorable.
 export const DEFAULT_GC_PARAMS: SsdParams = {
   ...DEFAULT_MAPPING_PARAMS,
-  gcExecThreshold: 0.8,
+  gcExecThreshold: 0.5,
 };
 
 // Same synthetic write flow as buildMappingWorkloadXml, but tuned to
@@ -445,6 +459,11 @@ export const DEFAULT_WL_PARAMS: SsdParams = {
   blockNoPerPlane: 64,
   gcExecThreshold: 0.5,
   staticWlThreshold: 1,
+  // overprovisioningRatio not pinned here (unlike chipCount/blockNoPerPlane
+  // above) - inherits DEFAULT_MAPPING_PARAMS' 10% (was 7%). Re-verified via
+  // native CLI after that change: Total_WL_Executions stayed exactly 1
+  // (the documented invariant), Total_GC_Executions shifted 92->86 (minor,
+  // expected from more spare capacity) - no regression.
 };
 
 export function buildWlWorkloadXml(params: SsdParams, workload: WorkloadParams = DEFAULT_WORKLOAD_PARAMS): string {
