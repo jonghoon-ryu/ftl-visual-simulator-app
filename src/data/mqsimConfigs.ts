@@ -47,22 +47,22 @@ export interface SsdParams {
 
 export const DEFAULT_MAPPING_PARAMS: SsdParams = {
   pageCapacityBytes: 4096,
-  chipCount: 1,
-  // 16, not ParamPanel's MIN_BLOCK_NO_PER_PLANE(8) - "매핑 기본"'s own
-  // Stop_Time (below) is tiny, so at 8 blocks the device's own physical
-  // capacity (not Stop_Time) is what cuts the demo short: with
-  // Working_Set_Percentage=100, the workload keeps issuing writes only as
-  // fast as old ones complete (QUEUE_DEPTH is demand-driven), so once the
-  // device fills and hard-blocks further writes, no old request ever
-  // completes, no new one ever gets generated, and the whole scenario goes
-  // idle regardless of how large Stop_Time is - confirmed via harness
-  // (raising Stop_Time 10x-1000x at 8 blocks never grew past the same ~119
-  // mapped pages/49 event-groups). 16 blocks gives the device enough
-  // headroom that Stop_Time becomes the actual limiter again, so raising
-  // Stop_Time (below) has a real effect. Also DEFAULT_GC_PARAMS' default
-  // (spread from this) - confirmed via harness that "GC 시연" still fires
-  // GC (5 times) at this block count within its shipped Stop_Time.
-  blockNoPerPlane: 16,
+  // 2, not 1 - Ryu's explicit choice (2026-09-20) to have the FlashGrid
+  // show chip-to-chip differences (now visually distinguishable via
+  // FlashGrid's per-chip badge/free-cell colors) by default rather than
+  // only when manually switched on.
+  chipCount: 2,
+  // 8 (ParamPanel's MIN_BLOCK_NO_PER_PLANE) - Ryu's explicit choice
+  // (2026-09-20) for a more compact grid, overriding the previous 16
+  // default. Known tradeoff (see the harness finding this replaces): at 8
+  // blocks + 100% working set, "매핑 기본"'s device fills and hard-blocks
+  // writes before its own tiny Stop_Time (below) elapses, so the demo ends
+  // when the device fills rather than when Stop_Time is reached - raising
+  // Stop_Time further would not extend it. Re-verify GC 시연's execution
+  // count against this block count if that preset's behavior ever looks
+  // off, since DEFAULT_GC_PARAMS spreads chipCount/blockNoPerPlane from
+  // this default too.
+  blockNoPerPlane: 8,
   pageNoPerBlock: 16,
   overprovisioningRatio: 0.07,
   gcExecThreshold: 0.05,
@@ -165,18 +165,25 @@ export interface WorkloadParams {
   // 80 keeps a comfortable safety margin (same margin philosophy as
   // MIN_BLOCK_NO_PER_PLANE in ParamPanel.tsx).
   readPercentage: number;
-  // Average_Request_Size in pages, 1-64 (matches ParamPanel's Page 당 Page
-  // 개수 max) - verified via native CLI up to 64 pages/request with no new
-  // deadlock (large bursts just take longer per request, self-limiting
-  // throughput rather than exhausting the free-block pool early).
-  burstSize: number;
 }
 
 export const DEFAULT_WORKLOAD_PARAMS: WorkloadParams = {
   addressDistribution: 'RANDOM_UNIFORM',
   readPercentage: 0,
-  burstSize: 1,
 };
+
+// Average_Request_Size is in 512B sectors (IO_Flow_Synthetic.cpp's
+// average_request_size_sector / request->LBA_count), not pages. A "burst
+// 크기" (page count) UI control existed briefly (2026-09-20) but was
+// removed: correctly converting it to sectors made every request take
+// noticeably longer to service, which pushed the small demo-scale device
+// (block count 8) into a real, still-uninvestigated stall in TSU_FLIN's
+// scheduler - not reachable at this project's previous 16-block default,
+// and not something to expose in the UI before that engine-level bug is
+// found and fixed. Hardcoded to 1 sector (a fraction of a page - MQSim
+// still services it as a single-page write) to exactly match the
+// unconverted behavior every preset already shipped with.
+const AVERAGE_REQUEST_SIZE_SECTORS = 1;
 
 // One small synthetic write-heavy flow to populate the mapping table.
 // Total_Requests_To_Generate is set but doesn't actually do anything -
@@ -214,7 +221,7 @@ export function buildMappingWorkloadXml(params: SsdParams, workload: WorkloadPar
 			<Generated_Aligned_Addresses>true</Generated_Aligned_Addresses>
 			<Address_Alignment_Unit>${ioAddressAlignmentUnitSectors(params)}</Address_Alignment_Unit>
 			<Request_Size_Distribution>FIXED</Request_Size_Distribution>
-			<Average_Request_Size>${workload.burstSize}</Average_Request_Size>
+			<Average_Request_Size>${AVERAGE_REQUEST_SIZE_SECTORS}</Average_Request_Size>
 			<Variance_Request_Size>0</Variance_Request_Size>
 			<Seed>${params.workloadSeed}</Seed>
 			<Average_No_of_Reqs_in_Queue>4</Average_No_of_Reqs_in_Queue>
@@ -346,7 +353,7 @@ export function buildGcWorkloadXml(params: SsdParams, workload: WorkloadParams =
 			<Generated_Aligned_Addresses>true</Generated_Aligned_Addresses>
 			<Address_Alignment_Unit>${ioAddressAlignmentUnitSectors(params)}</Address_Alignment_Unit>
 			<Request_Size_Distribution>FIXED</Request_Size_Distribution>
-			<Average_Request_Size>${workload.burstSize}</Average_Request_Size>
+			<Average_Request_Size>${AVERAGE_REQUEST_SIZE_SECTORS}</Average_Request_Size>
 			<Variance_Request_Size>0</Variance_Request_Size>
 			<Seed>${params.workloadSeed}</Seed>
 			<Average_No_of_Reqs_in_Queue>4</Average_No_of_Reqs_in_Queue>
@@ -388,6 +395,12 @@ export function buildGcWorkloadXml(params: SsdParams, workload: WorkloadParams =
 // preset can honestly demonstrate at this scale.
 export const DEFAULT_WL_PARAMS: SsdParams = {
   ...DEFAULT_MAPPING_PARAMS,
+  // Pinned to 1, not DEFAULT_MAPPING_PARAMS' 2 - Ryu's 2026-09-20 chip
+  // count change (see that default's own comment) was scoped to "매핑
+  // 기본"/"GC 시연" only; "마모평준화 시연"'s tuned trigger counts (92 GC
+  // executions, exactly 1 WL execution) were only ever verified at
+  // chipCount=1 and haven't been re-swept for multi-chip.
+  chipCount: 1,
   // Larger than the other presets' 16 - verified via the same harness
   // that 16 blocks stalls out (writes permanently hard-blocked, same
   // mechanism as MIN_BLOCK_NO_PER_PLANE) before enough erases accumulate
@@ -418,7 +431,7 @@ export function buildWlWorkloadXml(params: SsdParams, workload: WorkloadParams =
 			<Generated_Aligned_Addresses>true</Generated_Aligned_Addresses>
 			<Address_Alignment_Unit>${ioAddressAlignmentUnitSectors(params)}</Address_Alignment_Unit>
 			<Request_Size_Distribution>FIXED</Request_Size_Distribution>
-			<Average_Request_Size>${workload.burstSize}</Average_Request_Size>
+			<Average_Request_Size>${AVERAGE_REQUEST_SIZE_SECTORS}</Average_Request_Size>
 			<Variance_Request_Size>0</Variance_Request_Size>
 			<Seed>${params.workloadSeed}</Seed>
 			<Average_No_of_Reqs_in_Queue>4</Average_No_of_Reqs_in_Queue>

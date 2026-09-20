@@ -5,7 +5,6 @@ import type { WorkloadParams } from '../data/mqsimConfigs';
 // doc comment in mqsimConfigs.ts for why the other two real modes
 // (MIXED_STREAMING_RANDOM, RANDOM_HOTCOLD) are left out.
 const MAX_READ_PERCENTAGE = 80;
-const MAX_BURST_SIZE = 64;
 
 interface Props {
   workload: WorkloadParams;
@@ -14,9 +13,12 @@ interface Props {
 }
 
 // Session 10 spec ("workload 생성기 컨트롤 - sequential/random, read/write
-// 비율, burst 크기") - same pattern as ParamPanel.tsx: editing a value here
-// doesn't reconfigure the engine by itself, App.tsx watches `workload` and
+// 비율") - same pattern as ParamPanel.tsx: editing a value here doesn't
+// reconfigure the engine by itself, App.tsx watches `workload` and
 // reconfigures after the same short debounce used for SsdParams edits.
+// A "burst 크기" (request size) control existed briefly (2026-09-20) but
+// was removed - see AVERAGE_REQUEST_SIZE_SECTORS' comment in
+// mqsimConfigs.ts for why.
 export function WorkloadPanel({ workload, onChange, disabled }: Props) {
   return (
     <div className="sim-panel">
@@ -54,23 +56,6 @@ export function WorkloadPanel({ workload, onChange, disabled }: Props) {
           disabled={disabled}
           value={workload.readPercentage}
           onChange={(e) => onChange({ ...workload, readPercentage: Number(e.target.value) })}
-        />
-      </div>
-
-      <div className="param-row">
-        <div className="param-label">
-          <span>Burst 크기</span>
-          <span>{workload.burstSize} page</span>
-        </div>
-        <input
-          className="param-slider"
-          type="range"
-          min={1}
-          max={MAX_BURST_SIZE}
-          step={1}
-          disabled={disabled}
-          value={workload.burstSize}
-          onChange={(e) => onChange({ ...workload, burstSize: Number(e.target.value) })}
         />
       </div>
     </div>

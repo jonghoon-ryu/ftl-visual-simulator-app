@@ -19,6 +19,14 @@ const ALL_STATES: (keyof typeof LABELS)[] = ['valid', 'invalid', 'moving', 'free
 // instead of going undefined.
 const CHIP_COLORS = ['#4dabf7', '#b980f0', '#ff8ac2', '#4ecdc4'];
 
+// Distinct grays for the 'free' cell state, one per chip - the per-chip
+// colored cell border was removed earlier (too much visual noise stacked
+// on top of the state colors), but an all-gray "nothing has happened yet"
+// grid still looks like one undifferentiated block of chips. Kept within
+// the same gray family as .cell.free's base #383c4d so it still reads as
+// "free", just a tinted shade per chip.
+const CHIP_FREE_GRAYS = ['#383c4d', '#454a5f', '#2e313d', '#4f4438'];
+
 interface Props {
   blocks: BlockRow[];
   caption: string;
@@ -53,18 +61,22 @@ export function FlashGrid({ blocks, caption }: Props) {
             </div>
             <div className="row-label">{block.label}</div>
             <div className={`row-cells${block.erasing ? ' erasing' : ''}`}>
-              {block.pages.map((page, i) => (
-                <div
-                  key={i}
-                  className={`cell ${page.state}${page.superseded ? ' superseded' : ''}`}
-                  title={
-                    `Chip ${block.chip} · ${block.label} / Page ${i} — ${page.state}` +
-                    (page.superseded ? ' (다른 페이지로 옮겨짐 - 이전 데이터)' : '')
-                  }
-                >
-                  {page.state === 'valid' ? 'V' : page.state === 'invalid' ? 'X' : page.state === 'moving' ? '→' : ''}
-                </div>
-              ))}
+              {block.pages.map((page, i) => {
+                const freeGray = CHIP_FREE_GRAYS[(block.chip ?? 0) % CHIP_FREE_GRAYS.length];
+                return (
+                  <div
+                    key={i}
+                    className={`cell ${page.state}${page.superseded ? ' superseded' : ''}`}
+                    style={page.state === 'free' ? { background: freeGray, color: freeGray } : undefined}
+                    title={
+                      `Chip ${block.chip} · ${block.label} / Page ${i} — ${page.state}` +
+                      (page.superseded ? ' (다른 페이지로 옮겨짐 - 이전 데이터)' : '')
+                    }
+                  >
+                    {page.state === 'valid' ? 'V' : page.state === 'invalid' ? 'X' : page.state === 'moving' ? '→' : ''}
+                  </div>
+                );
+              })}
             </div>
             {block.isVictim && <span className="row-flag row-flag-victim">Victim</span>}
             {block.gcDestination && <span className="row-flag row-flag-gc-block">GC block</span>}

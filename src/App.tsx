@@ -79,7 +79,7 @@ function App() {
     'wear-leveling': DEFAULT_WL_PARAMS,
   });
   // Session 10: workload generator knobs (sequential/random, read/write
-  // 비율, burst 크기), independent of SsdParams and keyed per-preset the
+  // 비율), independent of SsdParams and keyed per-preset the
   // same way - all three wired presets start from the same DEFAULT_
   // WORKLOAD_PARAMS since that's exactly what their tuned Working_Set_
   // Percentage/Stop_Time values (mqsimConfigs.ts) were verified against.
