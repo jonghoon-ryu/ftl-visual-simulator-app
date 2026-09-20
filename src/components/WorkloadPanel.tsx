@@ -4,7 +4,6 @@ import type { WorkloadParams } from '../data/mqsimConfigs';
 // ("sequential") and RANDOM_UNIFORM ("random") here - see WorkloadParams'
 // doc comment in mqsimConfigs.ts for why the other two real modes
 // (MIXED_STREAMING_RANDOM, RANDOM_HOTCOLD) are left out.
-const MAX_READ_PERCENTAGE = 80;
 
 interface Props {
   workload: WorkloadParams;
@@ -12,13 +11,18 @@ interface Props {
   disabled: boolean;
 }
 
-// Session 10 spec ("workload 생성기 컨트롤 - sequential/random, read/write
-// 비율") - same pattern as ParamPanel.tsx: editing a value here doesn't
-// reconfigure the engine by itself, App.tsx watches `workload` and
-// reconfigures after the same short debounce used for SsdParams edits.
+// Session 10 spec ("workload 생성기 컨트롤 - sequential/random") - same
+// pattern as ParamPanel.tsx: editing a value here doesn't reconfigure the
+// engine by itself, App.tsx watches `workload` and reconfigures after the
+// same short debounce used for SsdParams edits.
 // A "burst 크기" (request size) control existed briefly (2026-09-20) but
 // was removed - see AVERAGE_REQUEST_SIZE_SECTORS' comment in
-// mqsimConfigs.ts for why.
+// mqsimConfigs.ts for why. "Read 비율" was removed the same session, for a
+// related reason - see READ_PERCENTAGE's comment in mqsimConfigs.ts: a
+// read to an LPA with no mapping yet silently reserves a real page (MQSim's
+// lazy stand-in for the preconditioning pass this project skips), which is
+// confusing at this project's small demo scale and unrelated to what this
+// project's GC/WL demos are actually about.
 export function WorkloadPanel({ workload, onChange, disabled }: Props) {
   return (
     <div className="sim-panel">
@@ -40,23 +44,6 @@ export function WorkloadPanel({ workload, onChange, disabled }: Props) {
           <option value="RANDOM_UNIFORM">Random</option>
           <option value="STREAMING">Sequential</option>
         </select>
-      </div>
-
-      <div className="param-row">
-        <div className="param-label">
-          <span>Read 비율</span>
-          <span>{workload.readPercentage}%</span>
-        </div>
-        <input
-          className="param-slider"
-          type="range"
-          min={0}
-          max={MAX_READ_PERCENTAGE}
-          step={5}
-          disabled={disabled}
-          value={workload.readPercentage}
-          onChange={(e) => onChange({ ...workload, readPercentage: Number(e.target.value) })}
-        />
       </div>
     </div>
   );

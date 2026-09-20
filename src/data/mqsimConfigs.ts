@@ -156,21 +156,31 @@ export interface WorkloadParams {
   // ("sequential"/"random"); MIXED_STREAMING_RANDOM and RANDOM_HOTCOLD are
   // real modes but outside the plan's beginner-facing two-way toggle.
   addressDistribution: 'RANDOM_UNIFORM' | 'STREAMING';
-  // 0-80, not 0-100: verified via native CLI that Read_Percentage=99 (and
-  // 100) hangs the simulator outright - reading an LPA that has *never*
-  // been written yet (unavoidable at the very start of a fresh device, and
-  // increasingly likely near 100% reads) sends MQSim into an infinite loop
-  // rather than an error. 95-98 still completed in testing, but the exact
-  // boundary depends on RNG/seed interaction with the specific geometry, so
-  // 80 keeps a comfortable safety margin (same margin philosophy as
-  // MIN_BLOCK_NO_PER_PLANE in ParamPanel.tsx).
-  readPercentage: number;
 }
 
 export const DEFAULT_WORKLOAD_PARAMS: WorkloadParams = {
   addressDistribution: 'RANDOM_UNIFORM',
-  readPercentage: 0,
 };
+
+// Hardcoded to 0 - a "Read 비율" (Read_Percentage) UI control existed
+// briefly (2026-09-20) but was removed. Found while testing it: a read
+// that lands on an LPA with no mapping yet doesn't just fail or return
+// empty - online_create_entry_for_reads() (Address_Mapping_Unit_Page_
+// Level.cpp) silently reserves a real page for it via the exact same
+// allocation function a write uses (Allocate_block_and_page_in_plane_
+// for_user_write), consuming free-pool capacity identically to a write,
+// with no Program command ever issued. This is MQSim's lazy stand-in for
+// the Perform_preconditioning() pass this project skips (Enabled_
+// Preconditioning=false, for demo speed) - real preconditioning eagerly
+// pre-writes the device before timed measurement so no read ever hits
+// unmapped territory; this project's beginner-facing demos hit that case
+// constantly instead, especially right at the start of a run, which is
+// confusing (a "Read" silently creating a valid page from nothing) and
+// unrelated to what the GC/WL demos are meant to show. Also verified
+// via native CLI that Read_Percentage=99-100 hangs the simulator outright
+// for the same underlying reason (reading a never-written LPA repeatedly
+// near 100% reads). At the hardcoded 0 this class of read never happens.
+const READ_PERCENTAGE = 0;
 
 // Average_Request_Size is in 512B sectors (IO_Flow_Synthetic.cpp's
 // average_request_size_sector / request->LBA_count), not pages. A "burst
@@ -215,7 +225,7 @@ export function buildMappingWorkloadXml(params: SsdParams, workload: WorkloadPar
 			<Initial_Occupancy_Percentage>0</Initial_Occupancy_Percentage>
 			<Working_Set_Percentage>100</Working_Set_Percentage>
 			<Synthetic_Generator_Type>QUEUE_DEPTH</Synthetic_Generator_Type>
-			<Read_Percentage>${workload.readPercentage}</Read_Percentage>
+			<Read_Percentage>${READ_PERCENTAGE}</Read_Percentage>
 			<Address_Distribution>${workload.addressDistribution}</Address_Distribution>
 			<Percentage_of_Hot_Region>0</Percentage_of_Hot_Region>
 			<Generated_Aligned_Addresses>true</Generated_Aligned_Addresses>
@@ -347,7 +357,7 @@ export function buildGcWorkloadXml(params: SsdParams, workload: WorkloadParams =
 			<Initial_Occupancy_Percentage>0</Initial_Occupancy_Percentage>
 			<Working_Set_Percentage>25</Working_Set_Percentage>
 			<Synthetic_Generator_Type>QUEUE_DEPTH</Synthetic_Generator_Type>
-			<Read_Percentage>${workload.readPercentage}</Read_Percentage>
+			<Read_Percentage>${READ_PERCENTAGE}</Read_Percentage>
 			<Address_Distribution>${workload.addressDistribution}</Address_Distribution>
 			<Percentage_of_Hot_Region>0</Percentage_of_Hot_Region>
 			<Generated_Aligned_Addresses>true</Generated_Aligned_Addresses>
@@ -425,7 +435,7 @@ export function buildWlWorkloadXml(params: SsdParams, workload: WorkloadParams =
 			<Initial_Occupancy_Percentage>0</Initial_Occupancy_Percentage>
 			<Working_Set_Percentage>25</Working_Set_Percentage>
 			<Synthetic_Generator_Type>QUEUE_DEPTH</Synthetic_Generator_Type>
-			<Read_Percentage>${workload.readPercentage}</Read_Percentage>
+			<Read_Percentage>${READ_PERCENTAGE}</Read_Percentage>
 			<Address_Distribution>${workload.addressDistribution}</Address_Distribution>
 			<Percentage_of_Hot_Region>0</Percentage_of_Hot_Region>
 			<Generated_Aligned_Addresses>true</Generated_Aligned_Addresses>
