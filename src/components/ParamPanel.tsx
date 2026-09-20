@@ -238,7 +238,10 @@ export function ParamPanel({ presetId, params, onChange, disabled }: Props) {
           value={params.deviceSeed}
           onChange={(e) => onChange({ ...params, deviceSeed: Number(e.target.value) })}
         />
-        <div className="param-hint">GC 후보 선택 등 엔진 내부 랜덤성의 시드</div>
+        <div className="param-hint">
+          선택한 GC 알고리즘의 무작위성(예: RGA/Random 계열의 후보 block 추첨)이나 동적 마모평준화 등, 엔진 내부
+          랜덤성의 시드
+        </div>
       </div>
 
       <div className="param-row">
