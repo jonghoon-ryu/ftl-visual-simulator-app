@@ -159,9 +159,19 @@ namespace SSD_Components {
 				}
 				targetChip->Suspend(transaction_list.front()->Address.DieID);
 				dieBKE->PrepareSuspend();
-				if (chipBKE->OngoingDieCMDTransfers.size()) {
-					chipBKE->PrepareSuspend();
-				}
+				// BUG FIX (this project, upstream MQSim): was gated behind
+				// `if (chipBKE->OngoingDieCMDTransfers.size())`, a condition
+				// that's essentially unreachable outside multi-die command
+				// interleaving. With die_no_per_chip==1 (this project's demo
+				// configs), that guard was always false, so
+				// chipBKE->No_of_active_dies never got reset here - the
+				// suspended die's slot stayed "active" forever, so the chip
+				// could never be seen as idle again (No_of_active_dies==0
+				// gates every later IDLE/WAIT_FOR_DATA_OUT transition),
+				// permanently wedging the TSU. Found 2026-09-20 tracing a
+				// deadlock where GC page-migration transactions never
+				// completed after suspending a busy chip.
+				chipBKE->PrepareSuspend();
 			} else {
 				PRINT_ERROR("Read suspension is not supported!")
 			}

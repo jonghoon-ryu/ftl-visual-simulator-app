@@ -10,8 +10,8 @@ TSU_OutOfOrder::TSU_OutOfOrder(const sim_object_id_type &id, FTL *ftl, NVM_PHY_O
 							   sim_time_type EraseReasonableSuspensionTimeForWrite,
 							   bool EraseSuspensionEnabled, bool ProgramSuspensionEnabled)
 	: TSU_Base(id, ftl, NVMController, Flash_Scheduling_Type::OUT_OF_ORDER, ChannelCount, chip_no_per_channel, DieNoPerChip, PlaneNoPerDie,
-			   WriteReasonableSuspensionTimeForRead, EraseReasonableSuspensionTimeForRead, EraseReasonableSuspensionTimeForWrite,
-			   EraseSuspensionEnabled, ProgramSuspensionEnabled)
+			   EraseSuspensionEnabled, ProgramSuspensionEnabled,
+			   WriteReasonableSuspensionTimeForRead, EraseReasonableSuspensionTimeForRead, EraseReasonableSuspensionTimeForWrite)
 {
 	UserReadTRQueue = new Flash_Transaction_Queue *[channel_count];
 	UserWriteTRQueue = new Flash_Transaction_Queue *[channel_count];
@@ -312,6 +312,7 @@ bool TSU_OutOfOrder::service_read_transaction(NVM::FlashMemory::Flash_Chip *chip
 			return false;
 		}
 		suspensionRequired = true;
+		break;
 	case ChipStatus::ERASING:
 		if (!eraseSuspensionEnabled || _NVMController->HasSuspendedCommand(chip))
 		{
@@ -322,6 +323,7 @@ bool TSU_OutOfOrder::service_read_transaction(NVM::FlashMemory::Flash_Chip *chip
 			return false;
 		}
 		suspensionRequired = true;
+		break;
 	default:
 		return false;
 	}
@@ -392,6 +394,7 @@ bool TSU_OutOfOrder::service_write_transaction(NVM::FlashMemory::Flash_Chip *chi
 		if (_NVMController->Expected_finish_time(chip) - Simulator->Time() < eraseReasonableSuspensionTimeForWrite)
 			return false;
 		suspensionRequired = true;
+		break;
 	default:
 		return false;
 	}

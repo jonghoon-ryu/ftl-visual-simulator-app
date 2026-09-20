@@ -82,7 +82,16 @@ namespace SSD_Components
 		unsigned int No_of_active_dies;
 
 		void PrepareSuspend() { HasSuspend = true; No_of_active_dies = 0; }
-		void PrepareResume() { HasSuspend = false; }
+		// BUG FIX (this project, upstream MQSim): PrepareSuspend() zeroes
+		// No_of_active_dies (the suspended die is no longer "active"), but
+		// this mirror-image call left it unrestored - the resumed die's
+		// completion handler later does No_of_active_dies-- expecting to
+		// land back on 0, underflowing an unsigned int to a huge value
+		// instead. That permanently fails every later `== 0` check gating
+		// IDLE/WAIT_FOR_DATA_OUT transitions, wedging the chip forever.
+		// Found 2026-09-20 pairing with the PrepareSuspend() call site fix
+		// in Send_command_to_chip.
+		void PrepareResume() { HasSuspend = false; No_of_active_dies++; }
 	};
 
 	class NVM_PHY_ONFI_NVDDR2 : public NVM_PHY_ONFI

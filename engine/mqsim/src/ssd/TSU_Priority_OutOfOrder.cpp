@@ -24,11 +24,11 @@ TSU_Priority_OutOfOrder::TSU_Priority_OutOfOrder(const sim_object_id_type &id,
                ChipNoPerChannel,
                DieNoPerChip,
                PlaneNoPerDie,
+               EraseSuspensionEnabled,
+               ProgramSuspensionEnabled,
                WriteReasonableSuspensionTimeForRead,
                EraseReasonableSuspensionTimeForRead,
-               EraseReasonableSuspensionTimeForWrite,
-               EraseSuspensionEnabled,
-               ProgramSuspensionEnabled)
+               EraseReasonableSuspensionTimeForWrite)
 {
     UserReadTRQueue = new Flash_Transaction_Queue **[channel_count];
     UserWriteTRQueue = new Flash_Transaction_Queue **[channel_count];
@@ -415,6 +415,7 @@ bool TSU_Priority_OutOfOrder::service_read_transaction(NVM::FlashMemory::Flash_C
             return false;
         }
         suspensionRequired = true;
+        break;
     case ChipStatus::ERASING:
         if (!eraseSuspensionEnabled || _NVMController->HasSuspendedCommand(chip))
         {
@@ -425,6 +426,7 @@ bool TSU_Priority_OutOfOrder::service_read_transaction(NVM::FlashMemory::Flash_C
             return false;
         }
         suspensionRequired = true;
+        break;
     default:
         return false;
     }
@@ -526,6 +528,7 @@ bool TSU_Priority_OutOfOrder::service_write_transaction(NVM::FlashMemory::Flash_
         if (_NVMController->Expected_finish_time(chip) - Simulator->Time() < eraseReasonableSuspensionTimeForWrite)
             return false;
         suspensionRequired = true;
+        break;
     default:
         return false;
     }
