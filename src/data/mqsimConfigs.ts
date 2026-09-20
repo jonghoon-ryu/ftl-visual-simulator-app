@@ -35,14 +35,27 @@ export interface SsdParams {
   // GC_and_WL_Unit_Page_Level::Check_gc_required()'s victim-block selection
   // policy (Device_Parameter_Set.cpp parses these 6 exact strings, case-
   // insensitive). Was a hardcoded literal 'RGA' in buildSsdConfigXml until
-  // Ryu asked to make it adjustable (2026-09-20). RGA (the default) and
-  // RANDOM/RANDOM_P/RANDOM_PP all bound their candidate-search loop at
-  // block_no_per_plane retries - safe at this project's small block counts
-  // (RGA's own loop needed exactly this fix once already, see reference/
-  // bug-list/rga-incomplete-block-bug/). GREEDY does a plain O(block count)
-  // scan - also safe. FIFO pops Block_usage_history.front() with no empty-
-  // queue check - untested at this project's scale, verify via native CLI
-  // before trusting it in a demo if it's ever picked.
+  // Ryu asked to make it adjustable (2026-09-20). All 6 verified via native
+  // CLI at this project's demo scale (block=8, chip=2, "GC 시연") the same
+  // session this was exposed:
+  // - GREEDY and FIFO both crashed ("Inconsistency in the global mapping
+  //   table when locking an LPA!") - neither validated its final candidate
+  //   against is_safe_gc_wl_candidate() before using it (GREEDY's initial
+  //   guess was never checked, only later replacements were; FIFO didn't
+  //   check its popped candidate at all, or even that its queue was non-
+  //   empty), so each could pick a block still actively serving as a write
+  //   frontier. Real, invisible-at-upstream-scale defects, same bucket as
+  //   the already-documented RGA bug - fixed in GC_and_WL_Unit_Page_Level.cpp
+  //   the same way RGA's own fix works: verify the final pick, skip this GC
+  //   opportunity entirely if nothing is confirmed safe.
+  // - RGA/RANDOM/RANDOM_P/RANDOM_PP all ran clean, no crashes.
+  // - Genuine performance differences confirmed too, not just safety: same
+  //   scenario, RGA and GREEDY both reached 20 GC executions; pure RANDOM
+  //   only ever reached 1 before the workload wound down; RANDOM_P/PP
+  //   reached 3. (RANDOM_PP is functionally identical to RANDOM_P in this
+  //   project specifically - its extra "minimum invalid pages" condition is
+  //   scaled by Initial_Occupancy_Percentage, which every preset here sets
+  //   to 0, making that condition always trivially true.)
   gcBlockSelectionPolicy: 'GREEDY' | 'RGA' | 'RANDOM' | 'RANDOM_P' | 'RANDOM_PP' | 'FIFO';
   // Device_Parameter_Set's own Seed - seeds MQSim's internal RNG (GC
   // candidate sampling for RANDOM*/RGA policies, dynamic WL tie-breaks,

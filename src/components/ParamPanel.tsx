@@ -4,9 +4,11 @@ const PAGE_CAPACITY_OPTIONS: SsdParams['pageCapacityBytes'][] = [4096, 8192, 163
 const CHIP_COUNT_OPTIONS: SsdParams['chipCount'][] = [1, 2, 4];
 
 // GC_Block_Selection_Policy_Type's 6 real values (Device_Parameter_Set.cpp).
-// RGA first/default - the only one this project's presets were tuned and
-// verified against; see SsdParams.gcBlockSelectionPolicy's doc comment for
-// which of the rest are loop-bounded (safe) vs unverified at this scale.
+// RGA first/default - the one this project's presets were originally tuned
+// against, though all 6 are now verified safe at this project's scale (a
+// real GREEDY/FIFO crash bug was found and fixed the same session this was
+// exposed) - see SsdParams.gcBlockSelectionPolicy's doc comment for the
+// full investigation and the real efficiency differences between them.
 const GC_POLICY_OPTIONS: SsdParams['gcBlockSelectionPolicy'][] = [
   'RGA',
   'GREEDY',
@@ -182,7 +184,7 @@ export function ParamPanel({ params, onChange, disabled }: Props) {
             </option>
           ))}
         </select>
-        <div className="param-hint">victim block 을 고르는 방식 - 기본(RGA)이 아닌 다른 알고리즘은 이 프로젝트 규모에서 따로 검증되지 않았습니다</div>
+        <div className="param-hint">지워질 block(victim)을 고르는 방식 - 알고리즘마다 GC 가 실제로 얼마나 효율적인지 다릅니다 (예: Random 은 RGA/Greedy 보다 훨씬 자주 헛수고함)</div>
       </div>
 
       <div className="param-row">

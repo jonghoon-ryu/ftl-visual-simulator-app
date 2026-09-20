@@ -54,16 +54,36 @@ namespace SSD_Components
 			switch (block_selection_policy) {
 				case SSD_Components::GC_Block_Selection_Policy_Type::GREEDY://Find the set of blocks with maximum number of invalid pages and no free pages
 				{
-					gc_candidate_block_id = 0;
-					if (pbke->Ongoing_erase_operations.find(0) != pbke->Ongoing_erase_operations.end()) {
-						gc_candidate_block_id++;
-					}
-					for (flash_block_ID_type block_id = 1; block_id < block_no_per_plane; block_id++) {
-						if (pbke->Blocks[block_id].Invalid_page_count > pbke->Blocks[gc_candidate_block_id].Invalid_page_count
-							&& pbke->Blocks[block_id].Current_page_write_index == pages_no_per_block
-							&& is_safe_gc_wl_candidate(pbke, block_id)) {
+					// BUG FIX (this project, upstream MQSim): the initial pick
+					// (block 0, or 1 if 0 is mid-erase) was never itself checked
+					// against is_safe_gc_wl_candidate() - only later replacement
+					// candidates were. At real MQSim's intended scale, block 0/1
+					// is essentially never still a live write frontier by the
+					// time GC first runs (thousands of other blocks exist to
+					// serve as frontiers instead); at this project's small demo
+					// scale, block 0 or 1 can easily *be* the current frontier,
+					// and if no other block ever has strictly more invalid pages
+					// while also being full and safe, that unsafe initial pick
+					// survives untouched and gets used - selecting a block still
+					// being actively written to as GC's victim, which crashes
+					// with "Inconsistency in the global mapping table when
+					// locking an LPA!". Now scans every block for the best
+					// full+safe+not-already-erasing candidate from scratch, and
+					// skips this GC opportunity entirely if none exists - same
+					// "never fall through with an unverified pick" fix already
+					// applied to RGA below.
+					bool found_candidate = false;
+					for (flash_block_ID_type block_id = 0; block_id < block_no_per_plane; block_id++) {
+						if (pbke->Blocks[block_id].Current_page_write_index == pages_no_per_block
+							&& pbke->Ongoing_erase_operations.find(block_id) == pbke->Ongoing_erase_operations.end()
+							&& is_safe_gc_wl_candidate(pbke, block_id)
+							&& (!found_candidate || pbke->Blocks[block_id].Invalid_page_count > pbke->Blocks[gc_candidate_block_id].Invalid_page_count)) {
 							gc_candidate_block_id = block_id;
+							found_candidate = true;
 						}
+					}
+					if (!found_candidate) {
+						return;
 					}
 					break;
 				}
@@ -167,9 +187,42 @@ namespace SSD_Components
 					break;
 				}
 				case SSD_Components::GC_Block_Selection_Policy_Type::FIFO:
-					gc_candidate_block_id = pbke->Block_usage_history.front();
-					pbke->Block_usage_history.pop();
+				{
+					// BUG FIX (this project, upstream MQSim): popped the front
+					// of the allocation-order queue unconditionally - no check
+					// that the queue was even non-empty (undefined behavior on
+					// std::queue::front() otherwise), and no check that the
+					// oldest-allocated block is actually a safe GC candidate
+					// (not a live write frontier, not mid-erase). At real
+					// MQSim's intended scale, the oldest-allocated block has
+					// almost always long since stopped being any block's
+					// current frontier by the time GC first runs; at this
+					// project's small demo scale, it can easily still *be* one,
+					// which crashes the same way GREEDY's equivalent gap did
+					// (see that case's comment above). Now cycles through the
+					// queue (re-queueing anything not yet eligible, so it's
+					// reconsidered on its next natural turn) up to its own
+					// size, and skips this GC opportunity entirely if nothing
+					// in it is eligible yet.
+					bool found_candidate = false;
+					const size_t attempts = pbke->Block_usage_history.size();
+					for (size_t attempt = 0; attempt < attempts; attempt++) {
+						flash_block_ID_type candidate_block_id = pbke->Block_usage_history.front();
+						pbke->Block_usage_history.pop();
+						if (pbke->Blocks[candidate_block_id].Current_page_write_index == pages_no_per_block
+							&& pbke->Ongoing_erase_operations.find(candidate_block_id) == pbke->Ongoing_erase_operations.end()
+							&& is_safe_gc_wl_candidate(pbke, candidate_block_id)) {
+							gc_candidate_block_id = candidate_block_id;
+							found_candidate = true;
+							break;
+						}
+						pbke->Block_usage_history.push(candidate_block_id);
+					}
+					if (!found_candidate) {
+						return;
+					}
 					break;
+				}
 				default:
 					break;
 			}
