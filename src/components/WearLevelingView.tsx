@@ -40,7 +40,7 @@ export function WearLevelingView({ rows, caption, trigger, bannerVisible }: Prop
       {wlTargetCount > 0 && trigger && bannerVisible ? (
         <>
           <button type="button" className="wl-status wl-status-button" onClick={() => setShowExplanation((v) => !v)}>
-            {`⭐ 마모평준화가 ${wlTargetCount}개 block 에서 발동했어요 - 왜 발동했는지 ${showExplanation ? '숨기기' : '보기'}`}
+            {`⭐ 정적 마모평준화가 ${wlTargetCount}개 block 에서 발동했어요 - 왜 발동했는지 ${showExplanation ? '숨기기' : '보기'}`}
           </button>
           {showExplanation && (
             <div className="wl-explanation">
@@ -58,7 +58,7 @@ export function WearLevelingView({ rows, caption, trigger, bannerVisible }: Prop
           )}
         </>
       ) : wlTargetCount === 0 ? (
-        <div className="wl-status">아직 마모평준화가 발동하지 않았어요 - 재생을 계속하면 언젠가 발동해요</div>
+        <div className="wl-status">아직 정적 마모평준화가 발동하지 않았어요 - 재생을 계속하면 언젠가 발동해요</div>
       ) : null}
       {rows.map((row) => (
         <div className={`wl-row${row.wasWlTarget ? ' wl-target' : ''}`} key={row.label}>
@@ -71,7 +71,7 @@ export function WearLevelingView({ rows, caption, trigger, bannerVisible }: Prop
           </div>
           <div className="wl-count">
             {row.eraseCount} 회 erase {row.level === 'hot' ? '🔥' : row.level === 'cool' ? '❄️' : ''}
-            {row.wasWlTarget ? ' ⭐ 마모평준화 발동!' : ''}
+            {row.wasWlTarget ? ' ⭐ 정적 마모평준화 발동!' : ''}
           </div>
         </div>
       ))}
