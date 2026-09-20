@@ -28,7 +28,10 @@ export function WorkloadPanel({ workload, onChange, disabled }: Props) {
     <div className="sim-panel">
       <div className="sim-panel-title">Workload</div>
 
-      <div className="param-row">
+      <div
+        className="param-row"
+        title="Random: 매 요청마다 완전히 무작위 주소(LPN). Sequential: 시작 주소는 무작위로 정해지지만, 그 이후로는 LPN 이 1씩 순서대로 증가합니다. 두 경우 모두 Flash Array 화면에서 실제로 채워지는 칸의 순서는 항상 동일합니다 - 차이는 로그의 LPN 값에서만 보입니다."
+      >
         <div className="param-label">
           <span>접근 패턴</span>
           <span>{workload.addressDistribution === 'STREAMING' ? 'Sequential' : 'Random'}</span>
