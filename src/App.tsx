@@ -223,7 +223,7 @@ function App() {
     wired && !isWearPreset
       ? toBlockRows(engine.state, migrations.movingKeys, overwrites.supersededKeys, overwrites.erasingBlockKeys)
       : active.blocks;
-  const wearRows = wired && isWearPreset ? toWearRows(engine.state, wlHighlight.wlTargetKeys) : active.wearRows;
+  const wearRows = wired && isWearPreset ? toWearRows(engine.state, wlHighlight.wlTargetCounts) : active.wearRows;
   const wlTrigger = wired ? wlHighlight.lastTrigger : (active.wlTrigger ?? null);
   // Mock preview (unwired) has no real play/pause to dismiss on, so its
   // banner just always shows - only the wired, real-engine path needs the

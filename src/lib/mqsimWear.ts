@@ -10,10 +10,11 @@ import type { WearRow } from '../types';
 // in mqsimConfigs.ts), so a fixed absolute scale would leave every bar
 // looking empty.
 //
-// wlTargetKeys (useMqsimWlHighlight) marks which block(s) were ever a WL
-// target this run - see wasWlTarget's doc comment in types.ts for why this
-// needs to be a persistent marker, not a one-step flash.
-export function toWearRows(state: MqsimState | null, wlTargetKeys: Set<string>): WearRow[] {
+// wlTargetCounts (useMqsimWlHighlight) counts how many times each block has
+// ever been a WL target this run - see WearRow.wlTriggerCount's doc comment
+// in types.ts for why this needs to be a persistent count, not a one-step
+// flash.
+export function toWearRows(state: MqsimState | null, wlTargetCounts: Map<string, number>): WearRow[] {
   if (!state) return [];
 
   const maxEraseCount = Math.max(1, ...state.blocks.map((block) => block.eraseCount));
@@ -28,7 +29,7 @@ export function toWearRows(state: MqsimState | null, wlTargetKeys: Set<string>):
       eraseCount: block.eraseCount,
       maxEraseCount,
       level,
-      wasWlTarget: wlTargetKeys.has(blockKey(block.chip, block.block)),
+      wlTriggerCount: wlTargetCounts.get(blockKey(block.chip, block.block)) ?? 0,
     };
   });
 }

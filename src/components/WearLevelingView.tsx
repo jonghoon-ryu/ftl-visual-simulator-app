@@ -12,9 +12,9 @@ interface Props {
   // Whether the "⭐ 발동했어요" banner (and its explanation button) should
   // currently show - false once dismissed (useMqsimWlHighlight.
   // dismissBanner, called from App.tsx right as ▶ resumes playback past the
-  // pause WL caused). The row-level ⭐ marker below is a separate, permanent
-  // record and isn't affected by this (Ryu, 2026-09-20: only the top banner
-  // reads as stale once the sim is running again, not the row itself).
+  // pause WL caused). The row-level 발동 횟수 column below is a separate,
+  // permanent record and isn't affected by this (Ryu, 2026-09-20: only the
+  // top banner reads as stale once the sim is running again, not the row).
   bannerVisible: boolean;
 }
 
@@ -29,10 +29,10 @@ export function WearLevelingView({ rows, caption, trigger, bannerVisible }: Prop
   // Static WL fires at most once or twice in a whole run and there's
   // otherwise zero indication it ever happened (found 2026-09-20 - Ryu
   // tested this preset and couldn't tell whether it had worked) - this
-  // banner and each affected row's own marker below persist for the rest
-  // of the run instead of a one-step flash, since a beginner has no
-  // realistic chance of watching for the exact moment live.
-  const wlTargetCount = rows.filter((row) => row.wasWlTarget).length;
+  // banner and each affected row's own 발동 횟수 marker below persist for
+  // the rest of the run instead of a one-step flash, since a beginner has
+  // no realistic chance of watching for the exact moment live.
+  const wlTargetCount = rows.filter((row) => row.wlTriggerCount > 0).length;
   return (
     <div className="sim-grid-panel">
       <div className="sim-panel-title">Block 별 Erase Count ( 마모 평준화 대상 )</div>
@@ -54,14 +54,25 @@ export function WearLevelingView({ rows, caption, trigger, bannerVisible }: Prop
                 <strong>마모평준화 임계값({trigger.threshold})</strong> 이상이 되어 정적 마모평준화가 발동했고, 가장 적게 닳은
                 Block {trigger.targetBlock}의 데이터를 다른 곳으로 옮겨서 이 block 을 다시 사용할 수 있게 합니다.
               </p>
+              <p>
+                가장 적게 닳은 block 이 여러 개 동률일 수도 있는데, 그럴 땐 그 중{' '}
+                <strong>block 번호가 가장 낮은 block</strong>이 선택돼요 — Block {trigger.targetBlock}가 유일하게
+                특별해서가 아니라, 동률 중 번호가 가장 낮았기 때문일 수 있습니다.
+              </p>
             </div>
           )}
         </>
       ) : wlTargetCount === 0 ? (
         <div className="wl-status">아직 정적 마모평준화가 발동하지 않았어요 - 재생을 계속하면 언젠가 발동해요</div>
       ) : null}
+      <div className="wl-row wl-header">
+        <div className="wl-label" />
+        <div className="wl-track" />
+        <div className="wl-count">Erase Count</div>
+        <div className="wl-trigger-count">발동 횟수</div>
+      </div>
       {rows.map((row) => (
-        <div className={`wl-row${row.wasWlTarget ? ' wl-target' : ''}`} key={row.label}>
+        <div className={`wl-row${row.wlTriggerCount > 0 ? ' wl-target' : ''}`} key={row.label}>
           <div className="wl-label">{row.label}</div>
           <div className="wl-track">
             <div
@@ -71,8 +82,8 @@ export function WearLevelingView({ rows, caption, trigger, bannerVisible }: Prop
           </div>
           <div className="wl-count">
             {row.eraseCount} 회 erase {row.level === 'hot' ? '🔥' : row.level === 'cool' ? '❄️' : ''}
-            {row.wasWlTarget ? ' ⭐ 정적 마모평준화 발동!' : ''}
           </div>
+          <div className="wl-trigger-count">{row.wlTriggerCount > 0 ? `⭐ ${row.wlTriggerCount}회` : '-'}</div>
         </div>
       ))}
       <div className="sim-legend">

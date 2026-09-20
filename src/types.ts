@@ -57,10 +57,13 @@ export interface WearRow {
   eraseCount: number;
   maxEraseCount: number;
   level: 'cool' | 'warm' | 'hot';
-  // True once this block has ever been static wear-leveling's target
+  // How many times this block has been static wear-leveling's target
   // during the current run (see useMqsimWlHighlight) - persistent, not a
   // one-step flash, since WL fires too rarely for a beginner to catch live.
-  wasWlTarget: boolean;
+  // A dedicated "발동 횟수" column shows this number directly (Ryu,
+  // 2026-09-20: "차라리 마모 평준화 발동 열을 새로 만들어서 이 열에 마모
+  // 평준화 발동 숫자를 표기") instead of the old inline "⭐ 발동!" text.
+  wlTriggerCount: number;
 }
 
 // The exact condition that made static WL fire (WL_Started_Event's min/max

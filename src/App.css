@@ -502,13 +502,25 @@
 }
 
 /* Persistent marker for a block that was ever a WL target this run - see
-   wasWlTarget's doc comment in types.ts for why this isn't a transient
-   one-step flash the way GC's moving/erasing overlays are. */
+   WearRow.wlTriggerCount's doc comment in types.ts for why this isn't a
+   transient one-step flash the way GC's moving/erasing overlays are. */
 .wl-row.wl-target {
   outline: 2px solid #f5b942;
   outline-offset: 2px;
   border-radius: 4px;
   background: #f5b94214;
+}
+
+/* Column-header row (empty label/track cells, just the two column titles) -
+   sits above the block list so the "발동 횟수" column's number reads as a
+   count rather than a mystery digit (Ryu, 2026-09-20: replaced the old
+   inline "⭐ 발동!" suffix text with this dedicated column). */
+.wl-row.wl-header {
+  color: #7d8296;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
 }
 
 .wl-label {
@@ -544,6 +556,15 @@
   white-space: nowrap;
 }
 
+.wl-trigger-count {
+  min-width: 56px;
+  text-align: right;
+  font-size: 11px;
+  color: #f5b942;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 /* Narrow viewports (phones) - shrink the flash grid's cells so the default
    geometry (32 blocks x 16 pages) fits without needing to scroll; larger
    geometries (up to 64 pages/block) still scroll horizontally via
@@ -571,6 +592,11 @@
 
   .wl-count {
     min-width: 72px;
+    font-size: 10px;
+  }
+
+  .wl-trigger-count {
+    min-width: 44px;
     font-size: 10px;
   }
 }

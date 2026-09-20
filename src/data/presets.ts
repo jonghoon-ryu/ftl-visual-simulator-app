@@ -59,16 +59,16 @@ export const presets: PresetScenario[] = [
     caption:
       '🟨 Block 2(118회)는 마모가 심하고 Block 5(9회)는 거의 안 닳았어요 — static WL 이 Block 5 의 cold 데이터를 옮겨서 Block 5 를 free pool 로 돌려보내는 중',
     wearRows: [
-      { label: 'Block 0', eraseCount: 42, maxEraseCount: 120, level: 'warm', wasWlTarget: false },
-      { label: 'Block 1', eraseCount: 55, maxEraseCount: 120, level: 'warm', wasWlTarget: false },
-      { label: 'Block 2', eraseCount: 118, maxEraseCount: 120, level: 'hot', wasWlTarget: false },
-      { label: 'Block 3', eraseCount: 47, maxEraseCount: 120, level: 'warm', wasWlTarget: false },
-      { label: 'Block 4', eraseCount: 30, maxEraseCount: 120, level: 'cool', wasWlTarget: false },
-      // wasWlTarget: true - matches this preview's own caption ("static WL
-      // 이 Block 5 의 cold 데이터를 옮겨서... 돌려보내는 중"), so the new
-      // persistent marker (added 2026-09-20) shows correctly even in the
-      // pre-play mock preview, not just the real engine-driven view.
-      { label: 'Block 5', eraseCount: 9, maxEraseCount: 120, level: 'cool', wasWlTarget: true },
+      { label: 'Block 0', eraseCount: 42, maxEraseCount: 120, level: 'warm', wlTriggerCount: 0 },
+      { label: 'Block 1', eraseCount: 55, maxEraseCount: 120, level: 'warm', wlTriggerCount: 0 },
+      { label: 'Block 2', eraseCount: 118, maxEraseCount: 120, level: 'hot', wlTriggerCount: 0 },
+      { label: 'Block 3', eraseCount: 47, maxEraseCount: 120, level: 'warm', wlTriggerCount: 0 },
+      { label: 'Block 4', eraseCount: 30, maxEraseCount: 120, level: 'cool', wlTriggerCount: 0 },
+      // wlTriggerCount: 1 - matches this preview's own caption ("static WL
+      // 이 Block 5 의 cold 데이터를 옮겨서... 돌려보내는 중"), so the
+      // persistent "발동 횟수" column shows correctly even in the pre-play
+      // mock preview, not just the real engine-driven view.
+      { label: 'Block 5', eraseCount: 9, maxEraseCount: 120, level: 'cool', wlTriggerCount: 1 },
     ],
     // Matches the wearRows/caption above so the "왜 발동했는지 보기" button
     // is meaningful even in this pre-play mock preview, not just once the
