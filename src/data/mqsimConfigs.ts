@@ -32,6 +32,18 @@ export interface SsdParams {
   // it as a visible-but-disabled choice, matching the plan's UI, but only
   // PAGE_LEVEL is ever actually generated here.
   addressMapping: 'PAGE_LEVEL';
+  // GC_and_WL_Unit_Page_Level::Check_gc_required()'s victim-block selection
+  // policy (Device_Parameter_Set.cpp parses these 6 exact strings, case-
+  // insensitive). Was a hardcoded literal 'RGA' in buildSsdConfigXml until
+  // Ryu asked to make it adjustable (2026-09-20). RGA (the default) and
+  // RANDOM/RANDOM_P/RANDOM_PP all bound their candidate-search loop at
+  // block_no_per_plane retries - safe at this project's small block counts
+  // (RGA's own loop needed exactly this fix once already, see reference/
+  // bug-list/rga-incomplete-block-bug/). GREEDY does a plain O(block count)
+  // scan - also safe. FIFO pops Block_usage_history.front() with no empty-
+  // queue check - untested at this project's scale, verify via native CLI
+  // before trusting it in a demo if it's ever picked.
+  gcBlockSelectionPolicy: 'GREEDY' | 'RGA' | 'RANDOM' | 'RANDOM_P' | 'RANDOM_PP' | 'FIFO';
   // Device_Parameter_Set's own Seed - seeds MQSim's internal RNG (GC
   // candidate sampling for RANDOM*/RGA policies, dynamic WL tie-breaks,
   // etc.). Was a hardcoded literal 321 in buildSsdConfigXml for every
@@ -68,6 +80,7 @@ export const DEFAULT_MAPPING_PARAMS: SsdParams = {
   gcExecThreshold: 0.05,
   staticWlThreshold: 100,
   addressMapping: 'PAGE_LEVEL',
+  gcBlockSelectionPolicy: 'RGA',
   deviceSeed: 321,
   workloadSeed: 798,
 };
@@ -106,7 +119,7 @@ export function buildSsdConfigXml(params: SsdParams): string {
 		<Transaction_Scheduling_Policy>PRIORITY_OUT_OF_ORDER</Transaction_Scheduling_Policy>
 		<Overprovisioning_Ratio>${params.overprovisioningRatio.toFixed(5)}</Overprovisioning_Ratio>
 		<GC_Exec_Threshold>${params.gcExecThreshold.toFixed(5)}</GC_Exec_Threshold>
-		<GC_Block_Selection_Policy>RGA</GC_Block_Selection_Policy>
+		<GC_Block_Selection_Policy>${params.gcBlockSelectionPolicy}</GC_Block_Selection_Policy>
 		<Use_Copyback_for_GC>false</Use_Copyback_for_GC>
 		<Preemptible_GC_Enabled>false</Preemptible_GC_Enabled>
 		<GC_Hard_Threshold>0.005000</GC_Hard_Threshold>

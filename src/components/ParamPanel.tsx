@@ -3,6 +3,27 @@ import type { SsdParams } from '../data/mqsimConfigs';
 const PAGE_CAPACITY_OPTIONS: SsdParams['pageCapacityBytes'][] = [4096, 8192, 16384];
 const CHIP_COUNT_OPTIONS: SsdParams['chipCount'][] = [1, 2, 4];
 
+// GC_Block_Selection_Policy_Type's 6 real values (Device_Parameter_Set.cpp).
+// RGA first/default - the only one this project's presets were tuned and
+// verified against; see SsdParams.gcBlockSelectionPolicy's doc comment for
+// which of the rest are loop-bounded (safe) vs unverified at this scale.
+const GC_POLICY_OPTIONS: SsdParams['gcBlockSelectionPolicy'][] = [
+  'RGA',
+  'GREEDY',
+  'RANDOM',
+  'RANDOM_P',
+  'RANDOM_PP',
+  'FIFO',
+];
+const GC_POLICY_LABELS: Record<SsdParams['gcBlockSelectionPolicy'], string> = {
+  RGA: 'RGA (기본)',
+  GREEDY: 'Greedy',
+  RANDOM: 'Random',
+  RANDOM_P: 'Random-p',
+  RANDOM_PP: 'Random-pp',
+  FIFO: 'FIFO',
+};
+
 // GC_and_WL_Unit_Page_Level's max_ongoing_gc_reqs_per_plane doubles as
 // Stop_servicing_writes()'s hard threshold (free block pool size below this
 // blocks all writes). At too few blocks, the free pool dips to/below that
@@ -140,6 +161,28 @@ export function ParamPanel({ params, onChange, disabled }: Props) {
           onChange={(e) => onChange({ ...params, gcExecThreshold: Number(e.target.value) / 100 })}
         />
         <div className="param-hint">빈 block 비율이 이 아래로 떨어지면 GC 시작</div>
+      </div>
+
+      <div className="param-row">
+        <div className="param-label">
+          <span>GC 알고리즘</span>
+          <span>{GC_POLICY_LABELS[params.gcBlockSelectionPolicy]}</span>
+        </div>
+        <select
+          className="param-select"
+          disabled={disabled}
+          value={params.gcBlockSelectionPolicy}
+          onChange={(e) =>
+            onChange({ ...params, gcBlockSelectionPolicy: e.target.value as SsdParams['gcBlockSelectionPolicy'] })
+          }
+        >
+          {GC_POLICY_OPTIONS.map((policy) => (
+            <option key={policy} value={policy}>
+              {GC_POLICY_LABELS[policy]}
+            </option>
+          ))}
+        </select>
+        <div className="param-hint">victim block 을 고르는 방식 - 기본(RGA)이 아닌 다른 알고리즘은 이 프로젝트 규모에서 따로 검증되지 않았습니다</div>
       </div>
 
       <div className="param-row">
