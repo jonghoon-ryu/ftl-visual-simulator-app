@@ -74,6 +74,10 @@ export function ParamPanel({ params, onChange, disabled }: Props) {
             </option>
           ))}
         </select>
+        <div className="param-hint">
+          이 값을 바꿔도 화면상 차이는 없습니다 - Read/Program 지연시간이 고정값으로 처리되고, Flash Array 는 페이지
+          개수(Block 당 Page 개수)만 그리기 때문입니다
+        </div>
       </div>
 
       <div className="param-row">
