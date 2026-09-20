@@ -22,6 +22,15 @@ export function useMqsimWlHighlight(subscribeEvents: MqsimEngine['subscribeEvent
   const pendingTriggerRef = useRef<WlTriggerInfo | null>(null);
   const [wlTargetKeys, setWlTargetKeys] = useState<Set<string>>(new Set());
   const [lastTrigger, setLastTrigger] = useState<WlTriggerInfo | null>(null);
+  // Whether the "⭐ 마모평준화가 발동했어요" banner (and its explanation
+  // button) should currently show - true from the moment a trigger commits
+  // until dismissBanner() is called. Kept separate from lastTrigger/
+  // wlTargetKeys (which must stay forever, per the doc comment above) since
+  // Ryu asked (2026-09-20) for the banner itself to go away once playback
+  // resumes past the pause it caused - it did its job (getting a beginner to
+  // stop and look), and re-showing "발동했어요" while the sim keeps running
+  // reads as stuck/stale rather than historical.
+  const [bannerVisible, setBannerVisible] = useState(false);
 
   useEffect(() => {
     if (!ready) return;
@@ -58,15 +67,19 @@ export function useMqsimWlHighlight(subscribeEvents: MqsimEngine['subscribeEvent
       return next;
     });
     setLastTrigger(pendingTrigger);
+    setBannerVisible(true);
     return true;
   }, []);
+
+  const dismissBanner = useCallback(() => setBannerVisible(false), []);
 
   const reset = useCallback(() => {
     pendingKeysRef.current = new Set();
     pendingTriggerRef.current = null;
     setWlTargetKeys(new Set());
     setLastTrigger(null);
+    setBannerVisible(false);
   }, []);
 
-  return { wlTargetKeys, lastTrigger, commit, reset };
+  return { wlTargetKeys, lastTrigger, bannerVisible, dismissBanner, commit, reset };
 }

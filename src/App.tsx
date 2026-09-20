@@ -225,6 +225,10 @@ function App() {
       : active.blocks;
   const wearRows = wired && isWearPreset ? toWearRows(engine.state, wlHighlight.wlTargetKeys) : active.wearRows;
   const wlTrigger = wired ? wlHighlight.lastTrigger : (active.wlTrigger ?? null);
+  // Mock preview (unwired) has no real play/pause to dismiss on, so its
+  // banner just always shows - only the wired, real-engine path needs the
+  // dismiss-on-resume behavior (see wlHighlight.dismissBanner below).
+  const wlBannerVisible = wired ? wlHighlight.bannerVisible : true;
   const statItems = wired ? toStatItems(engine.state, events.counters) : active.stats;
   const logEntries = wired ? events.log : active.log;
   const caption = wired ? '' : active.caption;
@@ -244,14 +248,23 @@ function App() {
             disabled: !wired,
             onStepEventOnce: playback.stepEventOnce,
             onStepEventMany: () => playback.stepEventMany(5),
-            onTogglePlay: playback.togglePlay,
+            onTogglePlay: () => {
+              // Resuming (not pausing) past the auto-pause WL caused - the
+              // banner already did its job of making a beginner stop and
+              // look, so dismiss it right as playback moves on again (Ryu,
+              // 2026-09-20: it read as stuck/stale once the sim kept going).
+              if (!playback.isPlaying) wlHighlight.dismissBanner();
+              playback.togglePlay();
+            },
             onRestart: playback.restart,
             onSpeedChange: playback.setSpeed,
           }}
         />
         <div className="sim-body">
           {blockRows && <FlashGrid blocks={blockRows} caption={caption} />}
-          {wearRows && <WearLevelingView rows={wearRows} caption={caption} trigger={wlTrigger} />}
+          {wearRows && (
+            <WearLevelingView rows={wearRows} caption={caption} trigger={wlTrigger} bannerVisible={wlBannerVisible} />
+          )}
           {/* All three wired presets get the 로그 column now - previously
               마모평준화 시연 was excluded (it never had a mapping table),
               but once 로그 became a general chronological event log rather
