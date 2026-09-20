@@ -6,12 +6,12 @@ import type { LogEntry } from '../types';
 // substring "GC" anywhere, which would also light up inside "GC Start".
 const DANGER_KEYWORDS = new Set(['GC Start', 'GC', 'Erase']);
 
-// "[0000] " (7 chars) + "12:34:56 " (9 chars) - the fixed-width index/time
+// "[00000] " (8 chars) + "12:34:56 " (9 chars) - the fixed-width index/time
 // columns that precede the log text itself on every line (see the render
 // below). Needed here so a wrapped "source -> destination" line's second
 // "Chip" can be padded to land in the same column as the first, not just
 // relative to where the text happens to start.
-const LOG_PREFIX_WIDTH = 16;
+const LOG_PREFIX_WIDTH = 17;
 
 // A "source -> destination" line (an LPN overwrite or a GC/WL migration)
 // is broken after "->" and the destination's "Chip" is padded onto its own
@@ -61,7 +61,7 @@ export function MappingTable({ log }: { log: LogEntry[] }) {
       <div className="log-list">
         {log.map((e) => (
           <div className="log-entry" key={e.index}>
-            <span className="log-index">{`[${String(e.index).padStart(4, '0')}] `}</span>
+            <span className="log-index">{`[${String(e.index).padStart(5, '0')}] `}</span>
             <span className="log-time">{`${e.time} `}</span>
             {renderLogText(e.text)}
           </div>

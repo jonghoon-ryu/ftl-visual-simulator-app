@@ -1,7 +1,10 @@
 .sim-app {
   max-width: 1600px;
   margin: 0 auto;
-  padding: 32px 16px 64px;
+  /* Left/right narrowed from 16px to 8px (2026-09-20) to claw back width
+     for the log column after its index widened to 5 digits ("[00000]") -
+     without this, a previously one-line log entry could wrap to two. */
+  padding: 32px 8px 64px;
 }
 
 .sim-mockup {
