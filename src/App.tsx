@@ -23,6 +23,7 @@ import { useMqsimEngine } from './hooks/useMqsimEngine';
 import { useMqsimEvents } from './hooks/useMqsimEvents';
 import { useMqsimMigrations } from './hooks/useMqsimMigrations';
 import { useMqsimOverwrites } from './hooks/useMqsimOverwrites';
+import { useMqsimWlHighlight } from './hooks/useMqsimWlHighlight';
 import { useSimulationPlayback } from './hooks/useSimulationPlayback';
 import { toBlockRows } from './lib/mqsimBlocks';
 import { toStatItems } from './lib/mqsimStats';
@@ -104,6 +105,7 @@ function App() {
   const events = useMqsimEvents(engine.subscribeEvents, engine.ready);
   const migrations = useMqsimMigrations(engine.subscribeEvents, engine.ready);
   const overwrites = useMqsimOverwrites(engine.subscribeEvents, engine.ready);
+  const wlHighlight = useMqsimWlHighlight(engine.subscribeEvents, engine.ready);
   const playback = useSimulationPlayback({
     engine,
     onRefresh: async (opts) => {
@@ -124,11 +126,18 @@ function App() {
         migrations.commit();
         overwrites.commit();
       }
+      // Always commit, batchEnded or not - unlike the transient GC overlays
+      // above, this is a persistent marker (see useMqsimWlHighlight), and
+      // the single rare WL event is actually *likely* to fall inside the
+      // final giant batch, so this is exactly the case we most need to
+      // still catch rather than discard.
+      wlHighlight.commit();
     },
     onRestart: () => {
       events.reset();
       migrations.reset();
       overwrites.reset();
+      wlHighlight.reset();
     },
     ticksMultiplier: TICKS_MULTIPLIER[activeId] ?? 1,
   });
@@ -206,7 +215,7 @@ function App() {
     wired && !isWearPreset
       ? toBlockRows(engine.state, migrations.movingKeys, overwrites.supersededKeys, overwrites.erasingBlockKeys)
       : active.blocks;
-  const wearRows = wired && isWearPreset ? toWearRows(engine.state) : active.wearRows;
+  const wearRows = wired && isWearPreset ? toWearRows(engine.state, wlHighlight.wlTargetKeys) : active.wearRows;
   const statItems = wired ? toStatItems(engine.state, events.counters) : active.stats;
   const logEntries = wired ? events.log : active.log;
   const caption = wired ? '' : active.caption;

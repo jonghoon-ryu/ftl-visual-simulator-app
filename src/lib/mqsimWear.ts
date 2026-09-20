@@ -1,3 +1,4 @@
+import { blockKey } from './pageKey';
 import type { WearRow } from '../types';
 
 // Converts the WASM engine's real per-block snapshot into the WearRow[]
@@ -8,7 +9,11 @@ import type { WearRow } from '../types';
 // scale that's usually single digits (see buildWlWorkloadXml's doc comment
 // in mqsimConfigs.ts), so a fixed absolute scale would leave every bar
 // looking empty.
-export function toWearRows(state: MqsimState | null): WearRow[] {
+//
+// wlTargetKeys (useMqsimWlHighlight) marks which block(s) were ever a WL
+// target this run - see wasWlTarget's doc comment in types.ts for why this
+// needs to be a persistent marker, not a one-step flash.
+export function toWearRows(state: MqsimState | null, wlTargetKeys: Set<string>): WearRow[] {
   if (!state) return [];
 
   const maxEraseCount = Math.max(1, ...state.blocks.map((block) => block.eraseCount));
@@ -23,6 +28,7 @@ export function toWearRows(state: MqsimState | null): WearRow[] {
       eraseCount: block.eraseCount,
       maxEraseCount,
       level,
+      wasWlTarget: wlTargetKeys.has(blockKey(block.chip, block.block)),
     };
   });
 }

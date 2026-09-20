@@ -59,12 +59,16 @@ export const presets: PresetScenario[] = [
     caption:
       '🟨 Block 2(118회)는 마모가 심하고 Block 5(9회)는 거의 안 닳았어요 — static WL 이 Block 5 의 cold 데이터를 옮겨서 Block 5 를 free pool 로 돌려보내는 중',
     wearRows: [
-      { label: 'Block 0', eraseCount: 42, maxEraseCount: 120, level: 'warm' },
-      { label: 'Block 1', eraseCount: 55, maxEraseCount: 120, level: 'warm' },
-      { label: 'Block 2', eraseCount: 118, maxEraseCount: 120, level: 'hot' },
-      { label: 'Block 3', eraseCount: 47, maxEraseCount: 120, level: 'warm' },
-      { label: 'Block 4', eraseCount: 30, maxEraseCount: 120, level: 'cool' },
-      { label: 'Block 5', eraseCount: 9, maxEraseCount: 120, level: 'cool' },
+      { label: 'Block 0', eraseCount: 42, maxEraseCount: 120, level: 'warm', wasWlTarget: false },
+      { label: 'Block 1', eraseCount: 55, maxEraseCount: 120, level: 'warm', wasWlTarget: false },
+      { label: 'Block 2', eraseCount: 118, maxEraseCount: 120, level: 'hot', wasWlTarget: false },
+      { label: 'Block 3', eraseCount: 47, maxEraseCount: 120, level: 'warm', wasWlTarget: false },
+      { label: 'Block 4', eraseCount: 30, maxEraseCount: 120, level: 'cool', wasWlTarget: false },
+      // wasWlTarget: true - matches this preview's own caption ("static WL
+      // 이 Block 5 의 cold 데이터를 옮겨서... 돌려보내는 중"), so the new
+      // persistent marker (added 2026-09-20) shows correctly even in the
+      // pre-play mock preview, not just the real engine-driven view.
+      { label: 'Block 5', eraseCount: 9, maxEraseCount: 120, level: 'cool', wasWlTarget: true },
     ],
     params: [
       { label: 'Static WL 임계값', value: 'erase count 차이 100', hint: '이 차이를 넘으면 cold 데이터를 강제로 옮김', kind: 'slider', percent: 70 },

@@ -57,6 +57,10 @@ export interface WearRow {
   eraseCount: number;
   maxEraseCount: number;
   level: 'cool' | 'warm' | 'hot';
+  // True once this block has ever been static wear-leveling's target
+  // during the current run (see useMqsimWlHighlight) - persistent, not a
+  // one-step flash, since WL fires too rarely for a beginner to catch live.
+  wasWlTarget: boolean;
 }
 
 export interface ParamItem {

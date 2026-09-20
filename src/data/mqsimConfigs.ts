@@ -451,12 +451,17 @@ export const DEFAULT_WL_PARAMS: SsdParams = {
   // executions, exactly 1 WL execution) were only ever verified at
   // chipCount=1 and haven't been re-swept for multi-chip.
   chipCount: 1,
-  // Larger than the other presets' 16 - verified via the same harness
-  // that 16 blocks stalls out (writes permanently hard-blocked, same
-  // mechanism as MIN_BLOCK_NO_PER_PLANE) before enough erases accumulate
-  // for even a threshold of 1 to be reachable; 64 sustains well past the
-  // point WL fires.
-  blockNoPerPlane: 64,
+  // 24, not the original 64 (2026-09-20) - Ryu found 64 rows in
+  // WearLevelingView too many to scan at a glance. Re-verified via native
+  // CLI at 24: Total_WL_Executions still exactly 1 (the documented
+  // invariant), Total_GC_Executions 35 (down from 64-block's ~86, expected
+  // with less capacity), no stall. Larger than the other presets' 16 -
+  // verified via the same harness that 16 blocks stalls out (writes
+  // permanently hard-blocked, same mechanism as MIN_BLOCK_NO_PER_PLANE)
+  // before enough erases accumulate for even a threshold of 1 to be
+  // reachable; 24 sustains well past the point WL fires, with room to
+  // spare above that stall boundary.
+  blockNoPerPlane: 24,
   gcExecThreshold: 0.5,
   staticWlThreshold: 1,
   // overprovisioningRatio not pinned here (unlike chipCount/blockNoPerPlane

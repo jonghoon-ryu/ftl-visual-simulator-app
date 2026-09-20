@@ -437,11 +437,31 @@
   color: #f16d75;
 }
 
+.wl-status {
+  font-size: 12px;
+  color: #f5b942;
+  background: #f5b94214;
+  border: 1px solid #f5b94240;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+}
+
 .wl-row {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 9px;
+}
+
+/* Persistent marker for a block that was ever a WL target this run - see
+   wasWlTarget's doc comment in types.ts for why this isn't a transient
+   one-step flash the way GC's moving/erasing overlays are. */
+.wl-row.wl-target {
+  outline: 2px solid #f5b942;
+  outline-offset: 2px;
+  border-radius: 4px;
+  background: #f5b94214;
 }
 
 .wl-label {
@@ -469,11 +489,12 @@
 .wl-fill.hot { background: #f16d75; }
 
 .wl-count {
-  width: 90px;
+  min-width: 90px;
   text-align: right;
   font-size: 11px;
   color: #9aa0b0;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* Narrow viewports (phones) - shrink the flash grid's cells so the default
@@ -502,7 +523,7 @@
   }
 
   .wl-count {
-    width: 72px;
+    min-width: 72px;
     font-size: 10px;
   }
 }
