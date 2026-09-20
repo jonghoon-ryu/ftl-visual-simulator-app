@@ -224,6 +224,7 @@ function App() {
       ? toBlockRows(engine.state, migrations.movingKeys, overwrites.supersededKeys, overwrites.erasingBlockKeys)
       : active.blocks;
   const wearRows = wired && isWearPreset ? toWearRows(engine.state, wlHighlight.wlTargetKeys) : active.wearRows;
+  const wlTrigger = wired ? wlHighlight.lastTrigger : (active.wlTrigger ?? null);
   const statItems = wired ? toStatItems(engine.state, events.counters) : active.stats;
   const logEntries = wired ? events.log : active.log;
   const caption = wired ? '' : active.caption;
@@ -250,7 +251,7 @@ function App() {
         />
         <div className="sim-body">
           {blockRows && <FlashGrid blocks={blockRows} caption={caption} />}
-          {wearRows && <WearLevelingView rows={wearRows} caption={caption} trigger={wlHighlight.lastTrigger} />}
+          {wearRows && <WearLevelingView rows={wearRows} caption={caption} trigger={wlTrigger} />}
           {/* All three wired presets get the 로그 column now - previously
               마모평준화 시연 was excluded (it never had a mapping table),
               but once 로그 became a general chronological event log rather

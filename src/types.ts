@@ -63,6 +63,21 @@ export interface WearRow {
   wasWlTarget: boolean;
 }
 
+// The exact condition that made static WL fire (WL_Started_Event's min/max
+// erase count + threshold fields) - powers WearLevelingView's "왜
+// 발동했는지 보기" button. Lives here (not in useMqsimWlHighlight, which
+// produces it from live engine events) so presets.ts's mock preview data
+// can also supply one, matching the wired path's shape.
+export interface WlTriggerInfo {
+  targetChip: number;
+  targetBlock: number;
+  minEraseCount: number;
+  maxEraseChip: number;
+  maxEraseBlock: number;
+  maxEraseCount: number;
+  threshold: number;
+}
+
 export interface ParamItem {
   label: string;
   value: string;
@@ -79,6 +94,7 @@ export interface PresetScenario {
   caption: string;
   blocks?: BlockRow[];
   wearRows?: WearRow[];
+  wlTrigger?: WlTriggerInfo;
   params: ParamItem[];
   stats: StatItem[];
   log: LogEntry[];

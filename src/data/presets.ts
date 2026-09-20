@@ -70,6 +70,18 @@ export const presets: PresetScenario[] = [
       // pre-play mock preview, not just the real engine-driven view.
       { label: 'Block 5', eraseCount: 9, maxEraseCount: 120, level: 'cool', wasWlTarget: true },
     ],
+    // Matches the wearRows/caption above so the "왜 발동했는지 보기" button
+    // is meaningful even in this pre-play mock preview, not just once the
+    // real engine has fired a genuine wl_started event.
+    wlTrigger: {
+      targetChip: 0,
+      targetBlock: 5,
+      minEraseCount: 9,
+      maxEraseChip: 0,
+      maxEraseBlock: 2,
+      maxEraseCount: 118,
+      threshold: 100,
+    },
     params: [
       { label: 'Static WL 임계값', value: 'erase count 차이 100', hint: '이 차이를 넘으면 cold 데이터를 강제로 옮김', kind: 'slider', percent: 70 },
     ],

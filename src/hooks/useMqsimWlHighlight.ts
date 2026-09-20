@@ -1,19 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { blockKey } from '../lib/pageKey';
+import type { WlTriggerInfo } from '../types';
 import type { MqsimEngine } from './useMqsimEngine';
-
-// The exact condition that made static WL fire (WL_Started_Event's new
-// fields, added 2026-09-20 specifically for this) - Ryu asked to see this
-// explained on demand rather than just knowing WL happened at all.
-export interface WlTriggerInfo {
-  targetChip: number;
-  targetBlock: number;
-  minEraseCount: number;
-  maxEraseChip: number;
-  maxEraseBlock: number;
-  maxEraseCount: number;
-  threshold: number;
-}
 
 // Static WL fires at most once or twice in a whole "마모평준화 시연" run
 // (see DEFAULT_WL_PARAMS' doc comment in mqsimConfigs.ts) - unlike GC's

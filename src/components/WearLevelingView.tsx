@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import type { WearRow } from '../types';
-import type { WlTriggerInfo } from '../hooks/useMqsimWlHighlight';
+import type { WearRow, WlTriggerInfo } from '../types';
 
 interface Props {
   rows: WearRow[];
