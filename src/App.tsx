@@ -5,6 +5,7 @@ import { MappingTable } from './components/MappingTable';
 import { ParamPanel } from './components/ParamPanel';
 import { StatsPanel } from './components/StatsPanel';
 import { Toolbar } from './components/Toolbar';
+import { UsageGuide } from './components/UsageGuide';
 import { WearLevelingView } from './components/WearLevelingView';
 import { WorkloadPanel } from './components/WorkloadPanel';
 import { presets } from './data/presets';
@@ -72,6 +73,7 @@ function buildWorkloadXmlFor(presetId: PresetId, params: SsdParams, workload: Wo
 
 function App() {
   const [activeId, setActiveId] = useState<PresetId>('mapping');
+  const [showUsageGuide, setShowUsageGuide] = useState(false);
   const active = presets.find((p) => p.id === activeId) ?? presets[0];
 
   const [paramsByPreset, setParamsByPreset] = useState<Record<string, SsdParams>>({
@@ -275,6 +277,10 @@ function App() {
           </div>
         </div>
       </div>
+      <button type="button" className="usage-guide-button" onClick={() => setShowUsageGuide(true)}>
+        사용법
+      </button>
+      {showUsageGuide && <UsageGuide onClose={() => setShowUsageGuide(false)} />}
     </div>
   );
 }
