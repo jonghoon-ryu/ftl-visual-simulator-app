@@ -4,17 +4,6 @@
   padding: 32px 16px 64px;
 }
 
-.sim-app-header h1 {
-  margin: 0 0 6px;
-  font-size: 22px;
-}
-
-.sim-app-header p {
-  margin: 0 0 24px;
-  color: #9aa0b0;
-  font-size: 13px;
-}
-
 .sim-mockup {
   font-family: 'SF Mono', 'Consolas', 'Menlo', monospace;
   font-size: 12.5px;
@@ -26,6 +15,7 @@
 }
 
 .sim-toolbar {
+  position: relative;
   display: flex;
   justify-content: flex-start;
   align-items: center;
@@ -34,6 +24,26 @@
   padding: 10px 14px;
   background: #23263080;
   border-bottom: 1px solid #33374a;
+}
+
+/* Absolutely centered on the toolbar's (and so the whole app's, since
+   .sim-app itself is a centered max-width column) width, regardless of how
+   much space .sim-presets/.sim-playback take up on either side - Ryu's ask
+   (2026-09-20, with a screenshot marking the empty gap between them) was
+   specifically "가로를 기준으로 화면 가운데" (centered on screen width),
+   not just centered within that gap, which would drift off-center as those
+   two groups' own widths change. Was a standalone <h1> in its own header
+   above the toolbar before this. */
+.sim-toolbar-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .sim-presets button,

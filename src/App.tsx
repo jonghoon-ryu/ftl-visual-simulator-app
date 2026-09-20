@@ -213,9 +213,6 @@ function App() {
 
   return (
     <div className="sim-app">
-      <header className="sim-app-header">
-        <h1>FTL Visual Simulator</h1>
-      </header>
       <div className="sim-mockup">
         <Toolbar
           presets={presets}
@@ -253,6 +250,7 @@ function App() {
           )}
           <div className="sim-sidebar">
             <ParamPanel
+              presetId={configKey}
               params={activeParams}
               onChange={(next) => setParamsByPreset((prev) => ({ ...prev, [configKey]: next }))}
               disabled={!wired}

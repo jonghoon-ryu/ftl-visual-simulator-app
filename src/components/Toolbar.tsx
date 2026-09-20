@@ -46,6 +46,7 @@ export function Toolbar({ presets, activeId, onSelect, playback }: Props) {
           </button>
         ))}
       </div>
+      <h1 className="sim-toolbar-title">FTL Visual Simulator</h1>
       <div
         className="sim-playback"
         title={disabled ? '이 프리셋은 아직 실제 엔진에 연결되지 않았어요' : !hasMore ? '워크로드 이벤트가 모두 처리됐어요' : undefined}
