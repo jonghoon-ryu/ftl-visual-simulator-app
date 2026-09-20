@@ -106,11 +106,24 @@ function App() {
   const overwrites = useMqsimOverwrites(engine.subscribeEvents, engine.ready);
   const playback = useSimulationPlayback({
     engine,
-    onRefresh: async () => {
+    onRefresh: async (opts) => {
       await engine.refresh();
       events.commit();
-      migrations.commit();
-      overwrites.commit();
+      // batchEnded: this tick's run() call reached the simulation's natural
+      // end mid-batch - any pending moving/erasing overlay reflects a huge
+      // multi-step batch, not a single meaningful moment, and nothing will
+      // ever arrive to clear it since playback just stopped. Clear instead
+      // of committing it, so the final frame matches what stepping one
+      // event at a time to the same point would show (found 2026-09-20 by
+      // comparing "5 steps"-button vs "▶" screenshots at an identical log
+      // position - the ▶ one left several blocks stuck mid-migration/erase).
+      if (opts?.batchEnded) {
+        migrations.reset();
+        overwrites.reset();
+      } else {
+        migrations.commit();
+        overwrites.commit();
+      }
     },
     onRestart: () => {
       events.reset();

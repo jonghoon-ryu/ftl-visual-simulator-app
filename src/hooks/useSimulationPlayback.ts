@@ -9,7 +9,11 @@ const TICK_INTERVAL_MS = 300;
 
 interface Options {
   engine: Pick<MqsimEngine, 'ready' | 'step' | 'run' | 'stepEvent' | 'configure'>;
-  onRefresh: () => void;
+  // `batchEnded` is true only for the ▶ play loop's tick when that tick's
+  // run() call itself reached the end of the simulation (no more events) -
+  // see its call site below for why this needs to be distinguished from an
+  // ordinary tick/step.
+  onRefresh: (opts?: { batchEnded?: boolean }) => void | Promise<void>;
   onRestart: () => void;
   // How many event-groups one "speed" unit (1-8, Toolbar's slider) is worth
   // per tick/step - lets a preset whose workload needs vastly more
@@ -102,7 +106,15 @@ export function useSimulationPlayback({ engine, onRefresh, onRestart, ticksMulti
       latestRef.current.engine
         .run(speed * latestRef.current.ticksMultiplier)
         .then(async (more) => {
-          await latestRef.current.onRefresh();
+          // A play tick's run() call can process tens of thousands of
+          // event-groups at once (see ticksMultiplier in App.tsx) - when it
+          // runs all the way to the end of the simulation in one call, the
+          // moving/erasing overlay hooks would otherwise show the union of
+          // every migration/erase across that entire final batch, frozen on
+          // screen forever since no further tick ever arrives to clear it.
+          // Flagging this lets onRefresh clear those overlays instead of
+          // populating them - see App.tsx's onRefresh.
+          await latestRef.current.onRefresh({ batchEnded: !more });
           setHasMore(more);
           if (!more) setIsPlaying(false);
         })
