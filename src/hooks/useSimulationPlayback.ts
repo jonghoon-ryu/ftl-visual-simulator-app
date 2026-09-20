@@ -31,7 +31,13 @@ interface Options {
 // about *driving* an already-loaded engine, not loading it.
 export function useSimulationPlayback({ engine, onRefresh, onRestart, ticksMultiplier = 1 }: Options) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [speed, setSpeed] = useState(1);
+  // Default 8 (the slider's max), not 1 - Ryu's ask (2026-09-20) for "매핑
+  // 기본"/"GC 시연" to start at full speed. There's only one playback
+  // instance shared across all three presets (no per-preset speed), so this
+  // applies uniformly - including "마모평준화 시연", which only benefits
+  // from a higher default given how many events it needs to reach its one
+  // WL execution.
+  const [speed, setSpeed] = useState(8);
   const [hasMore, setHasMore] = useState(true);
   // Keeps the interval/callbacks below calling the latest engine/onRefresh/
   // ticksMultiplier without needing them in dependency arrays. Assigned in
