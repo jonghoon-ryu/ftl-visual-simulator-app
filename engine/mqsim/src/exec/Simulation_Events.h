@@ -128,14 +128,32 @@ namespace Simulation_Events
 	{
 		stream_id_type Stream_id;
 		NVM::FlashMemory::Physical_Page_Address Block_address;
+		// This project's own addition (2026-09-20), so the visualizer can
+		// show *why* WL just fired, not just that it did - Block_address
+		// above is always the coldest (min-erase) block, matching
+		// Min_Erase_Count here; Max_Erase_Block_Id is whichever block is
+		// currently hottest, for contrast. Re-derived fresh at whichever
+		// call site actually notifies (see run_static_wearleveling() and
+		// execute_parked_gc_wl_if_ready() in GC_and_WL_Unit_Base.cpp) rather
+		// than captured once at the original trigger decision and carried
+		// through a possible park/defer - the two can differ slightly if
+		// other writes/GC land in between, but re-deriving is simpler than
+		// threading extra state through the deferred-event path, and "the
+		// condition true right when this executes" is the more honest thing
+		// to show a user anyway.
+		unsigned int Min_Erase_Count;
+		unsigned int Max_Erase_Count;
+		flash_block_ID_type Max_Erase_Block_Id;
+		unsigned int Threshold;
 	};
 
 	extern void (*On_wl_started)(const WL_Started_Event&);
 
-	inline void Notify_wl_started(stream_id_type stream_id, const NVM::FlashMemory::Physical_Page_Address& block_address)
+	inline void Notify_wl_started(stream_id_type stream_id, const NVM::FlashMemory::Physical_Page_Address& block_address,
+		unsigned int min_erase_count, unsigned int max_erase_count, flash_block_ID_type max_erase_block_id, unsigned int threshold)
 	{
 		if (On_wl_started) {
-			WL_Started_Event event{ stream_id, block_address };
+			WL_Started_Event event{ stream_id, block_address, min_erase_count, max_erase_count, max_erase_block_id, threshold };
 			On_wl_started(event);
 		}
 	}

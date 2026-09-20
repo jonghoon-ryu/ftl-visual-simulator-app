@@ -143,7 +143,7 @@ namespace SSD_Components
 		}
 	}
 
-	unsigned int Flash_Block_Manager_Base::Get_min_max_erase_difference(const NVM::FlashMemory::Physical_Page_Address& plane_address)
+	Flash_Block_Manager_Base::MinMaxEraseInfo Flash_Block_Manager_Base::Get_min_max_erase_info(const NVM::FlashMemory::Physical_Page_Address& plane_address)
 	{
 		unsigned int min_erased_block = 0;
 		unsigned int max_erased_block = 0;
@@ -158,6 +158,16 @@ namespace SSD_Components
 			}
 		}
 
+		return MinMaxEraseInfo{
+			plane_record->Blocks[min_erased_block].Erase_count,
+			plane_record->Blocks[max_erased_block].Erase_count,
+			(flash_block_ID_type)min_erased_block,
+			(flash_block_ID_type)max_erased_block,
+		};
+	}
+
+	unsigned int Flash_Block_Manager_Base::Get_min_max_erase_difference(const NVM::FlashMemory::Physical_Page_Address& plane_address)
+	{
 		// DEVIATION FROM UPSTREAM MQSim: the original returned
 		// `max_erased_block - min_erased_block` - the difference of the two
 		// *block indices*, not their erase counts, despite this value being
@@ -170,7 +180,8 @@ namespace SSD_Components
 		// real wear-leveling behavior - see the "마모 평준화 버그와 의도적
 		// 동작 변경" doc for the full writeup and rationale for diverging
 		// from upstream on this specific point.
-		return plane_record->Blocks[max_erased_block].Erase_count - plane_record->Blocks[min_erased_block].Erase_count;
+		MinMaxEraseInfo info = Get_min_max_erase_info(plane_address);
+		return info.MaxEraseCount - info.MinEraseCount;
 	}
 
 	flash_block_ID_type Flash_Block_Manager_Base::Get_coldest_block_id(const NVM::FlashMemory::Physical_Page_Address& plane_address)

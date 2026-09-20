@@ -196,7 +196,9 @@ namespace SSD_Components
 		bool is_wl = block->Is_wl_triggered;
 		Stats::Total_gc_executions++;
 		if (is_wl) {
-			Simulation_Events::Notify_wl_started(block->Stream_id, gc_wl_candidate_address);
+			Flash_Block_Manager_Base::MinMaxEraseInfo erase_info = block_manager->Get_min_max_erase_info(block_address);
+			Simulation_Events::Notify_wl_started(block->Stream_id, gc_wl_candidate_address,
+				erase_info.MinEraseCount, erase_info.MaxEraseCount, erase_info.MaxEraseBlockId, static_wearleveling_threshold);
 		} else {
 			Simulation_Events::Notify_gc_started(block->Stream_id, gc_wl_candidate_address);
 		}
@@ -371,7 +373,9 @@ namespace SSD_Components
 		address_mapping_unit->Set_barrier_for_accessing_physical_block(wl_candidate_address);//Lock the block, so no user request can intervene while the GC is progressing
 		if (block_manager->Can_execute_gc_wl(wl_candidate_address)) {//If there are ongoing requests targeting the candidate block, the gc execution should be postponed
 			Stats::Total_wl_executions++;
-			Simulation_Events::Notify_wl_started(block->Stream_id, wl_candidate_address);
+			Flash_Block_Manager_Base::MinMaxEraseInfo erase_info = block_manager->Get_min_max_erase_info(plane_address);
+			Simulation_Events::Notify_wl_started(block->Stream_id, wl_candidate_address,
+				erase_info.MinEraseCount, erase_info.MaxEraseCount, erase_info.MaxEraseBlockId, static_wearleveling_threshold);
 			tsu->Prepare_for_transaction_submit();
 
 			NVM_Transaction_Flash_ER* wl_erase_tr = new NVM_Transaction_Flash_ER(Transaction_Source_Type::GC_WL, pbke->Blocks[wl_candidate_block_id].Stream_id, wl_candidate_address);

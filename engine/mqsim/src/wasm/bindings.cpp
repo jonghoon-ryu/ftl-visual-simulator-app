@@ -164,6 +164,10 @@ namespace
 		payload.set("type", std::string("wl_started"));
 		payload.set("streamId", event.Stream_id);
 		payload.set("block", address_to_val(event.Block_address));
+		payload.set("minEraseCount", event.Min_Erase_Count);
+		payload.set("maxEraseCount", event.Max_Erase_Count);
+		payload.set("maxEraseBlockId", event.Max_Erase_Block_Id);
+		payload.set("threshold", event.Threshold);
 		g_event_callback(payload);
 	}
 

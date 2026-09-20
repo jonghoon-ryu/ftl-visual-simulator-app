@@ -91,6 +91,16 @@ interface MqsimEvent {
   eraseCount?: number;
   forMappingData?: boolean;
   dynamicWlConsidered?: boolean;
+  // wl_started only: the condition that just triggered static WL. `block`
+  // above is always the min-erase (coldest, chosen) block; maxEraseBlockId
+  // is whichever block is currently hottest, for contrast. See
+  // WL_Started_Event's doc comment in Simulation_Events.h for why these are
+  // re-derived at notify time rather than captured once at the original
+  // decision.
+  minEraseCount?: number;
+  maxEraseCount?: number;
+  maxEraseBlockId?: number;
+  threshold?: number;
 }
 
 interface MqsimModule {

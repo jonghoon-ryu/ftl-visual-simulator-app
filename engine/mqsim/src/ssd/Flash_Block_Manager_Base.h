@@ -143,6 +143,18 @@ namespace SSD_Components
 		// use (see mqsimConfigs.ts).
 		std::vector<Block_Snapshot_Entry> Get_block_state_snapshot();
 		unsigned int Get_min_max_erase_difference(const NVM::FlashMemory::Physical_Page_Address& plane_address);
+		// This project's own addition (2026-09-20), for the visualizer's "왜
+		// 마모평준화가 발동했나요?" explanation - same min/max scan as
+		// Get_min_max_erase_difference() above (which now just calls this and
+		// subtracts), but exposes the actual counts and which block IDs they
+		// belong to, not just their difference.
+		struct MinMaxEraseInfo {
+			unsigned int MinEraseCount;
+			unsigned int MaxEraseCount;
+			flash_block_ID_type MinEraseBlockId;
+			flash_block_ID_type MaxEraseBlockId;
+		};
+		MinMaxEraseInfo Get_min_max_erase_info(const NVM::FlashMemory::Physical_Page_Address& plane_address);
 		void Set_GC_and_WL_Unit(GC_and_WL_Unit_Base* );
 		PlaneBookKeepingType* Get_plane_bookkeeping_entry(const NVM::FlashMemory::Physical_Page_Address& plane_address);
 		bool Block_has_ongoing_gc_wl(const NVM::FlashMemory::Physical_Page_Address& block_address);//Checks if there is an ongoing gc for block_address

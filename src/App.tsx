@@ -132,8 +132,11 @@ function App() {
       // above, this is a persistent marker (see useMqsimWlHighlight), and
       // the single rare WL event is actually *likely* to fall inside the
       // final giant batch, so this is exactly the case we most need to
-      // still catch rather than discard.
-      wlHighlight.commit();
+      // still catch rather than discard. A fresh trigger returns true here,
+      // which useSimulationPlayback reads as "stop ▶ now" - see
+      // RefreshResult's doc comment there for why (Ryu, 2026-09-20: pause
+      // right when it fires, don't keep playing past it).
+      return { shouldPause: wlHighlight.commit() };
     },
     onRestart: () => {
       events.reset();
@@ -196,7 +199,10 @@ function App() {
   const stepShortcutRef = useRef({ canStep: false, stepEventOnce: playback.stepEventOnce });
   useEffect(() => {
     stepShortcutRef.current = {
-      canStep: wired && playback.hasMore && !playback.isPlaying,
+      // Same "마모평준화 시연" exclusion as Toolbar's step buttons below -
+      // pointless there (see hideStepButtons' doc comment), so the → key
+      // shouldn't silently do it either.
+      canStep: wired && activeId !== 'wear-leveling' && playback.hasMore && !playback.isPlaying,
       stepEventOnce: playback.stepEventOnce,
     };
   });
@@ -229,6 +235,7 @@ function App() {
           presets={presets}
           activeId={activeId}
           onSelect={setActiveId}
+          hideStepButtons={activeId === 'wear-leveling'}
           playback={{
             isPlaying: playback.isPlaying,
             speed: playback.speed,
@@ -243,7 +250,7 @@ function App() {
         />
         <div className="sim-body">
           {blockRows && <FlashGrid blocks={blockRows} caption={caption} />}
-          {wearRows && <WearLevelingView rows={wearRows} caption={caption} />}
+          {wearRows && <WearLevelingView rows={wearRows} caption={caption} trigger={wlHighlight.lastTrigger} />}
           {/* All three wired presets get the 로그 column now - previously
               마모평준화 시연 was excluded (it never had a mapping table),
               but once 로그 became a general chronological event log rather

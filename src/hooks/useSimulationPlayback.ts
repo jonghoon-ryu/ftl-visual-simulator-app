@@ -7,13 +7,21 @@ import type { MqsimEngine } from './useMqsimEngine';
 // frame rate rather than a shorter interval.
 const TICK_INTERVAL_MS = 300;
 
+// Returned by onRefresh to tell the caller whether to stop ▶ playback right
+// here - used for static WL's trigger (see App.tsx's onRefresh): a beginner
+// has no realistic chance of catching WL's one-off event live, so playback
+// auto-pauses the moment it happens instead of continuing past it.
+interface RefreshResult {
+  shouldPause?: boolean;
+}
+
 interface Options {
   engine: Pick<MqsimEngine, 'ready' | 'step' | 'run' | 'stepEvent' | 'configure'>;
   // `batchEnded` is true only for the ▶ play loop's tick when that tick's
   // run() call itself reached the end of the simulation (no more events) -
   // see its call site below for why this needs to be distinguished from an
   // ordinary tick/step.
-  onRefresh: (opts?: { batchEnded?: boolean }) => void | Promise<void>;
+  onRefresh: (opts?: { batchEnded?: boolean }) => RefreshResult | void | Promise<RefreshResult | void>;
   onRestart: () => void;
   // How many event-groups one "speed" unit (1-8, Toolbar's slider) is worth
   // per tick/step - lets a preset whose workload needs vastly more
@@ -66,9 +74,9 @@ export function useSimulationPlayback({ engine, onRefresh, onRestart, ticksMulti
   const stepEventOnce = useCallback(async () => {
     if (!engine.ready) return;
     const more = await engine.stepEvent();
-    await latestRef.current.onRefresh();
+    const result = await latestRef.current.onRefresh();
     setHasMore(more);
-    if (!more) setIsPlaying(false);
+    if (!more || result?.shouldPause) setIsPlaying(false);
   }, [engine]);
 
   // Backs the "5 steps" button - just stepEventOnce run n times in a row,
@@ -80,9 +88,9 @@ export function useSimulationPlayback({ engine, onRefresh, onRestart, ticksMulti
       if (!engine.ready) return;
       for (let i = 0; i < n; i++) {
         const more = await engine.stepEvent();
-        await latestRef.current.onRefresh();
+        const result = await latestRef.current.onRefresh();
         setHasMore(more);
-        if (!more) {
+        if (!more || result?.shouldPause) {
           setIsPlaying(false);
           break;
         }
@@ -120,9 +128,9 @@ export function useSimulationPlayback({ engine, onRefresh, onRestart, ticksMulti
           // screen forever since no further tick ever arrives to clear it.
           // Flagging this lets onRefresh clear those overlays instead of
           // populating them - see App.tsx's onRefresh.
-          await latestRef.current.onRefresh({ batchEnded: !more });
+          const result = await latestRef.current.onRefresh({ batchEnded: !more });
           setHasMore(more);
-          if (!more) setIsPlaying(false);
+          if (!more || result?.shouldPause) setIsPlaying(false);
         })
         .finally(() => {
           tickInFlightRef.current = false;

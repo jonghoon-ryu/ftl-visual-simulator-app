@@ -447,6 +447,50 @@
   margin-bottom: 14px;
 }
 
+/* Clickable variant of .wl-status - toggles .wl-explanation below it once a
+   trigger has fired. Reuses .wl-status's look so it doesn't read as a new,
+   unrelated element; only the pointer affordances are added. */
+.wl-status-button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.wl-status-button:hover {
+  background: #f5b9421f;
+  border-color: #f5b94266;
+}
+
+/* Expanded detail for exactly which erase-count condition triggered static
+   WL (see WlTriggerInfo) - Ryu asked to see this on demand, not just that
+   WL happened. Sits directly under the button that reveals it. */
+.wl-explanation {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #d7dae0;
+  background: #1c1e26;
+  border: 1px solid #f5b94240;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  padding: 10px 12px;
+  margin-top: -14px;
+  margin-bottom: 14px;
+}
+
+.wl-explanation p {
+  margin: 0 0 8px;
+}
+
+.wl-explanation p:last-child {
+  margin-bottom: 0;
+}
+
+.wl-explanation strong {
+  color: #f5b942;
+}
+
 .wl-row {
   display: flex;
   align-items: center;
