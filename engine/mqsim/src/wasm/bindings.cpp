@@ -324,6 +324,7 @@ val get_state()
 	stats.set("issuedProgramCmd", SSD_Components::Stats::IssuedProgramCMD);
 	stats.set("gcExecutions", SSD_Components::Stats::Total_gc_executions);
 	stats.set("wlExecutions", SSD_Components::Stats::Total_wl_executions);
+	stats.set("writesWaitingForSpace", g_instance ? MQSim_Interface::Get_writes_waiting_for_free_space(g_instance) : 0u);
 
 	val state = val::object();
 	state.set("mapping", mapping);

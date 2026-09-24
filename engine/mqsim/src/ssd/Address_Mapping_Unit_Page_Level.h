@@ -206,6 +206,19 @@ namespace SSD_Components
 		void Remove_barrier_for_accessing_lpa(stream_id_type stream_id, LPA_type lpa);
 		void Remove_barrier_for_accessing_mvpn(stream_id_type stream_id, MVPN_type mpvn);
 		void Start_servicing_writes_for_overfull_plane(const NVM::FlashMemory::Physical_Page_Address plane_address);
+		// Total across every plane - lets a UI explain a run that ended with
+		// writes still parked because the device filled up (see the WASM
+		// getState() stats' writesWaitingForSpace).
+		unsigned int Count_writes_waiting_for_free_space()
+		{
+			unsigned int count = 0;
+			for (unsigned int c = 0; c < channel_count; c++)
+				for (unsigned int ch = 0; ch < chip_no_per_channel; ch++)
+					for (unsigned int d = 0; d < die_no_per_chip; d++)
+						for (unsigned int p = 0; p < plane_no_per_die; p++)
+							count += (unsigned int)Write_transactions_for_overfull_planes[c][ch][d][p].size();
+			return count;
+		}
 		bool Has_writes_waiting_for_free_space(const NVM::FlashMemory::Physical_Page_Address& plane_address)
 		{
 			return !Write_transactions_for_overfull_planes[plane_address.ChannelID][plane_address.ChipID][plane_address.DieID][plane_address.PlaneID].empty();

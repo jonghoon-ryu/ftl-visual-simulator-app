@@ -63,6 +63,10 @@ interface MqsimStats {
   issuedProgramCmd: number;
   gcExecutions: number;
   wlExecutions: number;
+  // Host writes parked because their plane has no free pages left - still
+  // nonzero once the run has ended means the device filled up and the
+  // remaining writes could never be serviced.
+  writesWaitingForSpace: number;
 }
 
 interface MqsimState {

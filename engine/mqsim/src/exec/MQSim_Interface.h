@@ -73,6 +73,10 @@ namespace MQSim_Interface
 	// Manager_Base::Get_block_state_snapshot().
 	std::vector<SSD_Components::Block_Snapshot_Entry> Get_block_state_snapshot(Simulation_Instance* instance);
 
+	// How many host writes are parked because their plane ran out of free
+	// pages - nonzero after the run ends means the device filled up.
+	unsigned int Get_writes_waiting_for_free_space(Simulation_Instance* instance);
+
 	// Releases the SSD_Device/Host_System for this one scenario.
 	void Finalize_scenario(Simulation_Instance* instance);
 

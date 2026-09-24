@@ -294,6 +294,12 @@ namespace MQSim_Interface
 		return ftl->BlockManager->Get_block_state_snapshot();
 	}
 
+	unsigned int Get_writes_waiting_for_free_space(Simulation_Instance* instance)
+	{
+		SSD_Components::FTL* ftl = static_cast<SSD_Components::FTL*>(instance->Ssd->Firmware);
+		return static_cast<SSD_Components::Address_Mapping_Unit_Page_Level*>(ftl->Address_Mapping_Unit)->Count_writes_waiting_for_free_space();
+	}
+
 	void Finalize_scenario(Simulation_Instance* instance)
 	{
 		delete instance->Host;

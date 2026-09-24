@@ -230,6 +230,12 @@ function App() {
   // dismiss-on-resume behavior (see wlHighlight.dismissBanner below).
   const wlBannerVisible = wired ? wlHighlight.bannerVisible : true;
   const statItems = wired ? toStatItems(engine.state, events.counters) : active.stats;
+  // The run ended with host writes still parked for lack of free pages -
+  // e.g. "매핑 기본" (100% working set) at a small capacity fills the whole
+  // device before anything is overwritten, so GC has nothing to reclaim and
+  // the demo ends there by design (see DEFAULT_MAPPING_PARAMS). Without
+  // this, playback just stops with no visible reason.
+  const deviceFull = wired && !playback.hasMore && (engine.state?.stats.writesWaitingForSpace ?? 0) > 0;
   const logEntries = wired ? events.log : active.log;
   const caption = wired ? '' : active.caption;
 
@@ -294,6 +300,16 @@ function App() {
             />
           </div>
           <div className="sim-stats-col">
+            {deviceFull && (
+              <div className="device-full-status">
+                <strong>장치가 가득 찼어요</strong>
+                <p>
+                  남은 쓰기 {engine.state?.stats.writesWaitingForSpace}개가 빈 page 를 기다리다 끝났어요. 빈 page 가
+                  없는데 GC 가 청소할 invalid page(덮어써서 무효가 된 page)도 남아 있지 않아서예요. Block 개수, Block 당
+                  Page 개수, 또는 Over-provisioning 을 늘려보세요.
+                </p>
+              </div>
+            )}
             <StatsPanel stats={statItems} />
           </div>
         </div>

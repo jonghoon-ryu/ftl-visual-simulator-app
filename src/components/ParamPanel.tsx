@@ -39,6 +39,12 @@ const GC_POLICY_LABELS: Record<SsdParams['gcBlockSelectionPolicy'], string> = {
 // the boundary down too: confirmed empirically (same method as the original
 // finding - native/WASM harness, independent of OP ratio and pages-per-
 // block) that 7 blocks works, 6 stalls. 8 keeps a small margin above that.
+// That boundary is about GC deadlocking before anything is overwritten, as
+// measured on "GC 시연"'s 25% working set. "매핑 기본" writes its whole
+// logical space (100% working set), so at small capacity (4 pages/block,
+// or 8 blocks with 0% OP) the device simply fills before any overwrite and
+// the run ends there by design - App.tsx shows a "장치가 가득 찼어요" notice
+// for that case rather than restricting these sliders further.
 // "마모평준화 시연" needs more: it runs two flows (cold + hot), each with its
 // own data/GC/translation write frontiers, so twice as many blocks are tied
 // up as frontiers before anything is written. Verified via native CLI

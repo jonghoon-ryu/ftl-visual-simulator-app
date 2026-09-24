@@ -450,6 +450,24 @@
   margin-bottom: 14px;
 }
 
+/* Shown in the stats column when a run ended with writes still waiting for
+   free pages (device full) - same look as .wl-status, different colour so
+   it doesn't read as the WL-triggered banner. */
+.device-full-status {
+  font-size: 12px;
+  color: #e8836f;
+  background: #e8836f14;
+  border: 1px solid #e8836f40;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.device-full-status p {
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
 /* Clickable variant of .wl-status - toggles .wl-explanation below it once a
    trigger has fired. Reuses .wl-status's look so it doesn't read as a new,
    unrelated element; only the pointer affordances are added. */
