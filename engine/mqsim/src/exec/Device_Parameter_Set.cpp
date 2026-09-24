@@ -307,6 +307,9 @@ void Device_Parameter_Set::XML_serialize(Utils::XmlWriter& xmlwriter)
 		case SSD_Components::GC_Block_Selection_Policy_Type::FIFO:
 			val = "FIFO";
 			break;
+		case SSD_Components::GC_Block_Selection_Policy_Type::COST_BENEFIT:
+			val = "COST_BENEFIT";
+			break;
 		default:
 			break;
 	}
@@ -580,6 +583,8 @@ void Device_Parameter_Set::XML_deserialize(rapidxml::xml_node<> *node)
 					GC_Block_Selection_Policy = SSD_Components::GC_Block_Selection_Policy_Type::RANDOM_PP;
 				} else if (strcmp(val.c_str(), "FIFO") == 0) {
 					GC_Block_Selection_Policy = SSD_Components::GC_Block_Selection_Policy_Type::FIFO;
+				} else if (strcmp(val.c_str(), "COST_BENEFIT") == 0) {
+					GC_Block_Selection_Policy = SSD_Components::GC_Block_Selection_Policy_Type::COST_BENEFIT;
 				} else {
 					PRINT_ERROR("Unknown GC block selection policy specified in the SSD configuration file")
 				}

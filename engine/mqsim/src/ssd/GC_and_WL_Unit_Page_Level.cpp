@@ -1,3 +1,4 @@
+#include <limits>
 #include <math.h>
 #include <vector>
 #include <set>
@@ -201,6 +202,41 @@ namespace SSD_Components
 					if (pbke->Blocks[gc_candidate_block_id].Current_page_write_index < pages_no_per_block
 						|| pbke->Blocks[gc_candidate_block_id].Invalid_page_count < random_pp_threshold
 						|| !is_safe_gc_wl_candidate(pbke, gc_candidate_block_id)) {
+						return;
+					}
+					break;
+				}
+				case SSD_Components::GC_Block_Selection_Policy_Type::COST_BENEFIT:
+				{
+					// Not in upstream MQSim (this project): LFS cost-benefit.
+					// benefit/cost = (1 - u) / (2u) x age - (1 - u) is the space
+					// reclaimed, 2u the cost of reading and rewriting the valid
+					// fraction u, and age (time since the block was allocated as
+					// a write frontier) favors blocks whose data has been stable,
+					// since their remaining valid pages are less likely to be
+					// invalidated soon anyway. A fully invalid block (u = 0) is
+					// free to reclaim and always wins. Same candidate rules as
+					// GREEDY/FIFO (full, safe, not already erasing, something to
+					// reclaim, room to migrate).
+					bool found_candidate = false;
+					double best_score = -1;
+					for (flash_block_ID_type block_id = 0; block_id < block_no_per_plane; block_id++) {
+						const Block_Pool_Slot_Type& block = pbke->Blocks[block_id];
+						if (block.Current_page_write_index != pages_no_per_block || block.Invalid_page_count == 0
+							|| pbke->Ongoing_erase_operations.find(block_id) != pbke->Ongoing_erase_operations.end()
+							|| !is_safe_gc_wl_candidate(pbke, block_id) || !has_room_to_migrate(pbke, block_id)) {
+							continue;
+						}
+						double u = double(pages_no_per_block - block.Invalid_page_count) / double(pages_no_per_block);
+						double age = double(Simulator->Time() - block.Allocation_time) + 1.0;
+						double score = u == 0 ? std::numeric_limits<double>::max() : (1.0 - u) / (2.0 * u) * age;
+						if (!found_candidate || score > best_score) {
+							best_score = score;
+							gc_candidate_block_id = block_id;
+							found_candidate = true;
+						}
+					}
+					if (!found_candidate) {
 						return;
 					}
 					break;

@@ -17,6 +17,7 @@ const GC_POLICY_OPTIONS: SsdParams['gcBlockSelectionPolicy'][] = [
   'RANDOM_P',
   'RANDOM_PP',
   'FIFO',
+  'COST_BENEFIT',
 ];
 const SUSPENSION_LABELS: Record<SsdParams['cmdSuspension'], string> = {
   NONE: '끔',
@@ -32,6 +33,7 @@ const GC_POLICY_LABELS: Record<SsdParams['gcBlockSelectionPolicy'], string> = {
   RANDOM_P: 'Random-p',
   RANDOM_PP: 'Random-pp',
   FIFO: 'FIFO',
+  COST_BENEFIT: 'Cost-Benefit',
 };
 
 // GC_and_WL_Unit_Page_Level's max_ongoing_gc_reqs_per_plane doubles as
@@ -279,7 +281,7 @@ export function ParamPanel({ presetId, params, onChange, disabled }: Props) {
             </option>
           ))}
         </select>
-        <div className="param-hint">지워질 block(victim)을 고르는 방식 - 알고리즘마다 옮기는 page 수(=GC 비용)가 달라요. GC 시연의 "GC 알고리즘 비교"로 6개를 한 번에 비교해볼 수 있어요</div>
+        <div className="param-hint">지워질 block(victim)을 고르는 방식 - 알고리즘마다 옮기는 page 수(=GC 비용)가 달라요. GC 시연의 "GC 알고리즘 비교"로 7개를 한 번에 비교해볼 수 있어요</div>
       </div>
 
       <div className="param-row">

@@ -7,7 +7,7 @@ interface Props {
   workload: WorkloadParams;
 }
 
-const POLICIES: SsdParams['gcBlockSelectionPolicy'][] = ['RGA', 'GREEDY', 'RANDOM', 'RANDOM_P', 'RANDOM_PP', 'FIFO'];
+const POLICIES: SsdParams['gcBlockSelectionPolicy'][] = ['RGA', 'GREEDY', 'RANDOM', 'RANDOM_P', 'RANDOM_PP', 'FIFO', 'COST_BENEFIT'];
 const LABELS: Record<SsdParams['gcBlockSelectionPolicy'], string> = {
   RGA: 'RGA',
   GREEDY: 'Greedy',
@@ -15,6 +15,7 @@ const LABELS: Record<SsdParams['gcBlockSelectionPolicy'], string> = {
   RANDOM_P: 'Random-p',
   RANDOM_PP: 'Random-pp',
   FIFO: 'FIFO',
+  COST_BENEFIT: 'Cost-Benefit',
 };
 
 // "GC 시연": runs the current settings once per GC 알고리즘, each to the
@@ -82,7 +83,7 @@ export function GcPolicyComparison({ params, workload }: Props) {
     <div className="gc-compare">
       <div className="free-chart-title">GC 알고리즘 비교</div>
       <button type="button" className="gc-compare-button" onClick={start} disabled={running}>
-        {running ? `비교 중... (${results.length}/${POLICIES.length})` : done ? '다시 비교하기' : '지금 설정으로 GC 알고리즘 6개 비교하기'}
+        {running ? `비교 중... (${results.length}/${POLICIES.length})` : done ? '다시 비교하기' : '지금 설정으로 GC 알고리즘 7개 비교하기'}
       </button>
       {error && <div className="free-chart-empty">비교 중 오류: {error}</div>}
       {results.length > 0 && (

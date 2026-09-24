@@ -43,17 +43,17 @@ concept visible:
 - **"왜 이 block 을 골랐나요?"** (GC demo) — the latest GC victim's
   valid/invalid page counts and how the selected policy picked it.
 - **GC policy comparison** (GC demo) — runs the current settings once per
-  policy (all 6) in a background worker and tabulates GC runs, pages moved
+  policy (all 7, including this project's Cost-Benefit) in a background worker and tabulates GC runs, pages moved
   and WAF. At the defaults plain Random comes out cheapest, which the app
   says plainly rather than repeating the textbook claim.
 - **WAF vs over-provisioning curve** (GC demo) — OP 0-30% measured with the
-  current settings (1.45x -> 1.05x at the defaults).
+  current settings (1.49x -> 1.05x at the defaults).
 - **Follow one write** (all presets) — click an LPN in the log to see every
   physical page its data has occupied (write -> overwrite -> GC move ...),
   outlined on the grid: the out-of-place update in one picture.
 - **DRAM write-cache toggle** — with the cache on, GC 시연 sends ~2.2M host
   requests but only ~500 page writes reach flash; off, nearly every request
-  does and GC runs ~12x more.
+  does and GC runs ~16x more (30 -> 497).
 - **예측해보기 quiz** (all presets) — predict, then see the answer and where
   on the screen to check it.
 - A "장치가 가득 찼어요" notice when a tiny configuration fills the device.

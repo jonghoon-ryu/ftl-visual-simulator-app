@@ -56,7 +56,7 @@ export interface SsdParams {
   //   project specifically - its extra "minimum invalid pages" condition is
   //   scaled by Initial_Occupancy_Percentage, which every preset here sets
   //   to 0, making that condition always trivially true.)
-  gcBlockSelectionPolicy: 'GREEDY' | 'RGA' | 'RANDOM' | 'RANDOM_P' | 'RANDOM_PP' | 'FIFO';
+  gcBlockSelectionPolicy: 'GREEDY' | 'RGA' | 'RANDOM' | 'RANDOM_P' | 'RANDOM_PP' | 'FIFO' | 'COST_BENEFIT';
   // Flash CMD_Suspension_Support: which long flash operations a waiting
   // read (and, for erases, a waiting write) may pause. ERASE is the value
   // every preset has always used, so it stays the default. Measured
@@ -491,7 +491,7 @@ export const DEFAULT_WL_PARAMS: SsdParams = {
 
 // ParamPanel's 마모평준화 임계값 slider range - only shown for this preset.
 // 1-5, not 1-10: verified via native CLI at this preset's defaults (24
-// blocks, Stop_Time 8e9) that WL fires 341/23/7/5 times at thresholds 1-4
+// blocks, Stop_Time 8e9) that WL fires 341/30/7/5 times at thresholds 1-4 (re-measured after the 2026-09-24 suspend fix)
 // and 0 times for every value 5-10 - the erase-count gap never reaches 5
 // within this run length (at 4x Stop_Time threshold 5 does fire). 5 is
 // kept as the one "doesn't fire here" value; 6-10 would just repeat it.

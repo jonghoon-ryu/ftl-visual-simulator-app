@@ -12,9 +12,9 @@ interface Question {
 }
 
 // Numbers quoted below are this project's defaults, measured 2026-09-24
-// (native CLI and the WASM build agree): "GC 시연" runs 31 GCs with the
-// DRAM write cache on vs 370 with it off, and its lowest-WAF policy is
-// plain Random (1.19x vs RGA's 1.27x); "마모평준화 시연" fires static WL
+// (native CLI and the WASM build agree): "GC 시연" runs 30 GCs with the
+// DRAM write cache on vs 497 with it off, and its lowest-WAF policy is
+// plain Random (1.19x vs RGA's 1.23x; re-measured after the suspend fix); "마모평준화 시연" fires static WL
 // 7 times at threshold 3 vs 341 at threshold 1. Re-measure if defaults change.
 const QUESTIONS: Partial<Record<PresetId, Question[]>> = {
   mapping: [
@@ -49,16 +49,16 @@ const QUESTIONS: Partial<Record<PresetId, Question[]>> = {
       options: ['줄어든다', '거의 같다', '크게 늘어난다'],
       answer: 2,
       explanation:
-        '캐시가 켜져 있으면 같은 page 에 대한 반복 쓰기를 DRAM 이 흡수하고 작은 쓰기를 모아서 내려보내, flash 에 닿는 쓰기가 훨씬 적습니다. 끄면 거의 모든 요청이 flash 쓰기가 되니 빈 block 이 빨리 줄고 GC 가 훨씬 자주 일어나요. 기본 설정에서 끝까지 돌리면 31번 → 370번.',
+        '캐시가 켜져 있으면 같은 page 에 대한 반복 쓰기를 DRAM 이 흡수하고 작은 쓰기를 모아서 내려보내, flash 에 닿는 쓰기가 훨씬 적습니다. 끄면 거의 모든 요청이 flash 쓰기가 되니 빈 block 이 빨리 줄고 GC 가 훨씬 자주 일어나요. 기본 설정에서 끝까지 돌리면 30번 → 497번.',
       howToCheck: 'Workload 의 "DRAM 쓰기 캐시" 를 끄고 재생해보세요. 통계의 "호스트 요청 → flash 쓰기" 와 GC 실행 횟수를 캐시를 켰을 때와 비교해보세요.',
     },
     {
-      prompt: '기본 설정에서, GC 알고리즘 6개 중 WAF 가 가장 낮은 것은?',
+      prompt: '기본 설정에서, 다음 GC 알고리즘 중 WAF 가 가장 낮은 것은?',
       options: ['RGA', 'Greedy', 'Random', 'FIFO'],
       answer: 2,
       explanation:
-        '교과서대로라면 invalid 를 보고 고르는 Greedy/RGA 가 유리할 것 같지만, 이 데모에서는 Random 이 1.19× 로 가장 낮아요 (RGA/Greedy 1.27×). Random 은 무작위로 고른 block 에 청소할 게 없으면 그 GC 기회를 건너뛰어서 GC 를 덜 하기 때문이에요. block 이 적은 작은 규모에서는 이런 일이 생깁니다.',
-      howToCheck: '아래 "GC 알고리즘 비교" 버튼으로 6개를 직접 돌려 표로 확인해보세요.',
+        '교과서대로라면 invalid 를 보고 고르는 Greedy/RGA 가 유리할 것 같지만, 이 데모에서는 Random 이 1.19× 로 가장 낮아요 (RGA/Greedy 1.23×, Cost-Benefit 1.24×). Random 은 무작위로 고른 block 에 청소할 게 없으면 그 GC 기회를 건너뛰어서 GC 를 덜 하기 때문이에요. block 이 적은 작은 규모에서는 이런 일이 생깁니다.',
+      howToCheck: '아래 "GC 알고리즘 비교" 버튼으로 7개를 직접 돌려 표로 확인해보세요.',
     },
   ],
   'wear-leveling': [

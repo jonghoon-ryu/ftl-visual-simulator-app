@@ -59,6 +59,8 @@ function policyRule(params: SsdParams): string {
       return 'Random-p 는 다 쓴 block 중에서 무작위로 고릅니다 - Random 보다는 낫지만 invalid 개수는 보지 않아요.';
     case 'RANDOM_PP':
       return 'Random-pp 는 다 쓴 block 중 invalid page 가 일정 개수 이상인 block 에서 무작위로 고릅니다 (이 데모 설정에서는 그 기준이 사실상 0 이라 Random-p 와 같게 동작해요).';
+    case 'COST_BENEFIT':
+      return 'Cost-Benefit 은 (비울 수 있는 공간) ÷ (옮기는 비용) × (데이터가 얼마나 오래 안 바뀌었나) 가 가장 큰 block 을 고릅니다 - 1991년 LFS 논문의 정책이에요. 오래 안 바뀐 block 은 남은 valid page 도 앞으로 안 바뀔 가능성이 커서, invalid 가 조금 적어도 먼저 정리할 가치가 있다는 생각이에요. (원래 MQSim 에는 없어서 이 프로젝트가 추가한 정책이에요.)';
     case 'FIFO':
       return 'FIFO 는 가장 먼저 쓰기 시작한 block 부터 차례로 고릅니다 (invalid 가 하나도 없는 block 은 건너뜀). 오래된 block 일수록 덮어쓴 page 가 많을 거라는 가정이에요.';
   }

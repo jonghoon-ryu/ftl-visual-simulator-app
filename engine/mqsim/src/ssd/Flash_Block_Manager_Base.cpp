@@ -1,3 +1,4 @@
+#include "../sim/Engine.h"
 #include "Flash_Block_Manager.h"
 
 
@@ -113,6 +114,7 @@ namespace SSD_Components
 		new_block->Stream_id = stream_id;
 		new_block->Holds_mapping_data = for_mapping_data;
 		new_block->Allocation_seq++;
+		new_block->Allocation_time = Simulator->Time();
 		// Drop stale entries (see Block_usage_history's comment) from the
 		// front while we're here, so the queue stays about one entry per block.
 		while (!Block_usage_history.empty()

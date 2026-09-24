@@ -20,8 +20,8 @@ const PAD_BOTTOM = 26;
 // "GC 시연": the classic SSD textbook curve - more over-provisioning, lower
 // write amplification - measured from this simulator with the current
 // settings (everything except OP held fixed), each point run to the end in
-// compare.worker.ts. At the defaults it drops from ~1.45x at OP 0% to
-// ~1.05x at 30% (cache on); with the DRAM write cache off, ~1.85x -> ~1.28x.
+// compare.worker.ts. At the defaults it drops from ~1.49x at OP 0% to
+// ~1.05x at 30% (cache on); with the DRAM write cache off, ~1.85x -> ~1.29x.
 export function WafOpCurve({ params, workload }: Props) {
   const [results, setResults] = useState<CompareResult[]>([]);
   const [running, setRunning] = useState(false);

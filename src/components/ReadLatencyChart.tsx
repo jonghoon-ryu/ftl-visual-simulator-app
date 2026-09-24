@@ -20,8 +20,9 @@ function formatUs(us: number): string {
 // "GC 시연": average read latency per playback tick, with a ● on every
 // tick in which GC started. A GC ties up the chip with page moves and an
 // erase, and a read that needs that chip has to wait - so the line jumps
-// right where the dots are. Measured at the defaults with 30% reads: cache
-// on ~10µs normally vs ~22µs in ticks with GC; cache off ~1.3ms vs ~2.4ms.
+// right where the dots are. Measured at the defaults with 30% reads (after
+// the suspend fix): cache on ~10µs normally vs ~24µs in ticks with GC;
+// cache off ~0.24ms vs ~1.7ms.
 export function ReadLatencyChart({ samples, readPercentage }: Props) {
   const [hover, setHover] = useState<number | null>(null);
 

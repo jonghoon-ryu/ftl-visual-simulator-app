@@ -438,6 +438,7 @@ namespace SSD_Components
 				double r_to_f_ratio = std::sqrt(double(stat->Ratio_of_traffic_accessing_hot_region) / double(stat->Ratio_of_hot_addresses_to_whole_working_set));
 				switch (GC_and_WL_Unit->Get_gc_policy()) {
 					case GC_Block_Selection_Policy_Type::GREEDY://Based on: B. Van Houdt, "A mean field model for a class of garbage collection algorithms in flash-based solid state drives", SIGMETRICS 2013.
+					case GC_Block_Selection_Policy_Type::COST_BENEFIT://This project's addition - approximated with greedy's steady state, like FIFO
 					case GC_Block_Selection_Policy_Type::FIFO://Could be estimated with greedy for large page_no_per_block values, as mentioned in //Based on: B. Van Houdt, "A mean field model for a class of garbage collection algorithms in flash-based solid state drives", SIGMETRICS 2013.
 					{
 						for (unsigned int i = 0; i <= page_no_per_block; i++) {
@@ -543,6 +544,7 @@ namespace SSD_Components
 					case GC_Block_Selection_Policy_Type::RANDOM_PP:
 					case GC_Block_Selection_Policy_Type::RGA:
 					case GC_Block_Selection_Policy_Type::FIFO:
+					case GC_Block_Selection_Policy_Type::COST_BENEFIT:
 					case GC_Block_Selection_Policy_Type::RANDOM:
 					case GC_Block_Selection_Policy_Type::RANDOM_P:
 						break;
@@ -552,6 +554,7 @@ namespace SSD_Components
 			{
 				switch (GC_and_WL_Unit->Get_gc_policy()) {
 					case GC_Block_Selection_Policy_Type::GREEDY://Based on: B. Van Houdt, "A mean field model for a class of garbage collection algorithms in flash-based solid state drives", SIGMETRICS 2013.
+					case GC_Block_Selection_Policy_Type::COST_BENEFIT://This project's addition - approximated with greedy's steady state, like FIFO
 					case GC_Block_Selection_Policy_Type::FIFO://Could be estimated with greedy for large page_no_per_block values, as mentioned in //Based on: B. Van Houdt, "A mean field model for a class of garbage collection algorithms in flash-based solid state drives", SIGMETRICS 2013.
 					{
 						for (unsigned int i = 0; i <= page_no_per_block; i++) {

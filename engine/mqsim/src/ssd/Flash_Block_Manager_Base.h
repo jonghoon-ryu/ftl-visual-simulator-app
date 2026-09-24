@@ -104,6 +104,10 @@ namespace SSD_Components
 		// it still describes the block's current use (see that queue's
 		// comment). Deliberately not reset by Erase().
 		unsigned int Allocation_seq = 0;
+		// When this block was last handed out as a write frontier - the
+		// "age" of its data for the COST_BENEFIT GC policy (how long it has
+		// been since the data in it was written).
+		sim_time_type Allocation_time = 0;
 		void Erase();
 	};
 
