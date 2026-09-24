@@ -309,6 +309,18 @@ namespace MQSim_Interface
 		return total;
 	}
 
+	Read_Latency_Sample Take_read_latency_sample(Simulation_Instance* instance)
+	{
+		Read_Latency_Sample sample{ 0, 0, 0 };
+		for (auto flow : instance->Host->Get_io_flows()) {
+			sample.Reads += flow->Get_serviced_read_request_count();
+			sample.Sum_response_ns += (double)flow->Get_sum_device_response_time_read();
+			double max = (double)flow->Take_max_read_response_time_window();
+			if (max > sample.Max_response_ns_window) sample.Max_response_ns_window = max;
+		}
+		return sample;
+	}
+
 	std::vector<unsigned int> Get_free_block_counts(Simulation_Instance* instance)
 	{
 		SSD_Components::FTL* ftl = static_cast<SSD_Components::FTL*>(instance->Ssd->Firmware);

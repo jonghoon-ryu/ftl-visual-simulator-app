@@ -80,6 +80,12 @@ namespace MQSim_Interface
 	// Host requests completed so far, summed over every IO flow.
 	unsigned long Get_host_requests_serviced(Simulation_Instance* instance);
 
+	// Read latency sampling for a UI: reads serviced and their summed device
+	// response time (ns) over all flows, plus the slowest read since the last
+	// call (resets it).
+	struct Read_Latency_Sample { unsigned long Reads; double Sum_response_ns; double Max_response_ns_window; };
+	Read_Latency_Sample Take_read_latency_sample(Simulation_Instance* instance);
+
 	// Free-block pool size per plane, and the pool size below which GC starts.
 	std::vector<unsigned int> Get_free_block_counts(Simulation_Instance* instance);
 	unsigned int Get_gc_threshold_blocks(Simulation_Instance* instance);

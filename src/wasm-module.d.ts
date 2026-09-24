@@ -76,6 +76,12 @@ interface MqsimStats {
   // Host requests completed so far (all flows) - one sector each here, so
   // compare with flash page writes to see what the DRAM write cache absorbed.
   hostRequestsServiced: number;
+  // Read latency sampling: reads completed so far, their summed device
+  // response time (ns), and the slowest single read since the previous
+  // getState() call (this field resets on every call).
+  readsServiced: number;
+  readResponseSumNs: number;
+  readResponseMaxNsSinceLastState: number;
   gcThresholdBlocks: number;
 }
 

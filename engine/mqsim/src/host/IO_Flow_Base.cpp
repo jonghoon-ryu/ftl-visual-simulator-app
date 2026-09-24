@@ -179,6 +179,9 @@ IO_Flow_Base::IO_Flow_Base(const sim_object_id_type &name, uint16_t flow_id, LHA
 			if (device_response_time > STAT_max_device_response_time_read) {
 				STAT_max_device_response_time_read = device_response_time;
 			}
+			if (device_response_time > STAT_max_device_response_time_read_window) {
+				STAT_max_device_response_time_read_window = device_response_time;
+			}
 			if (device_response_time < STAT_min_device_response_time_read) {
 				STAT_min_device_response_time_read = device_response_time;
 			}
@@ -279,6 +282,9 @@ IO_Flow_Base::IO_Flow_Base(const sim_object_id_type &name, uint16_t flow_id, LHA
 			STAT_sum_request_delay_read += request_delay;
 			if (device_response_time > STAT_max_device_response_time_read) {
 				STAT_max_device_response_time_read = device_response_time;
+			}
+			if (device_response_time > STAT_max_device_response_time_read_window) {
+				STAT_max_device_response_time_read_window = device_response_time;
 			}
 			if (device_response_time < STAT_min_device_response_time_read) {
 				STAT_min_device_response_time_read = device_response_time;

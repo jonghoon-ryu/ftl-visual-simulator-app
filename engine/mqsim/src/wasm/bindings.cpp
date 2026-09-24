@@ -339,6 +339,14 @@ val get_state()
 		stats.set("freeBlocksPerPlane", free_blocks);
 		stats.set("gcThresholdBlocks", g_instance ? MQSim_Interface::Get_gc_threshold_blocks(g_instance) : 0u);
 	}
+	{
+		MQSim_Interface::Read_Latency_Sample reads{ 0, 0, 0 };
+		if (g_instance) reads = MQSim_Interface::Take_read_latency_sample(g_instance);
+		stats.set("readsServiced", (double)reads.Reads);
+		stats.set("readResponseSumNs", reads.Sum_response_ns);
+		// Resets on every getState() call - the slowest read since the last one.
+		stats.set("readResponseMaxNsSinceLastState", reads.Max_response_ns_window);
+	}
 	stats.set("hostRequestsServiced", g_instance ? (double)MQSim_Interface::Get_host_requests_serviced(g_instance) : 0.0);
 	stats.set("gcRetryLimitHits", SSD_Components::Stats::Gc_retry_limit_hits);
 	stats.set("writesWaitingForSpace", g_instance ? MQSim_Interface::Get_writes_waiting_for_free_space(g_instance) : 0u);

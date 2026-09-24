@@ -59,6 +59,17 @@ namespace Host_Components
 		LHA_type Get_end_lsa_address_on_device();
 		uint32_t Get_generated_request_count();
 		uint32_t Get_serviced_request_count();//in microseconds
+		// For a UI sampling read latency over time (WASM getState()): the raw
+		// running totals, and the slowest read since the last call to
+		// Take_max_read_response_time_window() (which resets it).
+		unsigned int Get_serviced_read_request_count() { return STAT_serviced_read_request_count; }
+		sim_time_type Get_sum_device_response_time_read() { return STAT_sum_device_response_time_read; }
+		sim_time_type Take_max_read_response_time_window()
+		{
+			sim_time_type max = STAT_max_device_response_time_read_window;
+			STAT_max_device_response_time_read_window = 0;
+			return max;
+		}
 		uint32_t Get_device_response_time();//in microseconds
 		uint32_t Get_min_device_response_time();//in microseconds
 		uint32_t Get_max_device_response_time();//in microseconds
@@ -98,6 +109,7 @@ namespace Host_Components
 		unsigned int STAT_serviced_request_count, STAT_serviced_read_request_count, STAT_serviced_write_request_count;
 		sim_time_type STAT_sum_device_response_time, STAT_sum_device_response_time_read, STAT_sum_device_response_time_write;
 		sim_time_type STAT_min_device_response_time, STAT_min_device_response_time_read, STAT_min_device_response_time_write;
+		sim_time_type STAT_max_device_response_time_read_window = 0;
 		sim_time_type STAT_max_device_response_time, STAT_max_device_response_time_read, STAT_max_device_response_time_write;
 		sim_time_type STAT_sum_request_delay, STAT_sum_request_delay_read, STAT_sum_request_delay_write;
 		sim_time_type STAT_min_request_delay, STAT_min_request_delay_read, STAT_min_request_delay_write;
