@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { blockKey, pageKey } from '../lib/pageKey';
+import { blockKey, pageKey, streamLpaKey } from '../lib/pageKey';
 import type { MqsimEngine } from './useMqsimEngine';
 
 // Tracks pages/blocks whose data just got copied elsewhere or erased, so
@@ -32,7 +32,10 @@ import type { MqsimEngine } from './useMqsimEngine';
 // its comment for why each pending ref is captured into a local before
 // being reset, not read lazily inside the setState updater.
 export function useMqsimOverwrites(subscribeEvents: MqsimEngine['subscribeEvents'], ready: boolean) {
-  const lpaToPageKeyRef = useRef(new Map<bigint, string>());
+  // Keyed by streamLpaKey(), not the bare LPA - each IO flow (stream) has its
+  // own logical address space, so with 2+ flows (e.g. "마모평준화 시연"'s
+  // cold + hot flows) the same LPA number means two different pages.
+  const lpaToPageKeyRef = useRef(new Map<string, string>());
   const pendingPagesRef = useRef(new Set<string>());
   const pendingBlocksRef = useRef(new Set<string>());
   const [supersededKeys, setSupersededKeys] = useState<Set<string>>(new Set());
@@ -48,7 +51,7 @@ export function useMqsimOverwrites(subscribeEvents: MqsimEngine['subscribeEvents
         if (event.newBlock) {
           pendingPagesRef.current.add(pageKey(event.newBlock.chip, event.newBlock.block, event.newBlock.page));
           if (event.lpa !== undefined) {
-            lpaToPageKeyRef.current.set(event.lpa, pageKey(event.newBlock.chip, event.newBlock.block, event.newBlock.page));
+            lpaToPageKeyRef.current.set(streamLpaKey(event.streamId, event.lpa), pageKey(event.newBlock.chip, event.newBlock.block, event.newBlock.page));
           }
         }
         return;
@@ -60,7 +63,7 @@ export function useMqsimOverwrites(subscribeEvents: MqsimEngine['subscribeEvents
         return;
       }
       if (event.type !== 'mapping_updated' || !event.isWrite || event.lpa === undefined || !event.address) return;
-      const lpa = event.lpa;
+      const lpa = streamLpaKey(event.streamId, event.lpa);
       const newKey = pageKey(event.address.chip, event.address.block, event.address.page);
       const oldKey = lpaToPageKeyRef.current.get(lpa);
       // Only an overwrite (a previous PPA for this LPA existed) gets

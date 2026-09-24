@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LogEntry } from '../types';
+import { streamLpaKey } from '../lib/pageKey';
 import type { MqsimEngine } from './useMqsimEngine';
 
 const MAX_LOG_ENTRIES = 50;
@@ -109,7 +110,8 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
   // location" for an overwrite, same idea as useMqsimOverwrites' own copy
   // of this map (kept separate rather than shared, since this one only
   // needs read access one event at a time, not a one-step-overlay set).
-  const lpaToAddressRef = useRef(new Map<bigint, MqsimPageAddress>());
+  // Keyed per stream - see useMqsimOverwrites' lpaToPageKeyRef.
+  const lpaToAddressRef = useRef(new Map<string, MqsimPageAddress>());
   // Next log index to hand out, in chronological order (0 for the very
   // first event ever logged) - MappingTable.tsx shows it zero-padded.
   const nextIndexRef = useRef(0);
@@ -178,11 +180,11 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
 
       const prevAddress =
         event.type === 'mapping_updated' && event.lpa !== undefined
-          ? lpaToAddressRef.current.get(event.lpa)
+          ? lpaToAddressRef.current.get(streamLpaKey(event.streamId, event.lpa))
           : undefined;
       const text = describeEvent(event, prevAddress);
       if (event.type === 'mapping_updated' && event.isWrite && event.lpa !== undefined && event.address) {
-        lpaToAddressRef.current.set(event.lpa, event.address);
+        lpaToAddressRef.current.set(streamLpaKey(event.streamId, event.lpa), event.address);
       }
       // A GC/WL migration moves an LPA's data too, but never fires
       // mapping_updated (it goes through Allocate_new_page_for_gc(), not
@@ -190,7 +192,7 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
       // block that's since been erased would still show its old,
       // now-freed address as "previous location" on its next overwrite.
       if ((event.type === 'gc_page_migrated' || event.type === 'wl_page_migrated') && event.lpa !== undefined && event.newBlock) {
-        lpaToAddressRef.current.set(event.lpa, event.newBlock);
+        lpaToAddressRef.current.set(streamLpaKey(event.streamId, event.lpa), event.newBlock);
       }
       if (text === null) return;
 

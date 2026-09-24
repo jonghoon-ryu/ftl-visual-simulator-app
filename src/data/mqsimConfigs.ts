@@ -416,89 +416,146 @@ export function buildGcWorkloadXml(params: SsdParams, workload: WorkloadParams =
 `;
 }
 
-// "마모평준화 시연" preset - found via a native step-count harness that
-// static wear-leveling was, until now, IMPOSSIBLE to trigger regardless of
-// workload or Static_Wearleveling_Threshold: SSD_Device.cpp's construction
-// of GC_and_WL_Unit_Page_Level never passed Dynamic_Wearleveling_Enabled/
-// Static_Wearleveling_Enabled/Static_Wearleveling_Threshold through from
-// the parsed config at all, silently using the class's compiled-in
-// defaults (true, true, 100) no matter what ssdconfig.xml said - a real
-// upstream bug, fixed in engine/mqsim/src/exec/SSD_Device.cpp (see this
-// project's reference docs for the full writeup). With that fixed,
-// Static_Wearleveling_Threshold finally does something - but 100 (the
-// realistic upstream default) is still unreachable at any demo-sized
-// scale, for the structural reason Session 6 already documented: the
-// block with the lowest erase count is always either a genuinely never-
-// used free block or the live write/GC/translation frontier, and
-// is_safe_gc_wl_candidate() (GC_and_WL_Unit_Base.cpp) explicitly rejects
-// picking a frontier block as the WL target. So building up a *large*
-// gap before some other, non-frontier block becomes the coldest doesn't
-// help - what's needed is a *low enough* threshold that WL fires on a
-// small, achievable gap instead. staticWlThreshold: 1 confirmed via the
-// harness to trigger real WL exactly once by ~1.5M event-groups (64
-// blocks, same GC-forcing tuning as "GC 시연") - it does not repeat
-// within a further 15M+ event-groups even as the gap keeps growing,
-// because the freed block immediately becomes the *new* frontier
-// (dynamic wear-leveling prefers reusing the least-worn free block),
-// reintroducing the same block ineligibility this preset works around.
-// One real, verified WL execution - not a repeating cycle - is what this
-// preset can honestly demonstrate at this scale.
+// "마모평준화 시연" preset.
+//
+// History, briefly: static WL was first IMPOSSIBLE to trigger (SSD_Device.cpp
+// never passed Static_Wearleveling_Threshold through - see the
+// wl-threshold-not-wired-bug writeup), then could only ever fire ONCE per run
+// at threshold 1, and never at 2+. The "only once" part was blamed on the
+// freed block becoming the new write frontier - that explanation was wrong
+// (2026-09-24). The real cause was upstream's target selection: it only ever
+// looked at the plane-wide coldest block (lowest ID on ties), which is almost
+// always an unwritten frontier (e.g. the Translation_wf - the whole mapping
+// table fits in the CMT, so it's never programmed and sits at erase count 0
+// forever). is_safe_gc_wl_candidate() rejects it, and upstream then simply
+// gave up - every time, for the rest of the run. Fixed in
+// GC_and_WL_Unit_Base::get_static_wl_erase_info() (only blocks that hold
+// data and are safe candidates count as "coldest").
+//
+// With that fixed, the old single uniform-random flow turned out to be the
+// wrong workload for this demo anyway: dynamic WL (always reuse the
+// least-worn free block) keeps wear nearly flat under uniform random writes,
+// so the erase-count gap never grows past 1-2 - at threshold 1 WL then fires
+// ~150 times per run (pure churn), at 3 never. Static WL exists for the
+// opposite case: data written once and never touched again, pinning its
+// blocks at a low erase count while everything else cycles. So this preset
+// now runs TWO flows (MQSim splits the logical address space evenly between
+// them, each flow is its own stream with its own write frontiers, so their
+// data never shares a block):
+// - flow 0 ("cold"): STREAMING over half its region, exactly one write per
+//   page, then stops for good (Stop_Time 0 makes Total_Requests_To_Generate
+//   the limit - see IO_Flow_Synthetic::Generate_next_request()). Caching
+//   TURNED_OFF, or the (huge, 256MB) DRAM write cache would absorb all of it
+//   and it would never reach flash at all.
+// - flow 1 ("hot"): the same random overwrite traffic the preset always had
+//   (25% of the whole device = 50% of its own half), for the whole run.
+// Verified via native CLI at the defaults below (24 blocks, threshold 3):
+// cold blocks stay at 0 erases while hot ones keep cycling, and static WL
+// fires 7 times, each relocating a full block (16 pages) of cold data - real
+// static wear-leveling, not the 0-1-page moves the old setup produced.
+// Threshold 4 fires 5 times at this Stop_Time; 5+ need a longer run (at 4x
+// Stop_Time, threshold 5 fires 11 times). The stall that used to cut such
+// runs off around 9e9 is fixed (2026-09-24) - it was several upstream
+// MQSim bugs, not one: barrier-released writes never reaching the data
+// cache manager, a parked GC/WL never submitting its erase, overfull-plane
+// writes bypassing the GC/WL LPA barrier, and no GC re-check once a
+// plane's writes all stalled.
 export const DEFAULT_WL_PARAMS: SsdParams = {
   ...DEFAULT_MAPPING_PARAMS,
-  // Pinned to 1, not DEFAULT_MAPPING_PARAMS' 2 - Ryu's 2026-09-20 chip
-  // count change (see that default's own comment) was scoped to "매핑
-  // 기본"/"GC 시연" only; "마모평준화 시연"'s tuned trigger counts (92 GC
-  // executions, exactly 1 WL execution) were only ever verified at
-  // chipCount=1 and haven't been re-swept for multi-chip.
+  // Pinned to 1, not DEFAULT_MAPPING_PARAMS' 2 - static WL compares erase
+  // counts within one plane, so a single chip keeps the whole story in one
+  // list of blocks.
   chipCount: 1,
   // 24, not the original 64 (2026-09-20) - Ryu found 64 rows in
-  // WearLevelingView too many to scan at a glance. Re-verified via native
-  // CLI at 24: Total_WL_Executions still exactly 1 (the documented
-  // invariant), Total_GC_Executions 35 (down from 64-block's ~86, expected
-  // with less capacity), no stall. Larger than the other presets' 16 -
-  // verified via the same harness that 16 blocks stalls out (writes
-  // permanently hard-blocked, same mechanism as MIN_BLOCK_NO_PER_PLANE)
-  // before enough erases accumulate for even a threshold of 1 to be
-  // reachable; 24 sustains well past the point WL fires, with room to
-  // spare above that stall boundary.
+  // WearLevelingView too many to scan at a glance.
   blockNoPerPlane: 24,
   gcExecThreshold: 0.5,
-  staticWlThreshold: 1,
-  // overprovisioningRatio not pinned here (unlike chipCount/blockNoPerPlane
-  // above) - inherits DEFAULT_MAPPING_PARAMS' 10% (was 7%). Re-verified via
-  // native CLI after that change: Total_WL_Executions stayed exactly 1
-  // (the documented invariant), Total_GC_Executions shifted 92->86 (minor,
-  // expected from more spare capacity) - no regression.
+  staticWlThreshold: 3,
 };
 
-export function buildWlWorkloadXml(params: SsdParams, workload: WorkloadParams = DEFAULT_WORKLOAD_PARAMS): string {
-  return `<?xml version="1.0" encoding="us-ascii"?>
-<MQSim_IO_Scenarios>
-	<IO_Scenario>
+// ParamPanel's 마모평준화 임계값 slider range - only shown for this preset.
+export const STATIC_WL_THRESHOLD_RANGE = { min: 1, max: 10 };
+
+// Share of each flow's own half of the address space it touches - see
+// DEFAULT_WL_PARAMS' comment.
+const WL_COLD_WORKING_SET_PERCENT = 50;
+const WL_HOT_WORKING_SET_PERCENT = 50;
+const WL_HOT_STOP_TIME = 8000000000;
+
+// How many one-page writes flow 0 issues: one per logical page of its
+// working set (logical capacity = physical x (1 - OP), split evenly across
+// the two flows), minus one so rounding in MQSim's own region-size math can
+// never make the sequential stream wrap around and overwrite its first page.
+function wlColdWriteCount(params: SsdParams): number {
+  const physicalPages = params.chipCount * params.blockNoPerPlane * params.pageNoPerBlock;
+  const logicalPagesPerFlow = (physicalPages * (1 - params.overprovisioningRatio)) / 2;
+  return Math.max(1, Math.floor((logicalPagesPerFlow * WL_COLD_WORKING_SET_PERCENT) / 100) - 1);
+}
+
+interface SyntheticFlowOptions {
+  cachingMode: 'WRITE_CACHE' | 'TURNED_OFF';
+  workingSetPercent: number;
+  addressDistribution: WorkloadParams['addressDistribution'];
+  seed: number;
+  stopTime: number;
+  totalRequests: number;
+}
+
+function syntheticFlowXml(params: SsdParams, flow: SyntheticFlowOptions): string {
+  return `
 		<IO_Flow_Parameter_Set_Synthetic>
 			<Priority_Class>HIGH</Priority_Class>
-			<Device_Level_Data_Caching_Mode>WRITE_CACHE</Device_Level_Data_Caching_Mode>
+			<Device_Level_Data_Caching_Mode>${flow.cachingMode}</Device_Level_Data_Caching_Mode>
 			<Channel_IDs>0</Channel_IDs>
 			<Chip_IDs>${chipIdsXml(params)}</Chip_IDs>
 			<Die_IDs>0</Die_IDs>
 			<Plane_IDs>0</Plane_IDs>
 			<Initial_Occupancy_Percentage>0</Initial_Occupancy_Percentage>
-			<Working_Set_Percentage>25</Working_Set_Percentage>
+			<Working_Set_Percentage>${flow.workingSetPercent}</Working_Set_Percentage>
 			<Synthetic_Generator_Type>QUEUE_DEPTH</Synthetic_Generator_Type>
 			<Read_Percentage>${READ_PERCENTAGE}</Read_Percentage>
-			<Address_Distribution>${workload.addressDistribution}</Address_Distribution>
+			<Address_Distribution>${flow.addressDistribution}</Address_Distribution>
 			<Percentage_of_Hot_Region>0</Percentage_of_Hot_Region>
 			<Generated_Aligned_Addresses>true</Generated_Aligned_Addresses>
 			<Address_Alignment_Unit>${ioAddressAlignmentUnitSectors(params)}</Address_Alignment_Unit>
 			<Request_Size_Distribution>FIXED</Request_Size_Distribution>
 			<Average_Request_Size>${AVERAGE_REQUEST_SIZE_SECTORS}</Average_Request_Size>
 			<Variance_Request_Size>0</Variance_Request_Size>
-			<Seed>${params.workloadSeed}</Seed>
+			<Seed>${flow.seed}</Seed>
 			<Average_No_of_Reqs_in_Queue>4</Average_No_of_Reqs_in_Queue>
 			<Intensity>32768</Intensity>
-			<Stop_Time>8000000000</Stop_Time>
-			<Total_Requests_To_Generate>1000000</Total_Requests_To_Generate>
-		</IO_Flow_Parameter_Set_Synthetic>
+			<Stop_Time>${flow.stopTime}</Stop_Time>
+			<Total_Requests_To_Generate>${flow.totalRequests}</Total_Requests_To_Generate>
+		</IO_Flow_Parameter_Set_Synthetic>`;
+}
+
+// Stream 0 = cold, stream 1 = hot (flow order) - WearLevelingView labels
+// blocks by exactly this.
+export const WL_COLD_STREAM_ID = 0;
+export const WL_HOT_STREAM_ID = 1;
+
+// WorkloadPanel's 접근 패턴 only applies to the hot flow - the cold flow is
+// sequential by design (write every page of its region exactly once).
+export function buildWlWorkloadXml(params: SsdParams, workload: WorkloadParams = DEFAULT_WORKLOAD_PARAMS): string {
+  const cold = syntheticFlowXml(params, {
+    cachingMode: 'TURNED_OFF',
+    workingSetPercent: WL_COLD_WORKING_SET_PERCENT,
+    addressDistribution: 'STREAMING',
+    seed: params.workloadSeed,
+    stopTime: 0,
+    totalRequests: wlColdWriteCount(params),
+  });
+  const hot = syntheticFlowXml(params, {
+    cachingMode: 'WRITE_CACHE',
+    workingSetPercent: WL_HOT_WORKING_SET_PERCENT,
+    addressDistribution: workload.addressDistribution,
+    seed: params.workloadSeed + 1,
+    stopTime: WL_HOT_STOP_TIME,
+    totalRequests: 1000000,
+  });
+  return `<?xml version="1.0" encoding="us-ascii"?>
+<MQSim_IO_Scenarios>
+	<IO_Scenario>${cold}${hot}
 	</IO_Scenario>
 </MQSim_IO_Scenarios>
 `;

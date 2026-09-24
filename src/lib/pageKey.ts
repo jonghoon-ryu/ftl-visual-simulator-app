@@ -13,3 +13,12 @@ export function pageKey(chip: number, block: number, page: number): string {
 export function blockKey(chip: number, block: number): string {
   return `${chip}:${block}`;
 }
+
+// Identity for one *logical* page. Each IO flow (stream) has its own logical
+// address space, so an LPA alone is ambiguous once a preset runs more than
+// one flow - "마모평준화 시연"'s cold flow and hot flow both have an LPA 5,
+// and they are different pages. Events from a single-flow preset carry
+// streamId 0.
+export function streamLpaKey(streamId: number | undefined, lpa: bigint): string {
+  return `${streamId ?? 0}:${lpa}`;
+}

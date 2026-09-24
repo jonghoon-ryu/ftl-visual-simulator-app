@@ -39,7 +39,17 @@ const GC_POLICY_LABELS: Record<SsdParams['gcBlockSelectionPolicy'], string> = {
 // the boundary down too: confirmed empirically (same method as the original
 // finding - native/WASM harness, independent of OP ratio and pages-per-
 // block) that 7 blocks works, 6 stalls. 8 keeps a small margin above that.
-const MIN_BLOCK_NO_PER_PLANE = 8;
+// "마모평준화 시연" needs more: it runs two flows (cold + hot), each with its
+// own data/GC/translation write frontiers, so twice as many blocks are tied
+// up as frontiers before anything is written. Verified via native CLI
+// (2026-09-24) across chip count 1/2/4, GC threshold 1-95% and several
+// seeds: 16 blocks works everywhere; below that some combination stalls or
+// runs a plane out of free blocks (12 works at 1 chip but not at 2 or 4).
+const MIN_BLOCK_NO_PER_PLANE: Record<PresetId, number> = {
+  mapping: 8,
+  gc: 8,
+  'wear-leveling': 16,
+};
 
 // "매핑 기본" is deliberately tuned so GC never meaningfully fires (5%
 // threshold, 100% working set, short Stop_Time - see [[ftl_visual_simulator_project]]
@@ -127,7 +137,7 @@ export function ParamPanel({ presetId, params, onChange, disabled }: Props) {
         <input
           className="param-slider"
           type="range"
-          min={MIN_BLOCK_NO_PER_PLANE}
+          min={MIN_BLOCK_NO_PER_PLANE[presetId]}
           max={64}
           step={1}
           disabled={disabled}
