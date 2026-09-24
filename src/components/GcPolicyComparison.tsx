@@ -69,7 +69,7 @@ export function GcPolicyComparison({ params, workload }: Props) {
       runId,
       jobs: POLICIES.map((policy) => {
         const p = { ...params, gcBlockSelectionPolicy: policy };
-        return { policy, ssdConfigXml: buildSsdConfigXml(p), workloadXml: buildGcWorkloadXml(p, workload) };
+        return { label: policy, ssdConfigXml: buildSsdConfigXml(p), workloadXml: buildGcWorkloadXml(p, workload) };
       }),
     });
   };
@@ -100,12 +100,12 @@ export function GcPolicyComparison({ params, workload }: Props) {
             <tbody>
               {results.map((r) => {
                 const waf = wafOf(r);
-                const isCurrent = r.policy === params.gcBlockSelectionPolicy;
+                const isCurrent = r.label === params.gcBlockSelectionPolicy;
                 const isBest = waf !== null && waf === bestWaf;
                 return (
-                  <tr key={r.policy} className={isCurrent ? 'current' : undefined}>
+                  <tr key={r.label} className={isCurrent ? 'current' : undefined}>
                     <td>
-                      {LABELS[r.policy as SsdParams['gcBlockSelectionPolicy']] ?? r.policy}
+                      {LABELS[r.label as SsdParams['gcBlockSelectionPolicy']] ?? r.label}
                       {isCurrent && <span className="gc-compare-tag">현재</span>}
                     </td>
                     <td>{r.gcExecutions}</td>

@@ -6,6 +6,7 @@ import { ParamPanel } from './components/ParamPanel';
 import { FreeBlockChart } from './components/FreeBlockChart';
 import { GcVictimExplanation } from './components/GcVictimExplanation';
 import { GcPolicyComparison } from './components/GcPolicyComparison';
+import { WafOpCurve } from './components/WafOpCurve';
 import { PredictQuiz } from './components/PredictQuiz';
 import { useFreeBlockHistory } from './hooks/useFreeBlockHistory';
 import { useLpnJourney } from './hooks/useLpnJourney';
@@ -318,6 +319,7 @@ function App() {
                 <>
                   {freeBlockChart}
                   {wired && configKey === 'gc' && <GcPolicyComparison params={activeParams} workload={activeWorkload} />}
+                  {wired && configKey === 'gc' && <WafOpCurve params={activeParams} workload={activeWorkload} />}
                 </>
               }
             />

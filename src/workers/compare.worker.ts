@@ -1,9 +1,10 @@
 import createMQSimModule from '../wasm-build/mqsim.mjs';
 
-// Runs the same workload once per GC victim-selection policy, each to the
-// end, entirely off the main thread and in its own module instance - so a
-// comparison never touches the simulation the user is stepping through in
-// mqsim.worker.ts. Backs GcPolicyComparison.tsx.
+// Runs a list of configurations (e.g. one per GC policy, or one per OP
+// ratio), each to the end, entirely off the main thread and in its own
+// module instance - so a comparison never touches the simulation the user
+// is stepping through in mqsim.worker.ts. Backs GcPolicyComparison.tsx and
+// WafOpCurve.tsx.
 //
 // Typed loosely for the same reason as mqsim.worker.ts (DOM vs WebWorker
 // lib conflict).
@@ -14,13 +15,14 @@ type WorkerContext = {
 const ctx = self as unknown as WorkerContext;
 
 export interface CompareJob {
-  policy: string;
+  // Identifies the run in its result (a policy name, an OP ratio, ...).
+  label: string;
   ssdConfigXml: string;
   workloadXml: string;
 }
 
 export interface CompareResult {
-  policy: string;
+  label: string;
   hostWrites: number;
   pagesMoved: number;
   gcExecutions: number;
@@ -69,7 +71,7 @@ ctx.onmessage = async (e) => {
         type: 'result',
         runId,
         result: {
-          policy: job.policy,
+          label: job.label,
           hostWrites,
           pagesMoved,
           gcExecutions: stats.gcExecutions,

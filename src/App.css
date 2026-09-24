@@ -1284,3 +1284,24 @@
   padding: 4px 10px;
   cursor: pointer;
 }
+
+/* WAF vs OP curve (WafOpCurve) - reuses the free-block chart's line/axis
+   styles; the current-OP point is bigger, ringed, and text-labeled. */
+.waf-op-svg {
+  max-height: 170px;
+}
+
+.waf-op-dot {
+  fill: #7fa2ff;
+  stroke: #1c1e26;
+  stroke-width: 2;
+}
+
+.waf-op-dot.current {
+  fill: #ffffff;
+}
+
+.waf-op-label {
+  fill: #d7dae3;
+  font-size: 10px;
+}
