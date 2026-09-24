@@ -21,19 +21,42 @@ Live app: [ftl-visual-simulator-app on GitHub Pages](https://jonghoon-ryu.github
 All three concept presets run on the real WASM engine end-to-end:
 
 - **매핑 기본 (mapping basics)** and **GC 시연 (GC demo)** — real playback,
-  live mapping table, flash block/page grid, event log, and stats (WAF,
-  valid-page ratio, GC/WL execution counts, erase count), all reconfigurable
-  via interactive parameter (page/block/OP/GC-threshold/mapping-method) and
-  workload (access pattern/read ratio/burst size) controls.
-- **마모평준화 시연 (wear-leveling demo)** — real per-block erase-count view,
-  wired to the real engine after fixing a genuine upstream bug: MQSim's
-  `SSD_Device.cpp` never actually passed the wear-leveling config fields
-  through to the GC/WL unit, so `Static_Wearleveling_Threshold` was
-  silently ignored no matter what `ssdconfig.xml` said. With that fixed,
-  static wear-leveling triggers exactly once per run at this preset's demo
-  scale (see the [reference docs](https://jonghoon-ryu.github.io/ftl-visual-simulator/reference/)
-  for why it doesn't repeat, and why that's an honest limit rather than a
-  bug).
+  flash block/page grid, event log, and stats (WAF, host requests vs flash
+  writes, valid-page ratio, GC/WL execution counts, erase count), all
+  reconfigurable via parameter controls (page/block/chip count, OP, GC
+  threshold, GC victim-selection policy, seeds) and workload controls
+  (access pattern, DRAM write cache on/off).
+- **마모평준화 시연 (wear-leveling demo)** — per-block erase-count view with a
+  cold/hot data column, driven by two IO flows: a write-once "cold" flow
+  and a constantly overwritten "hot" flow, so static wear-leveling has real
+  cold data to relocate. Static WL fires 7 times at the default threshold
+  (3), each moving a full block; the threshold is adjustable (1-5).
+
+### Learning features
+
+The app is meant for learning FTL internals, so each feature makes one
+concept visible:
+
+- **Free-block chart** (GC/WL demos) — free blocks per chip over time, the
+  GC threshold as a dashed line, and GC/WL start markers: the sawtooth shows
+  exactly when and why GC starts.
+- **"왜 이 block 을 골랐나요?"** (GC demo) — the latest GC victim's
+  valid/invalid page counts and how the selected policy picked it.
+- **GC policy comparison** (GC demo) — runs the current settings once per
+  policy (all 6) in a background worker and tabulates GC runs, pages moved
+  and WAF. At the defaults plain Random comes out cheapest, which the app
+  says plainly rather than repeating the textbook claim.
+- **WAF vs over-provisioning curve** (GC demo) — OP 0-30% measured with the
+  current settings (1.45x -> 1.05x at the defaults).
+- **Follow one write** (all presets) — click an LPN in the log to see every
+  physical page its data has occupied (write -> overwrite -> GC move ...),
+  outlined on the grid: the out-of-place update in one picture.
+- **DRAM write-cache toggle** — with the cache on, GC 시연 sends ~2.2M host
+  requests but only ~500 page writes reach flash; off, nearly every request
+  does and GC runs ~12x more.
+- **예측해보기 quiz** (all presets) — predict, then see the answer and where
+  on the screen to check it.
+- A "장치가 가득 찼어요" notice when a tiny configuration fills the device.
 
 ## How it works
 
@@ -57,6 +80,9 @@ All three concept presets run on the real WASM engine end-to-end:
    start/migrate/erase, dynamic-WL block rotation) are forwarded from C++
    to JS via a single registered callback and fanned out to whichever
    hooks/components subscribed (`src/hooks/useMqsimEvents.ts`).
+   Comparisons (GC policies, the OP curve) run in a second worker
+   (`src/workers/compare.worker.ts`) with its own module instance, so they
+   never disturb the simulation on screen.
 5. **Golden regression tests**: `npm run test:engine` builds a native (non-
    WASM) CLI from the same `engine/mqsim/src` and diffs its output against
    committed golden result files — a way to check that instrumentation
@@ -70,13 +96,18 @@ All three concept presets run on the real WASM engine end-to-end:
    [wear-leveling integration doc](https://jonghoon-ryu.github.io/ftl-visual-simulator/plan/wear-leveling-integration/)
    for the investigation that motivated writing these.
 
-Several real, pre-existing MQSim bugs (a use-after-free in the DRAM cache
-teardown path, an uninitialized-field divide-by-zero, two static
-wear-leveling logic bugs, and a dropped-config-parameter bug that made
-`Static_Wearleveling_Threshold` unconfigurable) were found and fixed along
-the way — see the
-[reference docs](https://jonghoon-ryu.github.io/ftl-visual-simulator/reference/)
-for the investigation write-ups.
+27 real, pre-existing MQSim bugs were found and fixed along the way -
+portability/UB issues, a use-after-free, uninitialized fields, dropped
+config parameters, a scheduler suspend/resume deadlock chain, static
+wear-leveling target selection, several simulations that silently stalled
+(barrier-released writes never reaching the DRAM cache, a parked GC that
+never submitted its erase, ...), and GC victim-selection bugs in the
+RANDOM/FIFO policies. Each has an investigation write-up; the summary table
+is at
+[reference/bug-list/table](https://jonghoon-ryu.github.io/ftl-visual-simulator/reference/bug-list/table/).
+A few deliberate deviations from upstream behavior (documented in code as
+`DEVIATION FROM UPSTREAM MQSim`) exist where this project's small demo scale
+needs them.
 
 ## Stack
 
