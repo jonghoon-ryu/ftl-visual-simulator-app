@@ -1,3 +1,4 @@
+#include <iostream>
 #include "GC_and_WL_Unit_Base.h"
 #include "../exec/Simulation_Events.h"
 #include "../sim/Engine.h"
@@ -292,10 +293,19 @@ namespace SSD_Components
 				PlaneBookKeepingType* pbke = block_manager->Get_plane_bookkeeping_entry(params->Plane_address);
 				size_t ongoing_erases_before = pbke->Ongoing_erase_operations.size();
 				Check_gc_required(params->Free_block_pool_size, params->Plane_address);
-				if (pbke->Ongoing_erase_operations.size() == ongoing_erases_before && params->Retry_count < GC_MAX_RETRIES
-					&& gc_retry_needed(params->Plane_address)) {
-					Simulator->Register_sim_event(Simulator->Time() + GC_RETRY_DELAY, this,
-						new Check_Gc_Required_Params{ pbke->Get_free_block_pool_size(), params->Plane_address, params->Retry_count + 1 }, (int)GC_Deferred_Event_Type::CHECK_GC_REQUIRED);
+				if (pbke->Ongoing_erase_operations.size() == ongoing_erases_before && gc_retry_needed(params->Plane_address)) {
+					if (params->Retry_count < GC_MAX_RETRIES) {
+						Simulator->Register_sim_event(Simulator->Time() + GC_RETRY_DELAY, this,
+							new Check_Gc_Required_Params{ pbke->Get_free_block_pool_size(), params->Plane_address, params->Retry_count + 1 }, (int)GC_Deferred_Event_Type::CHECK_GC_REQUIRED);
+					} else {
+						// Giving up turns what would have been an endless loop into
+						// a stall - still a bug somewhere, so say so rather than
+						// letting it pass as a normal end of the run.
+						Stats::Gc_retry_limit_hits++;
+						std::cerr << "WARNING: GC could not free space on plane " << params->Plane_address.ChannelID << "/"
+							<< params->Plane_address.ChipID << "/" << params->Plane_address.DieID << "/" << params->Plane_address.PlaneID
+							<< " after " << GC_MAX_RETRIES << " retries (t=" << Simulator->Time() << ") - writes to it will stall" << std::endl;
+					}
 				}
 				delete params;
 				break;

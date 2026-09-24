@@ -32,6 +32,9 @@ namespace SSD_Components
 		static unsigned int Total_page_movements_for_gc, Total_gc_page_movements_per_stream[MAX_SUPPORT_STREAMS];
 
 		static unsigned int Total_wl_executions, Total_wl_executions_per_stream[MAX_SUPPORT_STREAMS];
+		// How many times GC_and_WL_Unit_Base gave up re-checking a stalled plane
+		// after GC_MAX_RETRIES - nonzero means a stall the retry could not clear.
+		static unsigned int Gc_retry_limit_hits;
 		static unsigned int Total_page_movements_for_wl, Total_wl_page_movements_per_stream[MAX_SUPPORT_STREAMS];
 
 		static unsigned int***** Block_erase_histogram;

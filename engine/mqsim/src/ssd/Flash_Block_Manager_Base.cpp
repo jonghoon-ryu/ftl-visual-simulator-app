@@ -112,7 +112,14 @@ namespace SSD_Components
 		Free_block_pool.erase(Free_block_pool.begin());
 		new_block->Stream_id = stream_id;
 		new_block->Holds_mapping_data = for_mapping_data;
-		Block_usage_history.push(new_block->BlockID);
+		new_block->Allocation_seq++;
+		// Drop stale entries (see Block_usage_history's comment) from the
+		// front while we're here, so the queue stays about one entry per block.
+		while (!Block_usage_history.empty()
+			&& Block_usage_history.front().second != Blocks[Block_usage_history.front().first].Allocation_seq) {
+			Block_usage_history.pop();
+		}
+		Block_usage_history.push(std::make_pair(new_block->BlockID, new_block->Allocation_seq));
 
 		return new_block;
 	}

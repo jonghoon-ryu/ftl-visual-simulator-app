@@ -226,8 +226,12 @@ namespace SSD_Components
 					bool found_candidate = false;
 					const size_t attempts = pbke->Block_usage_history.size();
 					for (size_t attempt = 0; attempt < attempts; attempt++) {
-						flash_block_ID_type candidate_block_id = pbke->Block_usage_history.front();
+						std::pair<flash_block_ID_type, unsigned int> entry = pbke->Block_usage_history.front();
 						pbke->Block_usage_history.pop();
+						flash_block_ID_type candidate_block_id = entry.first;
+						if (entry.second != pbke->Blocks[candidate_block_id].Allocation_seq) {
+							continue;//Stale entry - see Block_usage_history's comment
+						}
 						// BUG FIX (this project, upstream MQSim): the candidate
 						// must also have something to reclaim. Popping a block
 						// with zero invalid pages here made the shared "No
@@ -248,7 +252,7 @@ namespace SSD_Components
 							found_candidate = true;
 							break;
 						}
-						pbke->Block_usage_history.push(candidate_block_id);
+						pbke->Block_usage_history.push(entry);
 					}
 					if (!found_candidate) {
 						return;

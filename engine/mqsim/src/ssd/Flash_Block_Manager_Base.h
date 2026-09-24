@@ -99,6 +99,11 @@ namespace SSD_Components
 		bool Hot_block = false;//Used for hot/cold separation mentioned in the "On the necessity of hot and cold data identification to reduce the write amplification in flash-based SSDs", Perf. Eval., 2014.
 		int Ongoing_user_read_count;
 		int Ongoing_user_program_count;
+		// Bumped every time this block is handed out as a new write frontier
+		// (Get_a_free_block()) - lets a Block_usage_history entry tell whether
+		// it still describes the block's current use (see that queue's
+		// comment). Deliberately not reset by Erase().
+		unsigned int Allocation_seq = 0;
 		void Erase();
 	};
 
@@ -113,7 +118,18 @@ namespace SSD_Components
 		std::multimap<unsigned int, Block_Pool_Slot_Type*> Free_block_pool;
 		Block_Pool_Slot_Type** Data_wf, ** GC_wf; //The write frontier blocks for data and GC pages. MQSim adopts Double Write Frontier approach for user and GC writes which is shown very advantages in: B. Van Houdt, "On the necessity of hot and cold data identification to reduce the write amplification in flash - based SSDs", Perf. Eval., 2014
 		Block_Pool_Slot_Type** Translation_wf; //The write frontier blocks for translation GC pages
-		std::queue<flash_block_ID_type> Block_usage_history;//A fifo queue that keeps track of flash blocks based on their usage history
+		// A fifo queue that keeps track of flash blocks based on their usage history.
+		// BUG FIX (this project, upstream MQSim): upstream stored bare block
+		// IDs and pushed one on every allocation, but only removed one when
+		// FIFO GC picked it - any block erased another way (static WL, or GC
+		// under another policy) was re-pushed on its next allocation with its
+		// old entry still queued. The queue grew without bound (83 entries on
+		// a 24-block plane over a long "마모평준화 시연" run) and the stale
+		// entries let FIFO reach a block through an outdated, too-early
+		// position. Each entry now carries the block's Allocation_seq at push
+		// time; an entry whose seq no longer matches is stale and is dropped
+		// wherever it is read.
+		std::queue<std::pair<flash_block_ID_type, unsigned int>> Block_usage_history;
 		std::set<flash_block_ID_type> Ongoing_erase_operations;
 		Block_Pool_Slot_Type* Get_a_free_block(stream_id_type stream_id, bool for_mapping_data);
 		unsigned int Get_free_block_pool_size();
