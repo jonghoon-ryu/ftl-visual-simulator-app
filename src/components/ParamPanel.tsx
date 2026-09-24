@@ -18,6 +18,13 @@ const GC_POLICY_OPTIONS: SsdParams['gcBlockSelectionPolicy'][] = [
   'RANDOM_PP',
   'FIFO',
 ];
+const SUSPENSION_LABELS: Record<SsdParams['cmdSuspension'], string> = {
+  NONE: '끔',
+  ERASE: 'erase 만 (기본)',
+  PROGRAM: 'program 만',
+  PROGRAM_ERASE: 'program + erase',
+};
+
 const GC_POLICY_LABELS: Record<SsdParams['gcBlockSelectionPolicy'], string> = {
   RGA: 'RGA (기본)',
   GREEDY: 'Greedy',
@@ -229,6 +236,29 @@ export function ParamPanel({ presetId, params, onChange, disabled }: Props) {
           </div>
         </div>
       )}
+
+      <div className="param-row">
+        <div className="param-label">
+          <span>명령 일시정지 (suspend)</span>
+          <span>{SUSPENSION_LABELS[params.cmdSuspension]}</span>
+        </div>
+        <select
+          className="param-select"
+          disabled={disabled}
+          value={params.cmdSuspension}
+          onChange={(e) => onChange({ ...params, cmdSuspension: e.target.value as SsdParams['cmdSuspension'] })}
+        >
+          {(Object.keys(SUSPENSION_LABELS) as SsdParams['cmdSuspension'][]).map((mode) => (
+            <option key={mode} value={mode}>
+              {SUSPENSION_LABELS[mode]}
+            </option>
+          ))}
+        </select>
+        <div className="param-hint">
+          program(쓰기)·erase(지우기)는 읽기보다 훨씬 오래 걸려요. 켜면 칩이 그 작업을 잠깐 멈추고 기다리던 읽기를 먼저
+          처리해서, GC 가 도는 동안 가장 느린 읽기가 줄어들어요. 읽기 비율을 올리고 GC 시연의 "읽기 지연" 차트로 비교해보세요.
+        </div>
+      </div>
 
       <div className="param-row">
         <div className="param-label">

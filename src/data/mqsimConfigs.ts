@@ -57,6 +57,12 @@ export interface SsdParams {
   //   scaled by Initial_Occupancy_Percentage, which every preset here sets
   //   to 0, making that condition always trivially true.)
   gcBlockSelectionPolicy: 'GREEDY' | 'RGA' | 'RANDOM' | 'RANDOM_P' | 'RANDOM_PP' | 'FIFO';
+  // Flash CMD_Suspension_Support: which long flash operations a waiting
+  // read (and, for erases, a waiting write) may pause. ERASE is the value
+  // every preset has always used, so it stays the default. Measured
+  // 2026-09-24 (GC 시연, 30% reads): suspend mainly shortens the slowest
+  // reads - cache on 19.7ms (NONE) -> 13.0ms (PROGRAM_ERASE).
+  cmdSuspension: 'NONE' | 'ERASE' | 'PROGRAM' | 'PROGRAM_ERASE';
   // Device_Parameter_Set's own Seed - seeds MQSim's internal RNG (GC
   // candidate sampling for RANDOM*/RGA policies, dynamic WL tie-breaks,
   // etc.). Was a hardcoded literal 321 in buildSsdConfigXml for every
@@ -100,6 +106,7 @@ export const DEFAULT_MAPPING_PARAMS: SsdParams = {
   staticWlThreshold: 100,
   addressMapping: 'PAGE_LEVEL',
   gcBlockSelectionPolicy: 'RGA',
+  cmdSuspension: 'ERASE',
   deviceSeed: 321,
   workloadSeed: 798,
 };
@@ -156,7 +163,7 @@ export function buildSsdConfigXml(params: SsdParams): string {
 		<Flash_Comm_Protocol>NVDDR2</Flash_Comm_Protocol>
 		<Flash_Parameter_Set>
 			<Flash_Technology>MLC</Flash_Technology>
-			<CMD_Suspension_Support>ERASE</CMD_Suspension_Support>
+			<CMD_Suspension_Support>${params.cmdSuspension}</CMD_Suspension_Support>
 			<Page_Read_Latency_LSB>75000</Page_Read_Latency_LSB>
 			<Page_Read_Latency_CSB>75000</Page_Read_Latency_CSB>
 			<Page_Read_Latency_MSB>75000</Page_Read_Latency_MSB>

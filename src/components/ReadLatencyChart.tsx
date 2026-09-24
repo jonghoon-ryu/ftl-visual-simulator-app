@@ -55,6 +55,7 @@ export function ReadLatencyChart({ samples, readPercentage }: Props) {
     arr.length === 0 ? null : arr.reduce((t, s) => t + s.avgUs * s.reads, 0) / arr.reduce((t, s) => t + s.reads, 0);
   const meanGc = mean(withGc);
   const meanNoGc = mean(withoutGc);
+  const slowest = Math.max(...withReads.map((s) => s.maxUs));
   const hovered = hover !== null ? samples[hover] : undefined;
 
   return (
@@ -104,11 +105,11 @@ export function ReadLatencyChart({ samples, readPercentage }: Props) {
       )}
       <div className="free-chart-caption">
         {meanGc !== null && meanNoGc !== null
-          ? `지금까지: GC 가 시작된 구간의 평균 읽기 ${formatUs(meanGc)}, 나머지 구간 ${formatUs(meanNoGc)}. `
+          ? `지금까지: GC 가 시작된 구간의 평균 읽기 ${formatUs(meanGc)}, 나머지 구간 ${formatUs(meanNoGc)}, 가장 느린 읽기 ${formatUs(slowest)}. `
           : ''}
         GC 는 victim 의 page 를 옮기고 block 을 지우는 동안 그 칩을 붙잡고 있어서, 같은 칩을 읽어야 하는 요청은 기다려야
         해요 - 그래서 GC 점이 있는 곳에서 선이 튀어 올라요. DRAM 캐시를 끄면 모든 읽기가 flash 로 가서 차이가 더
-        커집니다.
+        커집니다. "명령 일시정지(suspend)"를 켜면 가장 느린 읽기가 줄어드는지 비교해보세요.
       </div>
     </div>
   );

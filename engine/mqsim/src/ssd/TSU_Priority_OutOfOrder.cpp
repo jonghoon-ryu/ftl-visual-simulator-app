@@ -405,12 +405,22 @@ bool TSU_Priority_OutOfOrder::service_read_transaction(NVM::FlashMemory::Flash_C
     {
     case ChipStatus::IDLE:
         break;
+    // BUG FIX (this project, upstream MQSim): the "is it worth suspending"
+    // checks below computed Expected_finish_time(chip) - Simulator->Time() in
+    // unsigned sim_time_type. When the running command's expected finish time
+    // is already at or before now - e.g. the scheduler re-entered from inside
+    // that very command's completion broadcast, before the PHY cleared its
+    // bookkeeping - the subtraction wrapped to a huge value, the "too close to
+    // finishing" guard never fired, and the TSU suspended a command that had
+    // already finished: Flash_Chip::Suspend() then dereferenced its NULL
+    // completion event (segfault, program suspend + 30% reads). A command that
+    // is already due can't be worth suspending.
     case ChipStatus::WRITING:
         if (!programSuspensionEnabled || _NVMController->HasSuspendedCommand(chip))
         {
             return false;
         }
-        if (_NVMController->Expected_finish_time(chip) - Simulator->Time() < writeReasonableSuspensionTimeForRead)
+        if (_NVMController->Expected_finish_time(chip) <= Simulator->Time() || _NVMController->Expected_finish_time(chip) - Simulator->Time() < writeReasonableSuspensionTimeForRead)
         {
             return false;
         }
@@ -421,7 +431,7 @@ bool TSU_Priority_OutOfOrder::service_read_transaction(NVM::FlashMemory::Flash_C
         {
             return false;
         }
-        if (_NVMController->Expected_finish_time(chip) - Simulator->Time() < eraseReasonableSuspensionTimeForRead)
+        if (_NVMController->Expected_finish_time(chip) <= Simulator->Time() || _NVMController->Expected_finish_time(chip) - Simulator->Time() < eraseReasonableSuspensionTimeForRead)
         {
             return false;
         }
@@ -525,7 +535,7 @@ bool TSU_Priority_OutOfOrder::service_write_transaction(NVM::FlashMemory::Flash_
     case ChipStatus::ERASING:
         if (!eraseSuspensionEnabled || _NVMController->HasSuspendedCommand(chip))
             return false;
-        if (_NVMController->Expected_finish_time(chip) - Simulator->Time() < eraseReasonableSuspensionTimeForWrite)
+        if (_NVMController->Expected_finish_time(chip) <= Simulator->Time() || _NVMController->Expected_finish_time(chip) - Simulator->Time() < eraseReasonableSuspensionTimeForWrite)
             return false;
         suspensionRequired = true;
         break;
