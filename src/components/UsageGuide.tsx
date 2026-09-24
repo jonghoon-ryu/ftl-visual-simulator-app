@@ -187,8 +187,10 @@ export function UsageGuide({ onClose }: Props) {
               </li>
               <li>
                 <strong>GC 알고리즘</strong> - 지워질 block(victim)을 어떻게 고를지 정하는 방식입니다. RGA(기본)와
-                Greedy 는 무효 페이지가 가장 많은 block 을 영리하게 고르고, Random 계열은 무작위로 고릅니다(그만큼
-                덜 효율적) - 실제로 Random 은 같은 조건에서 RGA/Greedy 보다 GC 가 훨씬 헛수고를 자주 합니다.
+                Greedy 는 무효 페이지가 많은 block 을 고르고, Random 계열은 무작위로, FIFO 는 오래된 block 부터
+                고릅니다. 어느 쪽이 실제로 덜 옮기는지는 설정마다 달라서, GC 시연의 <em>GC 알고리즘 비교</em> 버튼으로
+                같은 설정에서 6개를 끝까지 돌려 비교해볼 수 있습니다 - 이 데모처럼 block 이 적으면 교과서와 다른 결과(예:
+                Random 이 오히려 적게 옮김)가 나오기도 해요.
               </li>
               <li>
                 <strong>매핑 방식</strong> - Page-level 만 실제로 동작합니다. Hybrid 는 MQSim 원본 자체에도 구현이

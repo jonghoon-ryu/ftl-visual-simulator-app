@@ -5,6 +5,7 @@ import { MappingTable } from './components/MappingTable';
 import { ParamPanel } from './components/ParamPanel';
 import { FreeBlockChart } from './components/FreeBlockChart';
 import { GcVictimExplanation } from './components/GcVictimExplanation';
+import { GcPolicyComparison } from './components/GcPolicyComparison';
 import { useFreeBlockHistory } from './hooks/useFreeBlockHistory';
 import { StatsPanel } from './components/StatsPanel';
 import { Toolbar } from './components/Toolbar';
@@ -289,7 +290,12 @@ function App() {
               banner={
                 wired && configKey === 'gc' ? <GcVictimExplanation gc={freeBlocks.lastGc} params={activeParams} /> : null
               }
-              footer={freeBlockChart}
+              footer={
+                <>
+                  {freeBlockChart}
+                  {wired && configKey === 'gc' && <GcPolicyComparison params={activeParams} workload={activeWorkload} />}
+                </>
+              }
             />
           )}
           {wearRows && (

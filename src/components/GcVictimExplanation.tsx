@@ -54,7 +54,7 @@ function policyRule(params: SsdParams): string {
     case 'GREEDY':
       return 'Greedy 는 다 쓴 block 전부를 보고 invalid page 가 가장 많은 block 을 고릅니다 - 옮길 valid page 가 가장 적은, 가장 싼 victim 이에요.';
     case 'RANDOM':
-      return 'Random 은 아무 block 이나 무작위로 고릅니다. invalid 가 거의 없는 block 이 뽑히면 많이 옮기고도 조금밖에 못 비워서, 같은 조건에서 RGA/Greedy 보다 WAF 가 높아요.';
+      return 'Random 은 아무 block 이나 무작위로 고릅니다 (다 안 쓴 block 도 후보). invalid 개수를 보지 않으니 운에 따라 비싼 victim 이 뽑힐 수도 있지만, 뽑힌 block 에 청소할 게 없으면 그 GC 기회를 건너뛰기도 해요 - 실제로 얼마나 옮기는지는 아래 "GC 알고리즘 비교"로 확인해보세요.';
     case 'RANDOM_P':
       return 'Random-p 는 다 쓴 block 중에서 무작위로 고릅니다 - Random 보다는 낫지만 invalid 개수는 보지 않아요.';
     case 'RANDOM_PP':

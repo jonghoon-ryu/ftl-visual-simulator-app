@@ -249,7 +249,7 @@ export function ParamPanel({ presetId, params, onChange, disabled }: Props) {
             </option>
           ))}
         </select>
-        <div className="param-hint">지워질 block(victim)을 고르는 방식 - 알고리즘마다 GC 가 실제로 얼마나 효율적인지 다릅니다 (예: Random 은 RGA/Greedy 보다 훨씬 자주 헛수고함)</div>
+        <div className="param-hint">지워질 block(victim)을 고르는 방식 - 알고리즘마다 옮기는 page 수(=GC 비용)가 달라요. GC 시연의 "GC 알고리즘 비교"로 6개를 한 번에 비교해볼 수 있어요</div>
       </div>
 
       <div className="param-row">
