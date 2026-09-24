@@ -1,4 +1,4 @@
-import type { SsdParams } from '../data/mqsimConfigs';
+import { STATIC_WL_THRESHOLD_RANGE, type SsdParams } from '../data/mqsimConfigs';
 import type { PresetId } from '../types';
 
 const PAGE_CAPACITY_OPTIONS: SsdParams['pageCapacityBytes'][] = [4096, 8192, 16384];
@@ -206,6 +206,29 @@ export function ParamPanel({ presetId, params, onChange, disabled }: Props) {
           {presetId === 'mapping' && ' - 이 프리셋은 GC 가 거의 발동하지 않도록 설계돼 있어 범위를 좁혀뒀습니다'}
         </div>
       </div>
+
+      {presetId === 'wear-leveling' && (
+        <div className="param-row">
+          <div className="param-label">
+            <span>마모평준화 임계값</span>
+            <span>{params.staticWlThreshold}</span>
+          </div>
+          <input
+            className="param-slider"
+            type="range"
+            min={STATIC_WL_THRESHOLD_RANGE.min}
+            max={STATIC_WL_THRESHOLD_RANGE.max}
+            step={1}
+            disabled={disabled}
+            value={params.staticWlThreshold}
+            onChange={(e) => onChange({ ...params, staticWlThreshold: Number(e.target.value) })}
+          />
+          <div className="param-hint">
+            가장 많이 닳은 block 과 가장 적게 닳은 block 의 erase 횟수 차이가 이 값 이상이 되면 정적 마모평준화
+            발동 - 낮을수록 자주, 높을수록 드물게 발동합니다 (이 데모의 실행 길이에서는 5 이상이면 발동하지 않아요)
+          </div>
+        </div>
+      )}
 
       <div className="param-row">
         <div className="param-label">

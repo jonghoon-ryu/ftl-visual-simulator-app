@@ -474,7 +474,12 @@ export const DEFAULT_WL_PARAMS: SsdParams = {
 };
 
 // ParamPanel's 마모평준화 임계값 slider range - only shown for this preset.
-export const STATIC_WL_THRESHOLD_RANGE = { min: 1, max: 10 };
+// 1-5, not 1-10: verified via native CLI at this preset's defaults (24
+// blocks, Stop_Time 8e9) that WL fires 341/23/7/5 times at thresholds 1-4
+// and 0 times for every value 5-10 - the erase-count gap never reaches 5
+// within this run length (at 4x Stop_Time threshold 5 does fire). 5 is
+// kept as the one "doesn't fire here" value; 6-10 would just repeat it.
+export const STATIC_WL_THRESHOLD_RANGE = { min: 1, max: 5 };
 
 // Share of each flow's own half of the address space it touches - see
 // DEFAULT_WL_PARAMS' comment.
