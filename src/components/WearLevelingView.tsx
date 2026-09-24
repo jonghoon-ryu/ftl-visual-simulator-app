@@ -6,6 +6,8 @@ interface Props {
   rows: WearRow[];
   // Rendered at the bottom of this panel (e.g. FreeBlockChart).
   footer?: ReactNode;
+  // Rendered right under the caption (e.g. PredictQuiz).
+  banner?: ReactNode;
   caption: string;
   // Most recent WL trigger's exact condition (useMqsimWlHighlight) - null
   // before WL has ever fired this run. Powers the "왜 발동했나요?" button
@@ -21,7 +23,7 @@ interface Props {
   bannerVisible: boolean;
 }
 
-export function WearLevelingView({ rows, caption, trigger, bannerVisible, footer }: Props) {
+export function WearLevelingView({ rows, caption, trigger, bannerVisible, footer, banner }: Props) {
   // Collapsed by default even once a trigger exists - showing it
   // automatically would fight with ▶ auto-pausing right when this becomes
   // available (see App.tsx's onRefresh / useSimulationPlayback's
@@ -42,6 +44,7 @@ export function WearLevelingView({ rows, caption, trigger, bannerVisible, footer
     <div className="sim-grid-panel">
       <div className="sim-panel-title">Block 별 Erase Count ( 마모 평준화 대상 )</div>
       {caption && <div className="sim-caption">{caption}</div>}
+      {banner}
       {wlTargetCount > 0 && trigger && bannerVisible ? (
         <>
           <button type="button" className="wl-status wl-status-button" onClick={() => setShowExplanation((v) => !v)}>

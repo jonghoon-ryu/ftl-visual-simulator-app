@@ -6,6 +6,7 @@ import { ParamPanel } from './components/ParamPanel';
 import { FreeBlockChart } from './components/FreeBlockChart';
 import { GcVictimExplanation } from './components/GcVictimExplanation';
 import { GcPolicyComparison } from './components/GcPolicyComparison';
+import { PredictQuiz } from './components/PredictQuiz';
 import { useFreeBlockHistory } from './hooks/useFreeBlockHistory';
 import { useLpnJourney } from './hooks/useLpnJourney';
 import { LpnJourneyPanel } from './components/LpnJourneyPanel';
@@ -306,7 +307,10 @@ function App() {
               blocks={blockRows}
               caption={caption}
               banner={
-                wired && configKey === 'gc' ? <GcVictimExplanation gc={freeBlocks.lastGc} params={activeParams} /> : null
+                <>
+                  {wired && <PredictQuiz key={configKey} presetId={configKey} />}
+                  {wired && configKey === 'gc' && <GcVictimExplanation gc={freeBlocks.lastGc} params={activeParams} />}
+                </>
               }
               trackedCurrentKey={lpnJourney.journey?.currentKey}
               trackedOldKeys={lpnJourney.journey?.oldKeys}
@@ -325,6 +329,7 @@ function App() {
               trigger={wlTrigger}
               bannerVisible={wlBannerVisible}
               footer={freeBlockChart}
+              banner={wired ? <PredictQuiz key={configKey} presetId={configKey} /> : null}
             />
           )}
           {/* All three wired presets get the 로그 column now - previously

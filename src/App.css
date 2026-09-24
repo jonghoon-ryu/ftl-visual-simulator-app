@@ -1173,3 +1173,114 @@
   color: #c9cdd8;
   cursor: pointer;
 }
+
+/* "예측해보기" (PredictQuiz) - top of each preset's grid panel. Neutral card
+   so it doesn't compete with the GC (red) / WL (yellow) status banners;
+   right/wrong carry a ✓/✗ mark too, never color alone. */
+.quiz-card {
+  font-size: 12px;
+  color: #c9cdd8;
+  background: #262a3a;
+  border: 1px solid #3a3f55;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+}
+
+.quiz-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.quiz-close,
+.quiz-reopen {
+  font-family: inherit;
+  font-size: 11px;
+  color: #9aa0b4;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.quiz-reopen {
+  display: block;
+  margin-bottom: 10px;
+  padding: 0;
+}
+
+.quiz-prompt {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quiz-option {
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  color: #d7dae3;
+  background: #2d3142;
+  border: 1px solid #3a3f55;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.quiz-option:hover:not(:disabled) {
+  border-color: #4a6cf7;
+}
+
+.quiz-option:disabled {
+  cursor: default;
+}
+
+.quiz-option.correct {
+  border-color: #4fd18b;
+  color: #4fd18b;
+}
+
+.quiz-option.wrong {
+  border-color: #f16d75;
+  color: #f38b91;
+}
+
+.quiz-option.dimmed {
+  opacity: 0.5;
+}
+
+.quiz-answer {
+  margin-top: 8px;
+  line-height: 1.6;
+}
+
+.quiz-answer p {
+  margin: 0 0 6px;
+}
+
+.quiz-check {
+  color: #9aa0b4;
+}
+
+.quiz-nav {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.quiz-next {
+  font-family: inherit;
+  font-size: 12px;
+  color: #d7dae3;
+  background: #2d3142;
+  border: 1px solid #3a3f55;
+  border-radius: 5px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
