@@ -73,6 +73,9 @@ interface MqsimStats {
   // Free-block pool size of each plane (one per chip in this project), and
   // the pool size below which GC starts on a plane.
   freeBlocksPerPlane: number[];
+  // Host requests completed so far (all flows) - one sector each here, so
+  // compare with flash page writes to see what the DRAM write cache absorbed.
+  hostRequestsServiced: number;
   gcThresholdBlocks: number;
 }
 

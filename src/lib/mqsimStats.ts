@@ -37,6 +37,14 @@ export function toStatItems(state: MqsimState | null, counters: SimulationCounte
       hint: waf === null ? '아직 쓰기가 없어요' : '1 번 쓰기 위한 실제 write 횟수 (호스트 쓰기 + GC/WL 이동)',
     },
     {
+      label: '호스트 요청 → flash 쓰기',
+      value:
+        state && state.stats.hostRequestsServiced > 0
+          ? `${state.stats.hostRequestsServiced.toLocaleString()} → ${counters.hostWrites.toLocaleString()}`
+          : '-',
+      hint: '호스트가 보낸 쓰기 요청 수 → 실제로 flash 에 쓴 page 수 (차이는 DRAM 캐시가 흡수하거나 합친 것 · 캐시를 끄면 아직 처리 중인 요청 몇 개 때문에 flash 쪽이 잠깐 더 많을 수 있어요)',
+    },
+    {
       label: 'Valid page 비율',
       value: validPageRatio === null ? '-' : `${Math.round(validPageRatio * 100)}%`,
     },

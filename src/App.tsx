@@ -53,6 +53,15 @@ const TICKS_MULTIPLIER: Partial<Record<PresetId, number>> = {
   'wear-leveling': 15000,
 };
 
+// Same idea for the DRAM write cache turned off (WorkloadPanel): measured
+// ~50k event-groups for "GC 시연" and ~40k for "마모평준화 시연" to finish
+// (vs ~17.4M / ~21M cached) - these keep a run at roughly the same ~180
+// ticks at speed 8.
+const TICKS_MULTIPLIER_NO_CACHE: Partial<Record<PresetId, number>> = {
+  gc: 35,
+  'wear-leveling': 28,
+};
+
 // Presets wired to the real WASM engine - each needs its own SsdParams
 // (block/page counts, GC threshold, ...) since "GC 시연" deliberately uses
 // a much higher GC_Exec_Threshold than "매핑 기본", and "마모평준화 시연"
@@ -156,7 +165,11 @@ function App() {
       freeBlocks.reset();
       lpnJourney.reset();
     },
-    ticksMultiplier: TICKS_MULTIPLIER[activeId] ?? 1,
+    // With the DRAM write cache off a run is ~350-500x fewer event-groups
+    // (every write goes to flash, so far fewer host requests fit before
+    // Stop_Time), so the cached multipliers would finish it in a tick or
+    // two - see TICKS_MULTIPLIER_NO_CACHE.
+    ticksMultiplier: (activeWorkload.writeCache ? TICKS_MULTIPLIER : TICKS_MULTIPLIER_NO_CACHE)[activeId] ?? 1,
     // "매핑 기본" plays one log line at a time instead of a fixed number of
     // event-groups - see useSimulationPlayback's playUnit. The other two
     // presets keep event-group pacing: their log lines are dense enough,

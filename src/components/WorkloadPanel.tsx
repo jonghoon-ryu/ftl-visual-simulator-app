@@ -48,6 +48,27 @@ export function WorkloadPanel({ workload, onChange, disabled }: Props) {
           <option value="STREAMING">Sequential</option>
         </select>
       </div>
+
+      <div className="param-row">
+        <div className="param-label">
+          <span>DRAM 쓰기 캐시</span>
+          <span>{workload.writeCache ? '켜짐' : '꺼짐'}</span>
+        </div>
+        <label className="param-toggle">
+          <input
+            type="checkbox"
+            disabled={disabled}
+            checked={workload.writeCache}
+            onChange={(e) => onChange({ ...workload, writeCache: e.target.checked })}
+          />
+          캐시 사용
+        </label>
+        <div className="param-hint">
+          켜면 SSD 안의 DRAM 이 쓰기를 먼저 받아서, 같은 page 에 대한 반복 쓰기를 흡수하고 작은 쓰기를 page 단위로
+          모아서 flash 에 내려보내요. 통계의 "호스트 요청 → flash 쓰기"를 켰을 때와 껐을 때 비교해보세요 - 끄면 거의 모든
+          요청이 flash 쓰기가 되고 GC 도 훨씬 자주 일어납니다.
+        </div>
+      </div>
     </div>
   );
 }

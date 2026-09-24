@@ -188,11 +188,23 @@ export interface WorkloadParams {
   // ("sequential"/"random"); MIXED_STREAMING_RANDOM and RANDOM_HOTCOLD are
   // real modes but outside the plan's beginner-facing two-way toggle.
   addressDistribution: 'RANDOM_UNIFORM' | 'STREAMING';
+  // The SSD's DRAM write cache (Device_Level_Data_Caching_Mode WRITE_CACHE
+  // vs TURNED_OFF). On, it absorbs repeated writes to the same page and
+  // merges sector-sized host writes into full pages before they reach
+  // flash - WorkloadPanel's toggle lets a learner see how much of that the
+  // flash never sees. "마모평준화 시연"'s cold flow ignores this and always
+  // runs uncached (see buildWlWorkloadXml).
+  writeCache: boolean;
 }
 
 export const DEFAULT_WORKLOAD_PARAMS: WorkloadParams = {
   addressDistribution: 'RANDOM_UNIFORM',
+  writeCache: true,
 };
+
+function cachingModeXml(workload: WorkloadParams): string {
+  return workload.writeCache ? 'WRITE_CACHE' : 'TURNED_OFF';
+}
 
 // Hardcoded to 0 - a "Read 비율" (Read_Percentage) UI control existed
 // briefly (2026-09-20) but was removed. Found while testing it: a read
@@ -255,7 +267,7 @@ export function buildMappingWorkloadXml(params: SsdParams, workload: WorkloadPar
 	<IO_Scenario>
 		<IO_Flow_Parameter_Set_Synthetic>
 			<Priority_Class>HIGH</Priority_Class>
-			<Device_Level_Data_Caching_Mode>WRITE_CACHE</Device_Level_Data_Caching_Mode>
+			<Device_Level_Data_Caching_Mode>${cachingModeXml(workload)}</Device_Level_Data_Caching_Mode>
 			<Channel_IDs>0</Channel_IDs>
 			<Chip_IDs>${chipIdsXml(params)}</Chip_IDs>
 			<Die_IDs>0</Die_IDs>
@@ -389,7 +401,7 @@ export function buildGcWorkloadXml(params: SsdParams, workload: WorkloadParams =
 	<IO_Scenario>
 		<IO_Flow_Parameter_Set_Synthetic>
 			<Priority_Class>HIGH</Priority_Class>
-			<Device_Level_Data_Caching_Mode>WRITE_CACHE</Device_Level_Data_Caching_Mode>
+			<Device_Level_Data_Caching_Mode>${cachingModeXml(workload)}</Device_Level_Data_Caching_Mode>
 			<Channel_IDs>0</Channel_IDs>
 			<Chip_IDs>${chipIdsXml(params)}</Chip_IDs>
 			<Die_IDs>0</Die_IDs>
@@ -551,7 +563,7 @@ export function buildWlWorkloadXml(params: SsdParams, workload: WorkloadParams =
     totalRequests: wlColdWriteCount(params),
   });
   const hot = syntheticFlowXml(params, {
-    cachingMode: 'WRITE_CACHE',
+    cachingMode: workload.writeCache ? 'WRITE_CACHE' : 'TURNED_OFF',
     workingSetPercent: WL_HOT_WORKING_SET_PERCENT,
     addressDistribution: workload.addressDistribution,
     seed: params.workloadSeed + 1,

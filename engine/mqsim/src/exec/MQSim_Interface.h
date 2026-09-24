@@ -77,6 +77,9 @@ namespace MQSim_Interface
 	// pages - nonzero after the run ends means the device filled up.
 	unsigned int Get_writes_waiting_for_free_space(Simulation_Instance* instance);
 
+	// Host requests completed so far, summed over every IO flow.
+	unsigned long Get_host_requests_serviced(Simulation_Instance* instance);
+
 	// Free-block pool size per plane, and the pool size below which GC starts.
 	std::vector<unsigned int> Get_free_block_counts(Simulation_Instance* instance);
 	unsigned int Get_gc_threshold_blocks(Simulation_Instance* instance);

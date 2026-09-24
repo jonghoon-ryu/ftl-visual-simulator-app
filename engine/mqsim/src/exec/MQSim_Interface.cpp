@@ -300,6 +300,15 @@ namespace MQSim_Interface
 		return static_cast<SSD_Components::Address_Mapping_Unit_Page_Level*>(ftl->Address_Mapping_Unit)->Count_writes_waiting_for_free_space();
 	}
 
+	unsigned long Get_host_requests_serviced(Simulation_Instance* instance)
+	{
+		unsigned long total = 0;
+		for (auto flow : instance->Host->Get_io_flows()) {
+			total += flow->Get_serviced_request_count();
+		}
+		return total;
+	}
+
 	std::vector<unsigned int> Get_free_block_counts(Simulation_Instance* instance)
 	{
 		SSD_Components::FTL* ftl = static_cast<SSD_Components::FTL*>(instance->Ssd->Firmware);
