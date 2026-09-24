@@ -46,6 +46,19 @@ protected:
 	// https://jonghoon-ryu.github.io/ftl-visual-simulator/reference/wl-threshold-not-wired-bug/,
 	// that static WL only ever finds a real target once one of those idle
 	// blocks becomes the coldest *and* isn't itself a frontier.
+	//
+	// Static WL's job is relocating *cold data*, so a real target must also
+	// hold written pages - an empty free-pool block has nothing to move (and
+	// erasing one would re-insert it into Free_block_pool a second time), see
+	// GC_and_WL_Unit_Base::get_static_wl_erase_info(). Tests that expect a
+	// trigger mark their cold block(s) as fully written with this.
+	void MarkFullyWrittenColdData(flash_block_ID_type block_id) {
+		PlaneBookKeepingType* plane = fbm.Get_plane_bookkeeping_entry(plane_address);
+		plane->Blocks[block_id].Current_page_write_index = 4;
+		// Every valid page gets a migration read built for it, which asks the
+		// AMU for that page's PPA - expected, not what these tests assert on.
+		EXPECT_CALL(amu, Convert_address_to_ppa(_)).Times(::testing::AnyNumber());
+	}
 	FakeFlashBlockManager fbm{/*gc_and_wl_unit=*/nullptr, /*max_allowed_block_erase_count=*/10000,
 		/*total_concurrent_streams_no=*/1, /*channel_count=*/1, /*chip_no_per_channel=*/1,
 		/*die_no_per_chip=*/1, /*plane_no_per_die=*/1, /*block_no_per_plane=*/5, /*page_no_per_block=*/4};
@@ -74,6 +87,8 @@ TEST_F(StaticWearLevelingTest, TriggersOnIdleColdestBlockAndBarriersIt) {
 	plane->Blocks[2].Erase_count = 10;
 	plane->Blocks[3].Erase_count = 0;
 	plane->Blocks[4].Erase_count = 5;
+	MarkFullyWrittenColdData(3);
+	MarkFullyWrittenColdData(4);
 
 	TestableGCAndWLUnit unit = MakeUnit(/*static_wl_threshold=*/5); // gap of 10 >= 5
 
@@ -95,6 +110,8 @@ TEST_F(StaticWearLevelingTest, DoesNotTriggerBelowThreshold) {
 	plane->Blocks[2].Erase_count = 4;
 	plane->Blocks[3].Erase_count = 1;
 	plane->Blocks[4].Erase_count = 3;
+	MarkFullyWrittenColdData(3);
+	MarkFullyWrittenColdData(4);
 	// gap is 4 - 1 = 3
 
 	TestableGCAndWLUnit unit = MakeUnit(/*static_wl_threshold=*/5);
@@ -118,6 +135,8 @@ TEST_F(StaticWearLevelingTest, HonorsTheThresholdItWasConstructedWith) {
 	plane->Blocks[2].Erase_count = 10;
 	plane->Blocks[3].Erase_count = 3;
 	plane->Blocks[4].Erase_count = 8;
+	MarkFullyWrittenColdData(3);
+	MarkFullyWrittenColdData(4);
 	// gap is 10 - 3 = 7
 
 	TestableGCAndWLUnit lenient_unit = MakeUnit(/*static_wl_threshold=*/7);
@@ -125,6 +144,56 @@ TEST_F(StaticWearLevelingTest, HonorsTheThresholdItWasConstructedWith) {
 
 	TestableGCAndWLUnit strict_unit = MakeUnit(/*static_wl_threshold=*/8);
 	EXPECT_FALSE(strict_unit.check_static_wl_required(plane_address));
+}
+
+// Regression test for why "마모평준화 시연" could only ever fire static WL
+// once per run: the plane-wide coldest block was a write frontier that is
+// never written (here: block 1, the Translation_wf - the whole mapping table
+// fits in the CMT, so no translation page is ever programmed), permanently
+// at erase count 0 and permanently rejected by is_safe_gc_wl_candidate().
+// Upstream picked only that one block, gave up, and never looked at the
+// next-coldest block that actually holds cold data.
+TEST_F(StaticWearLevelingTest, SkipsUnwrittenFrontierAndTargetsNextColdestDataBlock) {
+	PlaneBookKeepingType* plane = fbm.Get_plane_bookkeeping_entry(plane_address);
+	plane->Blocks[0].Erase_count = 10;
+	plane->Blocks[1].Erase_count = 0; // Translation_wf, never written
+	plane->Blocks[2].Erase_count = 10;
+	plane->Blocks[3].Erase_count = 6;
+	plane->Blocks[4].Erase_count = 4;
+	MarkFullyWrittenColdData(3);
+	MarkFullyWrittenColdData(4);
+
+	TestableGCAndWLUnit unit = MakeUnit(/*static_wl_threshold=*/5); // 10 - 4 = 6 >= 5
+
+	EXPECT_CALL(amu, Set_barrier_for_accessing_physical_block(
+		Field(&Physical_Page_Address::BlockID, 4u))).Times(1);
+
+	ASSERT_TRUE(unit.check_static_wl_required(plane_address));
+	unit.run_static_wearleveling(plane_address);
+
+	EXPECT_TRUE(plane->Blocks[4].Has_ongoing_gc_wl);
+	EXPECT_FALSE(plane->Blocks[1].Has_ongoing_gc_wl);
+}
+
+// An empty free-pool block has no cold data to relocate - it must never be
+// the reason static WL fires, however low its erase count.
+TEST_F(StaticWearLevelingTest, IgnoresEmptyFreeBlocks) {
+	PlaneBookKeepingType* plane = fbm.Get_plane_bookkeeping_entry(plane_address);
+	plane->Blocks[0].Erase_count = 10;
+	plane->Blocks[1].Erase_count = 10;
+	plane->Blocks[2].Erase_count = 10;
+	plane->Blocks[3].Erase_count = 0; // free, never written
+	plane->Blocks[4].Erase_count = 8;
+	MarkFullyWrittenColdData(4);
+	// plane-wide gap is 10 - 0 = 10, but among data-holding candidates it's
+	// only 10 - 8 = 2
+
+	TestableGCAndWLUnit unit = MakeUnit(/*static_wl_threshold=*/5);
+
+	EXPECT_CALL(amu, Set_barrier_for_accessing_physical_block(_)).Times(0);
+	EXPECT_FALSE(unit.check_static_wl_required(plane_address));
+	unit.run_static_wearleveling(plane_address);
+	EXPECT_FALSE(plane->Blocks[3].Has_ongoing_gc_wl);
 }
 
 // Watching real GC in the browser demo has two problems: the whole run can

@@ -57,6 +57,10 @@ namespace SSD_Components
 	// unrelated read/write's own completion, in the same event-group.
 	enum class GC_Deferred_Event_Type { CHECK_GC_REQUIRED, RUN_STATIC_WEARLEVELING, EXECUTE_PARKED_GC_WL };
 
+	// How long to wait before re-running a GC check that started nothing
+	// while the plane's writes are stalled - see gc_retry_needed().
+	const sim_time_type GC_RETRY_DELAY = 1000;
+
 	struct Check_Gc_Required_Params
 	{
 		unsigned int Free_block_pool_size;
@@ -94,6 +98,9 @@ namespace SSD_Components
 
 		virtual bool GC_is_in_urgent_mode(const NVM::FlashMemory::Flash_Chip*) = 0;
 		virtual void Check_gc_required(const unsigned int BlockPoolSize, const NVM::FlashMemory::Physical_Page_Address& planeAddress) = 0;
+		// Schedules a deferred Check_gc_required() for this plane - see
+		// gc_retry_needed() for why the Address Mapping Unit needs this.
+		void Request_gc_check(const NVM::FlashMemory::Physical_Page_Address& plane_address);
 		GC_Block_Selection_Policy_Type Get_gc_policy();
 		unsigned int Get_GC_policy_specific_parameter();//Returns the parameter specific to the GC block selection policy: threshold for random_pp, set_size for RGA
 		unsigned int Get_minimum_number_of_free_pages_before_GC();
@@ -115,8 +122,11 @@ namespace SSD_Components
 		// top section - see EXECUTE_PARKED_GC_WL's doc comment above for why
 		// this now runs as its own deferred event instead of inline there.
 		void execute_parked_gc_wl_if_ready(const NVM::FlashMemory::Physical_Page_Address& block_address);
+		bool gc_retry_needed(const NVM::FlashMemory::Physical_Page_Address& plane_address);
 		bool is_safe_gc_wl_candidate(const PlaneBookKeepingType* pbke, const flash_block_ID_type gc_wl_candidate_block_id);//Checks if block_address is a safe candidate for gc execution, i.e., 1) it is not a write frontier, and 2) there is no ongoing program operation
 		bool check_static_wl_required(const NVM::FlashMemory::Physical_Page_Address plane_address);
+		bool get_static_wl_erase_info(const NVM::FlashMemory::Physical_Page_Address& plane_address,
+			flash_block_ID_type& min_block_id, unsigned int& min_erase_count, flash_block_ID_type& max_block_id, unsigned int& max_erase_count);
 		void run_static_wearleveling(const NVM::FlashMemory::Physical_Page_Address plane_address);
 		bool use_copyback;
 		bool dynamic_wearleveling_enabled;

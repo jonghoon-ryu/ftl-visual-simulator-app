@@ -1227,6 +1227,7 @@ namespace SSD_Components
 						transaction->Content, transaction, read_pages_bitmap, domain->GlobalMappingTable[transaction->LPA].TimeStamp);
 					Convert_ppa_to_address(old_ppa, update_read_tr->Address);
 					block_manager->Read_transaction_issued(update_read_tr->Address);//Inform block manager about a new transaction as soon as the transaction's target address is determined
+					update_read_tr->Physical_address_determined = true;// BUG FIX (this project): upstream never set this for reads counted via Read_transaction_issued() outside translate_lpa_to_ppa() - GC_and_WL_Unit_Base's completion handler now relies on it
 					block_manager->Invalidate_page_in_block(transaction->Stream_id, update_read_tr->Address);
 					transaction->RelatedRead = update_read_tr;
 				}
@@ -1268,6 +1269,7 @@ namespace SSD_Components
 		}
 
 		block_manager->Allocate_block_and_page_in_plane_for_translation_write(transaction->Stream_id, transaction->Address, false);
+		transaction->Physical_address_determined = true;// BUG FIX (this project): see update_read_tr above
 		transaction->PPA = Convert_address_to_ppa(transaction->Address);
 		domain->GlobalTranslationDirectory[mvpn].MPPN = (MPPN_type)transaction->PPA;
 		domain->GlobalTranslationDirectory[mvpn].TimeStamp = CurrentTimeStamp;
@@ -1658,6 +1660,7 @@ namespace SSD_Components
 					mvpn, mppn, NULL, mvpn, NULL, readSectorsBitmap, CurrentTimeStamp);
 				Convert_ppa_to_address(mppn, readTR->Address);
 				block_manager->Read_transaction_issued(readTR->Address);//Inform block_manager as soon as the transaction's target address is determined
+				readTR->Physical_address_determined = true;// BUG FIX (this project): see update_read_tr above
 				domains[stream_id]->ArrivingMappingEntries.insert(std::pair<MVPN_type, LPA_type>(mvpn, lpn));
 				ftl->TSU->Submit_transaction(readTR);
 			}
@@ -1703,6 +1706,7 @@ namespace SSD_Components
 					SECTOR_SIZE_IN_BYTE, NO_LPA, NO_PPA, NULL, mvpn, ((page_status_type)0x1) << sector_no_per_page, CurrentTimeStamp);
 			Convert_ppa_to_address(ppn, readTR->Address);
 			block_manager->Read_transaction_issued(readTR->Address);//Inform block_manager as soon as the transaction's target address is determined
+			readTR->Physical_address_determined = true;// BUG FIX (this project): see update_read_tr above
 			readTR->PPA = ppn;
 			ftl->TSU->Submit_transaction(readTR);
 
@@ -1858,21 +1862,36 @@ namespace SSD_Components
 		}
 		domains[stream_id]->Locked_LPAs.erase(itr);
 
+		// BUG FIX (this project, upstream MQSim): upstream "serviced" the
+		// transactions parked behind this barrier by calling only this class's
+		// own handle_transaction_serviced_signal_from_PHY() and deleting them -
+		// none of the other completion listeners ever heard about them. The
+		// data cache manager is the one that matters: it never decremented its
+		// back-pressure counter for a write-back parked here (so every such
+		// write leaked its sectors, and once the leak reached
+		// back_pressure_buffer_max_depth every later write parked in
+		// waiting_user_requests_queue_for_dram_free_slot forever - the
+		// simulation's event queue then emptied with requests still
+		// outstanding), and with caching turned off the owning user request
+		// never completed at all. Each is now erased from the barrier list
+		// *before* being signaled (the broadcast deletes it), through the
+		// same broadcast a real flash completion uses.
+
 		//If there are read requests waiting behind the barrier, then MQSim assumes they can be serviced with the actual page data that is accessed during GC execution
 		auto read_tr = domains[stream_id]->Read_transactions_behind_LPA_barrier.find(lpa);
 		while (read_tr != domains[stream_id]->Read_transactions_behind_LPA_barrier.end()) {
-			handle_transaction_serviced_signal_from_PHY((*read_tr).second);
-			delete (*read_tr).second;
+			NVM_Transaction_Flash* transaction = (*read_tr).second;
 			domains[stream_id]->Read_transactions_behind_LPA_barrier.erase(read_tr);
+			flash_controller->Signal_transaction_serviced_without_flash_access(transaction);
 			read_tr = domains[stream_id]->Read_transactions_behind_LPA_barrier.find(lpa);
 		}
 
 		//If there are write requests waiting behind the barrier, then MQSim assumes they can be serviced with the actual page data that is accessed during GC execution. This may not be 100% true for all write requests, but, to avoid more complexity in the simulation, we accept this assumption.
 		auto write_tr = domains[stream_id]->Write_transactions_behind_LPA_barrier.find(lpa);
 		while (write_tr != domains[stream_id]->Write_transactions_behind_LPA_barrier.end()) {
-			handle_transaction_serviced_signal_from_PHY((*write_tr).second);
-			delete (*write_tr).second;
+			NVM_Transaction_Flash* transaction = (*write_tr).second;
 			domains[stream_id]->Write_transactions_behind_LPA_barrier.erase(write_tr);
+			flash_controller->Signal_transaction_serviced_without_flash_access(transaction);
 			write_tr = domains[stream_id]->Write_transactions_behind_LPA_barrier.find(lpa);
 		}
 	}
@@ -1965,7 +1984,14 @@ namespace SSD_Components
 	void Address_Mapping_Unit_Page_Level::mange_unsuccessful_translation(NVM_Transaction_Flash* transaction)
 	{
 		//Currently, the only unsuccessfull translation would be for program translations that are accessing a plane that is running out of free pages
-		Write_transactions_for_overfull_planes[transaction->Address.ChannelID][transaction->Address.ChipID][transaction->Address.DieID][transaction->Address.PlaneID].insert((NVM_Transaction_Flash_WR*)transaction);
+		std::set<NVM_Transaction_Flash_WR*>& waiting_write_list = Write_transactions_for_overfull_planes[transaction->Address.ChannelID][transaction->Address.ChipID][transaction->Address.DieID][transaction->Address.PlaneID];
+		// BUG FIX (this project, upstream MQSim): make sure GC gets another
+		// look at a plane whose writes have started stalling - see
+		// GC_and_WL_Unit_Base::gc_retry_needed().
+		if (waiting_write_list.empty()) {
+			ftl->GC_and_WL_Unit->Request_gc_check(transaction->Address);
+		}
+		waiting_write_list.insert((NVM_Transaction_Flash_WR*)transaction);
 	}
 
 	// Never does the release itself - always schedules it (see release_one_
@@ -1992,8 +2018,24 @@ namespace SSD_Components
 			return;
 		}
 
-		ftl->TSU->Prepare_for_transaction_submit();
 		auto program = waiting_write_list.begin();
+		// BUG FIX (this project, upstream MQSim): upstream translated a
+		// waiting write here without checking the GC/WL LPA barrier, unlike
+		// every other path that translates a user write (Translate_lpa_to_
+		// ppa_and_dispatch() and the Waiting_unmapped_program_transactions
+		// release in handle_transaction_serviced_signal_from_PHY()). If a
+		// GC/WL locked this write's LPA while it waited, translating it
+		// remapped a locked LPA mid-migration - the migration read then found
+		// the mapping moved ("Inconsistency found when moving a page for
+		// GC/WL!"). Park it behind the barrier instead, same as those paths.
+		if (is_lpa_locked_for_gc((*program)->Stream_id, (*program)->LPA)) {
+			manage_user_transaction_facing_barrier(*program);
+			waiting_write_list.erase(program);
+			Start_servicing_writes_for_overfull_plane(plane_address);
+			return;
+		}
+
+		ftl->TSU->Prepare_for_transaction_submit();
 		// Same as the original loop's own stopping condition: a translate
 		// failure means this (and by implication every later-queued write,
 		// same as upstream's own reasoning) is still blocked - don't keep

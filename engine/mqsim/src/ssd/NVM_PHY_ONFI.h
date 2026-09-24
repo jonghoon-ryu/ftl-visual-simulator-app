@@ -41,6 +41,14 @@ namespace SSD_Components
 		void ConnectToChannelIdleSignal(ChannelIdleHandlerType);
 		typedef void(*ChipIdleHandlerType) (NVM::FlashMemory::Flash_Chip*);
 		void ConnectToChipIdleSignal(ChipIdleHandlerType);
+		// BUG FIX (this project, upstream MQSim): lets the Address Mapping
+		// Unit complete a user transaction that is serviced without ever
+		// reaching flash (one parked behind a GC/WL LPA barrier - see
+		// Address_Mapping_Unit_Page_Level::Remove_barrier_for_accessing_lpa())
+		// through the exact same broadcast a real flash completion uses, so
+		// every listener (notably the data cache manager) sees it. Deletes
+		// the transaction, same as a real completion.
+		void Signal_transaction_serviced_without_flash_access(NVM_Transaction_Flash* transaction) { broadcastTransactionServicedSignal(transaction); }
 	protected:
 		unsigned int channel_count;
 		unsigned int chip_no_per_channel;

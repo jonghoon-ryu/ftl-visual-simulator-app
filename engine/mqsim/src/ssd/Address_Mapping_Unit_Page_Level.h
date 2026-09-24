@@ -206,6 +206,10 @@ namespace SSD_Components
 		void Remove_barrier_for_accessing_lpa(stream_id_type stream_id, LPA_type lpa);
 		void Remove_barrier_for_accessing_mvpn(stream_id_type stream_id, MVPN_type mpvn);
 		void Start_servicing_writes_for_overfull_plane(const NVM::FlashMemory::Physical_Page_Address plane_address);
+		bool Has_writes_waiting_for_free_space(const NVM::FlashMemory::Physical_Page_Address& plane_address)
+		{
+			return !Write_transactions_for_overfull_planes[plane_address.ChannelID][plane_address.ChipID][plane_address.DieID][plane_address.PlaneID].empty();
+		}
 	private:
 		// The actual one-write release, run only from Execute_simulator_event()
 		// - Start_servicing_writes_for_overfull_plane() itself (above) only

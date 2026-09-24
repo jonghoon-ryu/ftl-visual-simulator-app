@@ -79,6 +79,9 @@ namespace SSD_Components
 		virtual void Remove_barrier_for_accessing_lpa(const stream_id_type stream_id, const LPA_type lpa) = 0; //Removes the barrier that has already been set for accessing an LPA (i.e., the GC_and_WL_Unit_Base unit successfully finished relocating LPA from one physical location to another physical location).
 		virtual void Remove_barrier_for_accessing_mvpn(const stream_id_type stream_id, const MVPN_type mvpn) = 0; //Removes the barrier that has already been set for accessing an MVPN (i.e., the GC_and_WL_Unit_Base unit successfully finished relocating MVPN from one physical location to another physical location).
 		virtual void Start_servicing_writes_for_overfull_plane(const NVM::FlashMemory::Physical_Page_Address plane_address) = 0;//This function is invoked when GC execution is finished on a plane and the plane has enough number of free pages to service writes
+		// Whether any user write is parked waiting for this plane to get free
+		// pages back (see GC_and_WL_Unit_Base::gc_retry_needed()).
+		virtual bool Has_writes_waiting_for_free_space(const NVM::FlashMemory::Physical_Page_Address& plane_address) { return false; }
 	protected:
 		FTL* ftl;
 		NVM_PHY_ONFI* flash_controller;

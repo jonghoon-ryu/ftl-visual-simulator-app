@@ -49,6 +49,16 @@ namespace SSD_Components
 			case Transaction_Source_Type::USERIO:
 			case Transaction_Source_Type::MAPPING:
 			case Transaction_Source_Type::CACHE:
+				// BUG FIX (this project): a user transaction released from a
+				// GC/WL LPA barrier (Address_Mapping_Unit_Page_Level::Remove_
+				// barrier_for_accessing_lpa()) is signaled serviced without
+				// ever having been translated - its Address is still the
+				// default (block 0 of plane 0/0/0/0) and no *_transaction_
+				// issued() was ever counted for it, so "un-counting" it here
+				// drove that block's Ongoing_user_program_count negative.
+				if (!transaction->Physical_address_determined) {
+					return;
+				}
 				switch (transaction->Type)
 				{
 					case Transaction_Type::READ:
@@ -194,11 +204,20 @@ namespace SSD_Components
 		NVM::FlashMemory::Physical_Page_Address gc_wl_candidate_address(block_address);
 		Block_Pool_Slot_Type* block = &pbke->Blocks[block_address.BlockID];
 		bool is_wl = block->Is_wl_triggered;
-		Stats::Total_gc_executions++;
+		// BUG FIX (this project, upstream MQSim): upstream counted a parked
+		// static-WL execution resuming here as a GC execution.
 		if (is_wl) {
+			Stats::Total_wl_executions++;
+		} else {
+			Stats::Total_gc_executions++;
+		}
+		if (is_wl) {
+			// The target itself is the minimum here (see get_static_wl_erase_
+			// info()) - it's already marked Has_ongoing_gc_wl, so it would no
+			// longer be picked up as an eligible candidate if recomputed now.
 			Flash_Block_Manager_Base::MinMaxEraseInfo erase_info = block_manager->Get_min_max_erase_info(block_address);
 			Simulation_Events::Notify_wl_started(block->Stream_id, gc_wl_candidate_address,
-				erase_info.MinEraseCount, erase_info.MaxEraseCount, erase_info.MaxEraseBlockId, static_wearleveling_threshold);
+				block->Erase_count, erase_info.MaxEraseCount, erase_info.MaxEraseBlockId, static_wearleveling_threshold);
 		} else {
 			Simulation_Events::Notify_gc_started(block->Stream_id, gc_wl_candidate_address);
 		}
@@ -211,7 +230,11 @@ namespace SSD_Components
 			NVM_Transaction_Flash_WR* gc_wl_write = NULL;
 			for (flash_page_ID_type pageID = 0; pageID < block->Current_page_write_index; pageID++) {
 				if (block_manager->Is_page_valid(block, pageID)) {
-					Stats::Total_page_movements_for_gc++;
+					if (is_wl) {
+						Stats::Total_page_movements_for_wl++;
+					} else {
+						Stats::Total_page_movements_for_gc++;
+					}
 					gc_wl_candidate_address.PageID = pageID;
 					// Notify_*_page_migrated() fires from this class's own READ
 					// completion case above, once each page's migration read has
@@ -236,6 +259,15 @@ namespace SSD_Components
 			}
 		}
 		block->Erase_transaction = gc_wl_erase_tr;
+		// BUG FIX (this project, upstream MQSim): upstream never submitted
+		// the erase on this parked path (both direct paths - GC_and_WL_Unit_
+		// Page_Level::Check_gc_required() and run_static_wearleveling() - do).
+		// A GC/WL parked behind an in-flight user read/program therefore never
+		// erased its block: the block stayed Has_ongoing_gc_wl forever, the
+		// plane lost it for good, and once the free pool ran low the writes
+		// parked in Write_transactions_for_overfull_planes were never
+		// released - the event queue emptied with requests still outstanding.
+		tsu->Submit_transaction(gc_wl_erase_tr);
 		tsu->Schedule();
 	}
 
@@ -257,7 +289,13 @@ namespace SSD_Components
 		switch ((GC_Deferred_Event_Type)ev->Type) {
 			case GC_Deferred_Event_Type::CHECK_GC_REQUIRED: {
 				Check_Gc_Required_Params* params = (Check_Gc_Required_Params*)ev->Parameters;
+				PlaneBookKeepingType* pbke = block_manager->Get_plane_bookkeeping_entry(params->Plane_address);
+				size_t ongoing_erases_before = pbke->Ongoing_erase_operations.size();
 				Check_gc_required(params->Free_block_pool_size, params->Plane_address);
+				if (pbke->Ongoing_erase_operations.size() == ongoing_erases_before && gc_retry_needed(params->Plane_address)) {
+					Simulator->Register_sim_event(Simulator->Time() + GC_RETRY_DELAY, this,
+						new Check_Gc_Required_Params{ pbke->Get_free_block_pool_size(), params->Plane_address }, (int)GC_Deferred_Event_Type::CHECK_GC_REQUIRED);
+				}
 				delete params;
 				break;
 			}
@@ -274,6 +312,50 @@ namespace SSD_Components
 				break;
 			}
 		}
+	}
+
+	// BUG FIX (this project, upstream MQSim): a GC check only ever runs when
+	// something triggers it - a write frontier rolling over onto a new block,
+	// or an erase completing. If a check starts nothing (e.g. RGA's random
+	// sample of rga_set_size full blocks happened to contain only blocks
+	// with zero invalid pages - at this project's scale, with only a couple
+	// of reclaimable blocks per plane, that's a ~1-in-5 event) at a moment
+	// when every write for the plane is already parked in Write_transactions_
+	// for_overfull_planes and no erase is in flight, nothing will ever
+	// trigger another check: no write can allocate, no erase can complete,
+	// and the simulation's event queue empties with those writes still
+	// outstanding. Upstream never hits this at real-SSD block counts. The
+	// last check before such a stall usually runs *before* the first write
+	// gets parked (right after an erase, while the plane still has a few
+	// free pages), so the Address Mapping Unit also requests a check the
+	// moment a plane's first write is parked (mange_unsuccessful_
+	// translation()); from then on, this retry keeps it going.
+	// Retrying (instead of, say, making RGA fall back to greedy) keeps every
+	// selection policy's own behavior unchanged. Only retries while a
+	// reclaimable block actually exists, so it can't loop forever on a plane
+	// that truly has nothing to collect.
+	void GC_and_WL_Unit_Base::Request_gc_check(const NVM::FlashMemory::Physical_Page_Address& plane_address)
+	{
+		Simulator->Register_sim_event(Simulator->Time() + 1, this,
+			new Check_Gc_Required_Params{ block_manager->Get_pool_size(plane_address), plane_address }, (int)GC_Deferred_Event_Type::CHECK_GC_REQUIRED);
+	}
+
+	bool GC_and_WL_Unit_Base::gc_retry_needed(const NVM::FlashMemory::Physical_Page_Address& plane_address)
+	{
+		PlaneBookKeepingType* pbke = block_manager->Get_plane_bookkeeping_entry(plane_address);
+		if (!pbke->Ongoing_erase_operations.empty()
+			|| pbke->Get_free_block_pool_size() >= block_pool_gc_threshold
+			|| !address_mapping_unit->Has_writes_waiting_for_free_space(plane_address)) {
+			return false;
+		}
+		for (flash_block_ID_type block_id = 0; block_id < block_no_per_plane; block_id++) {
+			if (pbke->Blocks[block_id].Current_page_write_index == pages_no_per_block
+				&& pbke->Blocks[block_id].Invalid_page_count > 0
+				&& is_safe_gc_wl_candidate(pbke, block_id)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	GC_Block_Selection_Policy_Type GC_and_WL_Unit_Base::Get_gc_policy()
@@ -351,14 +433,69 @@ namespace SSD_Components
 	// wearleveling() above - see that comment.
 	bool GC_and_WL_Unit_Base::check_static_wl_required(const NVM::FlashMemory::Physical_Page_Address plane_address)
 	{
-		return static_wearleveling_enabled && (block_manager->Get_min_max_erase_difference(plane_address) >= static_wearleveling_threshold);
+		if (!static_wearleveling_enabled) {
+			return false;
+		}
+		flash_block_ID_type min_block_id, max_block_id;
+		unsigned int min_erase_count, max_erase_count;
+		return get_static_wl_erase_info(plane_address, min_block_id, min_erase_count, max_block_id, max_erase_count)
+			&& (max_erase_count - min_erase_count >= static_wearleveling_threshold);
+	}
+
+	// DEVIATION FROM UPSTREAM MQSim: upstream compared the plane-wide
+	// max/min erase counts (Get_min_max_erase_difference()) and always
+	// targeted the plane-wide coldest block (Get_coldest_block_id(), lowest
+	// block ID on ties), then silently gave up if that one block failed
+	// is_safe_gc_wl_candidate(). The coldest block is very often one that
+	// can never be a valid static-WL target:
+	//   - a write frontier that is never written at all (e.g. a stream's
+	//     Translation_wf when the whole mapping table fits in the CMT, or a
+	//     GC_wf of a stream GC never touches) - permanently erase count 0
+	//     and permanently unsafe, so once it is the coldest block, static WL
+	//     can never fire again for the rest of the simulation, and
+	//   - a free-pool block - it holds no cold data to move, and erasing it
+	//     re-inserts it into Free_block_pool a second time on completion
+	//     (Add_erased_block_to_pool() never removes it first).
+	// Only blocks that actually hold written data and are safe GC/WL
+	// candidates are considered for the minimum (and therefore the target);
+	// the maximum still spans the whole plane. Returns false if no block
+	// qualifies.
+	bool GC_and_WL_Unit_Base::get_static_wl_erase_info(const NVM::FlashMemory::Physical_Page_Address& plane_address,
+		flash_block_ID_type& min_block_id, unsigned int& min_erase_count, flash_block_ID_type& max_block_id, unsigned int& max_erase_count)
+	{
+		PlaneBookKeepingType* pbke = block_manager->Get_plane_bookkeeping_entry(plane_address);
+		bool found = false;
+		min_block_id = 0;
+		min_erase_count = 0;
+		max_block_id = 0;
+		max_erase_count = pbke->Blocks[0].Erase_count;
+		for (flash_block_ID_type block_id = 0; block_id < block_no_per_plane; block_id++) {
+			const Block_Pool_Slot_Type& block = pbke->Blocks[block_id];
+			if (block.Erase_count > max_erase_count) {
+				max_erase_count = block.Erase_count;
+				max_block_id = block_id;
+			}
+			if (block.Current_page_write_index == 0 || !is_safe_gc_wl_candidate(pbke, block_id)) {
+				continue;
+			}
+			if (!found || block.Erase_count < min_erase_count) {
+				min_erase_count = block.Erase_count;
+				min_block_id = block_id;
+				found = true;
+			}
+		}
+		return found;
 	}
 
 	void GC_and_WL_Unit_Base::run_static_wearleveling(const NVM::FlashMemory::Physical_Page_Address plane_address)
 	{
 		PlaneBookKeepingType* pbke = block_manager->Get_plane_bookkeeping_entry(plane_address);
-		flash_block_ID_type wl_candidate_block_id = block_manager->Get_coldest_block_id(plane_address);
-		if (!is_safe_gc_wl_candidate(pbke, wl_candidate_block_id)) {
+		flash_block_ID_type wl_candidate_block_id, max_erase_block_id;
+		unsigned int min_erase_count, max_erase_count;
+		// Re-checked here, not just when this deferred event was scheduled -
+		// the plane may have changed in between (see get_static_wl_erase_info()).
+		if (!get_static_wl_erase_info(plane_address, wl_candidate_block_id, min_erase_count, max_erase_block_id, max_erase_count)
+			|| max_erase_count - min_erase_count < static_wearleveling_threshold) {
 			return;
 		}
 
@@ -373,9 +510,8 @@ namespace SSD_Components
 		address_mapping_unit->Set_barrier_for_accessing_physical_block(wl_candidate_address);//Lock the block, so no user request can intervene while the GC is progressing
 		if (block_manager->Can_execute_gc_wl(wl_candidate_address)) {//If there are ongoing requests targeting the candidate block, the gc execution should be postponed
 			Stats::Total_wl_executions++;
-			Flash_Block_Manager_Base::MinMaxEraseInfo erase_info = block_manager->Get_min_max_erase_info(plane_address);
 			Simulation_Events::Notify_wl_started(block->Stream_id, wl_candidate_address,
-				erase_info.MinEraseCount, erase_info.MaxEraseCount, erase_info.MaxEraseBlockId, static_wearleveling_threshold);
+				min_erase_count, max_erase_count, max_erase_block_id, static_wearleveling_threshold);
 			tsu->Prepare_for_transaction_submit();
 
 			NVM_Transaction_Flash_ER* wl_erase_tr = new NVM_Transaction_Flash_ER(Transaction_Source_Type::GC_WL, pbke->Blocks[wl_candidate_block_id].Stream_id, wl_candidate_address);
@@ -384,7 +520,10 @@ namespace SSD_Components
 				NVM_Transaction_Flash_WR* wl_write = NULL;
 				for (flash_page_ID_type pageID = 0; pageID < block->Current_page_write_index; pageID++) {
 					if (block_manager->Is_page_valid(block, pageID)) {
-						Stats::Total_page_movements_for_gc++;
+						// BUG FIX (this project, upstream MQSim): upstream counted
+						// static-WL page movements as GC page movements, leaving
+						// Average_Page_Movement_For_WL permanently 0.
+						Stats::Total_page_movements_for_wl++;
 						wl_candidate_address.PageID = pageID;
 						// Notify_wl_page_migrated() fires from this function's own READ
 						// completion case (handle_transaction_serviced_signal_from_PHY,

@@ -223,6 +223,7 @@ namespace SSD_Components
 							entry.EraseCount = slot.Erase_count;
 							entry.Status = slot.Current_status;
 							entry.Has_ongoing_gc_wl = slot.Has_ongoing_gc_wl;
+							entry.Stream_id = slot.Stream_id;
 							entry.Is_write_frontier = false;
 							entry.Is_gc_write_frontier = false;
 							for (unsigned int stream_cntr = 0; stream_cntr < total_concurrent_streams_no; stream_cntr++) {

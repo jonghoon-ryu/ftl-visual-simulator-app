@@ -69,6 +69,11 @@ namespace SSD_Components
 		// side of a migration, as opposed to Has_ongoing_gc_wl above, which
 		// marks the *victim* block being reclaimed).
 		bool Is_gc_write_frontier;
+		// The stream (IO flow) whose data this block holds - NO_STREAM for a
+		// block that's been erased back into the free pool (Erase() resets
+		// it) or never allocated. Lets a UI tell which flow's data sits where,
+		// e.g. "마모평준화 시연"'s write-once cold flow vs its hot flow.
+		stream_id_type Stream_id;
 	};
 
 	class Block_Pool_Slot_Type
