@@ -5,6 +5,7 @@
 
 int Device_Parameter_Set::Seed = 123;//Seed for random number generation (used in device's random number generators)
 bool Device_Parameter_Set::Enabled_Preconditioning = true;
+bool Device_Parameter_Set::Unmapped_Reads_Return_Zeros = false;
 NVM::NVM_Type Device_Parameter_Set::Memory_Type = NVM::NVM_Type::FLASH;
 HostInterface_Types Device_Parameter_Set::HostInterface_Type = HostInterface_Types::NVME;
 uint16_t Device_Parameter_Set::IO_Queue_Depth = 1024;//For NVMe, it determines the size of the submission/completion queues; for SATA, it determines the size of NCQ_Control_Structure
@@ -55,6 +56,10 @@ void Device_Parameter_Set::XML_serialize(Utils::XmlWriter& xmlwriter)
 
 	attr = "Enabled_Preconditioning";
 	val = (Enabled_Preconditioning ? "true" : "false");
+	xmlwriter.Write_attribute_string(attr, val);
+
+	attr = "Unmapped_Reads_Return_Zeros";
+	val = (Unmapped_Reads_Return_Zeros ? "true" : "false");
 	xmlwriter.Write_attribute_string(attr, val);
 
 	attr = "Memory_Type";
@@ -386,6 +391,10 @@ void Device_Parameter_Set::XML_deserialize(rapidxml::xml_node<> *node)
 				std::string val = param->value();
 				std::transform(val.begin(), val.end(), val.begin(), ::toupper);
 				Enabled_Preconditioning = (val.compare("FALSE") == 0 ? false : true);
+			} else if (strcmp(param->name(), "Unmapped_Reads_Return_Zeros") == 0) {
+				std::string val = param->value();
+				std::transform(val.begin(), val.end(), val.begin(), ::toupper);
+				Unmapped_Reads_Return_Zeros = (val.compare("TRUE") == 0);
 			} else if (strcmp(param->name(), "Memory_Type") == 0) {
 				std::string val = param->value();
 				std::transform(val.begin(), val.end(), val.begin(), ::toupper);

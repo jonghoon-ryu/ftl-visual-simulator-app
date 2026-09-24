@@ -270,6 +270,7 @@ SSD_Device::SSD_Device(Device_Parameter_Set *parameters, std::vector<IO_Flow_Par
 		switch (parameters->Address_Mapping)
 		{
 		case SSD_Components::Flash_Address_Mapping_Type::PAGE_LEVEL:
+			SSD_Components::Address_Mapping_Unit_Page_Level::Unmapped_reads_return_zeros = Device_Parameter_Set::Unmapped_Reads_Return_Zeros;
 			amu = new SSD_Components::Address_Mapping_Unit_Page_Level(ftl->ID() + ".AddressMappingUnit", ftl, (SSD_Components::NVM_PHY_ONFI *)device->PHY,
 																	  fbm, parameters->Ideal_Mapping_Table, parameters->CMT_Capacity, parameters->Plane_Allocation_Scheme, stream_count,
 																	  parameters->Flash_Channel_Count, parameters->Chip_No_Per_Channel, parameters->Flash_Parameters.Die_No_Per_Chip, parameters->Flash_Parameters.Plane_No_Per_Die,

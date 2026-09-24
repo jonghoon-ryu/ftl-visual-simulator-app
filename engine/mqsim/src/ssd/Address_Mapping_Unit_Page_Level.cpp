@@ -10,6 +10,8 @@
 
 namespace SSD_Components
 {
+	bool Address_Mapping_Unit_Page_Level::Unmapped_reads_return_zeros = false;
+
 	Cached_Mapping_Table::Cached_Mapping_Table(unsigned int capacity) : capacity(capacity)
 	{
 	}
@@ -436,6 +438,12 @@ namespace SSD_Components
 				delete params;
 				break;
 			}
+			case AMU_Deferred_Event_Type::SERVICE_UNMAPPED_READ: {
+				Service_Unmapped_Read_Params* params = (Service_Unmapped_Read_Params*)event->Parameters;
+				flash_controller->Signal_transaction_serviced_without_flash_access(params->Transaction);
+				delete params;
+				break;
+			}
 		}
 	}
 
@@ -635,8 +643,27 @@ namespace SSD_Components
 		PPA_type ppa = domains[streamID]->Get_ppa(ideal_mapping_table, streamID, transaction->LPA);
 
 		if (transaction->Type == Transaction_Type::READ) {
-			if (ppa == NO_PPA) {
+			if (ppa == NO_PPA && !Unmapped_reads_return_zeros) {
 				ppa = online_create_entry_for_reads(transaction->LPA, streamID, transaction->Address, ((NVM_Transaction_Flash_RD*)transaction)->read_sectors_bitmap);
+			}
+			if (ppa == NO_PPA) {
+				// DEVIATION FROM UPSTREAM MQSim (opt-in, Unmapped_Reads_Return_Zeros): upstream called
+				// online_create_entry_for_reads() here - a read of a
+				// never-written LPA silently reserved a real flash page for it
+				// (through the same allocator as a write, consuming free-pool
+				// capacity, with no program ever issued), standing in for
+				// data that preconditioning would have pre-written. This
+				// project runs without preconditioning (it can't place data
+				// at demo block counts), so that made reads fill the device
+				// with phantom pages. Like a real SSD returning zeros for an
+				// unmapped LBA, the read now completes without touching flash:
+				// Physical_address_determined stays false, so callers don't
+				// submit it to the TSU, and it is signaled serviced from its
+				// own event - not here, since callers still hold it in the
+				// list they're iterating (the broadcast deletes it).
+				Simulator->Register_sim_event(Simulator->Time() + 1, this,
+					new Service_Unmapped_Read_Params{ transaction }, (int)AMU_Deferred_Event_Type::SERVICE_UNMAPPED_READ);
+				return true;
 			}
 			transaction->PPA = ppa;
 			Convert_ppa_to_address(transaction->PPA, transaction->Address);
@@ -1766,7 +1793,10 @@ namespace SSD_Components
 							_my_instance->manage_user_transaction_facing_barrier(it2->second);
 						} else {
 							if (_my_instance->translate_lpa_to_ppa(transaction->Stream_id, it2->second)) {
-								_my_instance->ftl->TSU->Submit_transaction(it2->second);
+								// An unmapped read completes on its own (see translate_lpa_to_ppa).
+								if (it2->second->Physical_address_determined) {
+									_my_instance->ftl->TSU->Submit_transaction(it2->second);
+								}
 							}
 							else {
 								_my_instance->mange_unsuccessful_translation(it2->second);

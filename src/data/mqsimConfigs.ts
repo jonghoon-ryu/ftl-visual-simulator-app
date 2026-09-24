@@ -117,6 +117,7 @@ export function buildSsdConfigXml(params: SsdParams): string {
 	<Device_Parameter_Set>
 		<Seed>${params.deviceSeed}</Seed>
 		<Enabled_Preconditioning>false</Enabled_Preconditioning>
+		<Unmapped_Reads_Return_Zeros>true</Unmapped_Reads_Return_Zeros>
 		<Memory_Type>FLASH</Memory_Type>
 		<HostInterface_Type>NVME</HostInterface_Type>
 		<IO_Queue_Depth>65535</IO_Queue_Depth>
@@ -195,36 +196,32 @@ export interface WorkloadParams {
   // flash never sees. "마모평준화 시연"'s cold flow ignores this and always
   // runs uncached (see buildWlWorkloadXml).
   writeCache: boolean;
+  // Share of host requests that are reads (0-50, WorkloadPanel). Default 0 -
+  // the GC/WL demos are about writes; reads are there to show how GC slows
+  // them down (ReadLatencyChart). See READ_PERCENTAGE_MAX below.
+  readPercentage: number;
 }
 
 export const DEFAULT_WORKLOAD_PARAMS: WorkloadParams = {
   addressDistribution: 'RANDOM_UNIFORM',
   writeCache: true,
+  readPercentage: 0,
 };
 
 function cachingModeXml(workload: WorkloadParams): string {
   return workload.writeCache ? 'WRITE_CACHE' : 'TURNED_OFF';
 }
 
-// Hardcoded to 0 - a "Read 비율" (Read_Percentage) UI control existed
-// briefly (2026-09-20) but was removed. Found while testing it: a read
-// that lands on an LPA with no mapping yet doesn't just fail or return
-// empty - online_create_entry_for_reads() (Address_Mapping_Unit_Page_
-// Level.cpp) silently reserves a real page for it via the exact same
-// allocation function a write uses (Allocate_block_and_page_in_plane_
-// for_user_write), consuming free-pool capacity identically to a write,
-// with no Program command ever issued. This is MQSim's lazy stand-in for
-// the Perform_preconditioning() pass this project skips (Enabled_
-// Preconditioning=false, for demo speed) - real preconditioning eagerly
-// pre-writes the device before timed measurement so no read ever hits
-// unmapped territory; this project's beginner-facing demos hit that case
-// constantly instead, especially right at the start of a run, which is
-// confusing (a "Read" silently creating a valid page from nothing) and
-// unrelated to what the GC/WL demos are meant to show. Also verified
-// via native CLI that Read_Percentage=99-100 hangs the simulator outright
-// for the same underlying reason (reading a never-written LPA repeatedly
-// near 100% reads). At the hardcoded 0 this class of read never happens.
-const READ_PERCENTAGE = 0;
+// History: a "Read 비율" control existed briefly (2026-09-20) and was
+// removed - a read of a never-written LPA made MQSim's online_create_entry_
+// for_reads() silently reserve a real page for it (its lazy stand-in for
+// the preconditioning pass this project can't use at demo scale), so reads
+// "created" valid pages from nothing, and Read_Percentage 99-100 hung the
+// simulator. Since 2026-09-24 the SSD config sets the (project-specific)
+// Unmapped_Reads_Return_Zeros, so such a read completes without touching
+// flash, like a real SSD returning zeros - and reads are back. Capped at 50%:
+// the demos still need writes to fill the device and drive GC.
+export const READ_PERCENTAGE_MAX = 50;
 
 // Average_Request_Size is in 512B sectors (IO_Flow_Synthetic.cpp's
 // average_request_size_sector / request->LBA_count), not pages. A "burst
@@ -275,7 +272,7 @@ export function buildMappingWorkloadXml(params: SsdParams, workload: WorkloadPar
 			<Initial_Occupancy_Percentage>0</Initial_Occupancy_Percentage>
 			<Working_Set_Percentage>100</Working_Set_Percentage>
 			<Synthetic_Generator_Type>QUEUE_DEPTH</Synthetic_Generator_Type>
-			<Read_Percentage>${READ_PERCENTAGE}</Read_Percentage>
+			<Read_Percentage>${workload.readPercentage}</Read_Percentage>
 			<Address_Distribution>${workload.addressDistribution}</Address_Distribution>
 			<Percentage_of_Hot_Region>0</Percentage_of_Hot_Region>
 			<Generated_Aligned_Addresses>true</Generated_Aligned_Addresses>
@@ -409,7 +406,7 @@ export function buildGcWorkloadXml(params: SsdParams, workload: WorkloadParams =
 			<Initial_Occupancy_Percentage>0</Initial_Occupancy_Percentage>
 			<Working_Set_Percentage>25</Working_Set_Percentage>
 			<Synthetic_Generator_Type>QUEUE_DEPTH</Synthetic_Generator_Type>
-			<Read_Percentage>${READ_PERCENTAGE}</Read_Percentage>
+			<Read_Percentage>${workload.readPercentage}</Read_Percentage>
 			<Address_Distribution>${workload.addressDistribution}</Address_Distribution>
 			<Percentage_of_Hot_Region>0</Percentage_of_Hot_Region>
 			<Generated_Aligned_Addresses>true</Generated_Aligned_Addresses>
@@ -516,6 +513,7 @@ interface SyntheticFlowOptions {
   seed: number;
   stopTime: number;
   totalRequests: number;
+  readPercentage: number;
 }
 
 function syntheticFlowXml(params: SsdParams, flow: SyntheticFlowOptions): string {
@@ -530,7 +528,7 @@ function syntheticFlowXml(params: SsdParams, flow: SyntheticFlowOptions): string
 			<Initial_Occupancy_Percentage>0</Initial_Occupancy_Percentage>
 			<Working_Set_Percentage>${flow.workingSetPercent}</Working_Set_Percentage>
 			<Synthetic_Generator_Type>QUEUE_DEPTH</Synthetic_Generator_Type>
-			<Read_Percentage>${READ_PERCENTAGE}</Read_Percentage>
+			<Read_Percentage>${flow.readPercentage}</Read_Percentage>
 			<Address_Distribution>${flow.addressDistribution}</Address_Distribution>
 			<Percentage_of_Hot_Region>0</Percentage_of_Hot_Region>
 			<Generated_Aligned_Addresses>true</Generated_Aligned_Addresses>
@@ -556,6 +554,8 @@ export const WL_HOT_STREAM_ID = 1;
 export function buildWlWorkloadXml(params: SsdParams, workload: WorkloadParams = DEFAULT_WORKLOAD_PARAMS): string {
   const cold = syntheticFlowXml(params, {
     cachingMode: 'TURNED_OFF',
+    // Write-only: its whole point is data written once and never touched.
+    readPercentage: 0,
     workingSetPercent: WL_COLD_WORKING_SET_PERCENT,
     addressDistribution: 'STREAMING',
     seed: params.workloadSeed,
@@ -564,6 +564,7 @@ export function buildWlWorkloadXml(params: SsdParams, workload: WorkloadParams =
   });
   const hot = syntheticFlowXml(params, {
     cachingMode: workload.writeCache ? 'WRITE_CACHE' : 'TURNED_OFF',
+    readPercentage: workload.readPercentage,
     workingSetPercent: WL_HOT_WORKING_SET_PERCENT,
     addressDistribution: workload.addressDistribution,
     seed: params.workloadSeed + 1,

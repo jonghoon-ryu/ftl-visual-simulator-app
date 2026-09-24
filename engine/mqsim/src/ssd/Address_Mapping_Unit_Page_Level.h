@@ -27,11 +27,17 @@ namespace SSD_Components
 	// GC_and_WL_Unit_Base.h's GC_Deferred_Event_Type: release exactly one
 	// write per call, and defer releasing the next (if any remain) to its
 	// own Sim_Event instead of looping - see Execute_simulator_event().
-	enum class AMU_Deferred_Event_Type { RELEASE_WAITING_WRITE };
+	// SERVICE_UNMAPPED_READ: see translate_lpa_to_ppa()'s read branch.
+	enum class AMU_Deferred_Event_Type { RELEASE_WAITING_WRITE, SERVICE_UNMAPPED_READ };
 
 	struct Release_Waiting_Write_Params
 	{
 		NVM::FlashMemory::Physical_Page_Address Plane_address;
+	};
+
+	struct Service_Unmapped_Read_Params
+	{
+		NVM_Transaction_Flash* Transaction;
 	};
 
 	struct GTDEntryType //Entry type for the Global Translation Directory
@@ -247,6 +253,11 @@ namespace SSD_Components
 		// room) - see AMU_Deferred_Event_Type's doc comment.
 		void release_one_waiting_write(const NVM::FlashMemory::Physical_Page_Address& plane_address);
 		static Address_Mapping_Unit_Page_Level* _my_instance;
+	public:
+		// Set from Device_Parameter_Set::Unmapped_Reads_Return_Zeros when the
+		// device is built (SSD_Device.cpp) - see translate_lpa_to_ppa().
+		static bool Unmapped_reads_return_zeros;
+	private:
 		unsigned int cmt_capacity;
 		AddressMappingDomain** domains;
 		unsigned int CMT_entry_size, GTD_entry_size;//In CMT MQSim stores (lpn, ppn, page status bits) but in GTD it only stores (ppn, page status bits)

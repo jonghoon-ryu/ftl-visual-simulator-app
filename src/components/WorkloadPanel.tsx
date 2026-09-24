@@ -1,4 +1,4 @@
-import type { WorkloadParams } from '../data/mqsimConfigs';
+import { READ_PERCENTAGE_MAX, type WorkloadParams } from '../data/mqsimConfigs';
 
 // MQSim's Utils::Address_Distribution_Type only exposes STREAMING
 // ("sequential") and RANDOM_UNIFORM ("random") here - see WorkloadParams'
@@ -47,6 +47,27 @@ export function WorkloadPanel({ workload, onChange, disabled }: Props) {
           <option value="RANDOM_UNIFORM">Random</option>
           <option value="STREAMING">Sequential</option>
         </select>
+      </div>
+
+      <div className="param-row">
+        <div className="param-label">
+          <span>읽기 비율</span>
+          <span>{workload.readPercentage}%</span>
+        </div>
+        <input
+          className="param-slider"
+          type="range"
+          min={0}
+          max={READ_PERCENTAGE_MAX}
+          step={10}
+          disabled={disabled}
+          value={workload.readPercentage}
+          onChange={(e) => onChange({ ...workload, readPercentage: Number(e.target.value) })}
+        />
+        <div className="param-hint">
+          호스트 요청 중 읽기의 비율. 한 번도 안 쓴 LPN 을 읽으면 flash 를 거치지 않고 바로 끝나요(실제 SSD 가 0 을
+          돌려주듯). GC 시연에서 올리면 "읽기 지연" 차트로 GC 가 읽기를 얼마나 느리게 만드는지 볼 수 있어요.
+        </div>
       </div>
 
       <div className="param-row">

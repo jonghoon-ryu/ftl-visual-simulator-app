@@ -10,6 +10,8 @@ import { WafOpCurve } from './components/WafOpCurve';
 import { PredictQuiz } from './components/PredictQuiz';
 import { useFreeBlockHistory } from './hooks/useFreeBlockHistory';
 import { useLpnJourney } from './hooks/useLpnJourney';
+import { useReadLatencyHistory } from './hooks/useReadLatencyHistory';
+import { ReadLatencyChart } from './components/ReadLatencyChart';
 import { LpnJourneyPanel } from './components/LpnJourneyPanel';
 import { StatsPanel } from './components/StatsPanel';
 import { Toolbar } from './components/Toolbar';
@@ -127,12 +129,14 @@ function App() {
   const wlHighlight = useMqsimWlHighlight(engine.subscribeEvents, engine.ready);
   const freeBlocks = useFreeBlockHistory(engine.subscribeEvents, engine.ready);
   const lpnJourney = useLpnJourney(engine.subscribeEvents, engine.ready);
+  const readLatency = useReadLatencyHistory(engine.subscribeEvents, engine.ready);
   const playback = useSimulationPlayback({
     engine,
     onRefresh: async (opts) => {
       const refreshed = await engine.refresh();
       events.commit();
       freeBlocks.commit(refreshed);
+      readLatency.commit(refreshed);
       lpnJourney.commit();
       // batchEnded: this tick's run() call reached the simulation's natural
       // end mid-batch - any pending moving/erasing overlay reflects a huge
@@ -166,6 +170,7 @@ function App() {
       wlHighlight.reset();
       freeBlocks.reset();
       lpnJourney.reset();
+      readLatency.reset();
     },
     // With the DRAM write cache off a run is ~350-500x fewer event-groups
     // (every write goes to flash, so far fewer host requests fit before
@@ -318,6 +323,9 @@ function App() {
               footer={
                 <>
                   {freeBlockChart}
+                  {wired && configKey === 'gc' && (
+                    <ReadLatencyChart samples={readLatency.samples} readPercentage={activeWorkload.readPercentage} />
+                  )}
                   {wired && configKey === 'gc' && <GcPolicyComparison params={activeParams} workload={activeWorkload} />}
                   {wired && configKey === 'gc' && <WafOpCurve params={activeParams} workload={activeWorkload} />}
                 </>
