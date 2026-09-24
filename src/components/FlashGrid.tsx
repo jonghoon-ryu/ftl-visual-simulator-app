@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { CHIP_COLORS } from '../lib/chipColors';
+import { pageKey } from '../lib/pageKey';
 import type { BlockRow } from '../types';
 
 const LABELS: Record<string, string> = {
@@ -32,9 +33,13 @@ interface Props {
   banner?: ReactNode;
   // Rendered below the legend, inside this panel (e.g. FreeBlockChart).
   footer?: ReactNode;
+  // "Follow one write" (useLpnJourney): the tracked LPN's current page, and
+  // its older copies that are invalid but not yet erased - pageKey() form.
+  trackedCurrentKey?: string | null;
+  trackedOldKeys?: Set<string>;
 }
 
-export function FlashGrid({ blocks, caption, banner, footer }: Props) {
+export function FlashGrid({ blocks, caption, banner, footer, trackedCurrentKey, trackedOldKeys }: Props) {
   // All blocks share the same page count in every preset - take it from
   // the first one so the header row lines up with each column below.
   const pageCount = blocks[0]?.pages.length ?? 0;
@@ -66,10 +71,12 @@ export function FlashGrid({ blocks, caption, banner, footer }: Props) {
             <div className={`row-cells${block.erasing ? ' erasing' : ''}`}>
               {block.pages.map((page, i) => {
                 const freeGray = CHIP_FREE_GRAYS[(block.chip ?? 0) % CHIP_FREE_GRAYS.length];
+                const key = block.block !== undefined ? pageKey(block.chip ?? 0, block.block, i) : null;
+                const tracked = key !== null && key === trackedCurrentKey ? ' tracked-current' : key !== null && trackedOldKeys?.has(key) ? ' tracked-old' : '';
                 return (
                   <div
                     key={i}
-                    className={`cell ${page.state}${page.superseded ? ' superseded' : ''}`}
+                    className={`cell ${page.state}${page.superseded ? ' superseded' : ''}${tracked}`}
                     style={page.state === 'free' ? { background: freeGray, color: freeGray } : undefined}
                     title={
                       `Chip ${block.chip} · ${block.label} / Page ${i} — ${page.state}` +

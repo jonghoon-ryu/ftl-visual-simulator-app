@@ -7,6 +7,8 @@ import { FreeBlockChart } from './components/FreeBlockChart';
 import { GcVictimExplanation } from './components/GcVictimExplanation';
 import { GcPolicyComparison } from './components/GcPolicyComparison';
 import { useFreeBlockHistory } from './hooks/useFreeBlockHistory';
+import { useLpnJourney } from './hooks/useLpnJourney';
+import { LpnJourneyPanel } from './components/LpnJourneyPanel';
 import { StatsPanel } from './components/StatsPanel';
 import { Toolbar } from './components/Toolbar';
 import { UsageGuide } from './components/UsageGuide';
@@ -113,12 +115,14 @@ function App() {
   const overwrites = useMqsimOverwrites(engine.subscribeEvents, engine.ready);
   const wlHighlight = useMqsimWlHighlight(engine.subscribeEvents, engine.ready);
   const freeBlocks = useFreeBlockHistory(engine.subscribeEvents, engine.ready);
+  const lpnJourney = useLpnJourney(engine.subscribeEvents, engine.ready);
   const playback = useSimulationPlayback({
     engine,
     onRefresh: async (opts) => {
       const refreshed = await engine.refresh();
       events.commit();
       freeBlocks.commit(refreshed);
+      lpnJourney.commit();
       // batchEnded: this tick's run() call reached the simulation's natural
       // end mid-batch - any pending moving/erasing overlay reflects a huge
       // multi-step batch, not a single meaningful moment, and nothing will
@@ -150,6 +154,7 @@ function App() {
       overwrites.reset();
       wlHighlight.reset();
       freeBlocks.reset();
+      lpnJourney.reset();
     },
     ticksMultiplier: TICKS_MULTIPLIER[activeId] ?? 1,
     // "매핑 기본" plays one log line at a time instead of a fixed number of
@@ -290,6 +295,8 @@ function App() {
               banner={
                 wired && configKey === 'gc' ? <GcVictimExplanation gc={freeBlocks.lastGc} params={activeParams} /> : null
               }
+              trackedCurrentKey={lpnJourney.journey?.currentKey}
+              trackedOldKeys={lpnJourney.journey?.oldKeys}
               footer={
                 <>
                   {freeBlockChart}
@@ -319,7 +326,18 @@ function App() {
               visible from the moment a preset is selected. */}
           {wired && (
             <div className="sim-mapping-col">
-              <MappingTable log={logEntries} />
+              {lpnJourney.journey && (
+                <LpnJourneyPanel
+                  journey={lpnJourney.journey}
+                  showsGrid={!!blockRows}
+                  onClose={() => lpnJourney.select(null)}
+                />
+              )}
+              <MappingTable
+                log={logEntries}
+                trackedLpnKey={lpnJourney.journey?.lpnKey ?? null}
+                onSelectLpn={(key, label) => lpnJourney.select(key, label)}
+              />
             </div>
           )}
           <div className="sim-sidebar">

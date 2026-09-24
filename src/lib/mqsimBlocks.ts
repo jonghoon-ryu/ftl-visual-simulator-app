@@ -22,6 +22,7 @@ export function toBlockRows(
   // chips.
   return state.blocks.map((block) => ({
     label: `Block ${block.block}`,
+    block: block.block,
     pages: block.pages.map((pageState, page) => {
       const key = pageKey(block.chip, block.block, page);
       return {

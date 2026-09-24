@@ -53,14 +53,34 @@ function renderLogText(rawText: string) {
 // already is: each mapping_updated event is already rendered as one
 // sentence ("LPA 0x0.. 이(가) Block.. Page.. 에 매핑됨 (쓰기/읽기)")
 // interleaved newest-first with gc_started/gc_block_erased/wl_* lines.
-export function MappingTable({ log }: { log: LogEntry[] }) {
+export function MappingTable({
+  log,
+  trackedLpnKey,
+  onSelectLpn,
+}: {
+  log: LogEntry[];
+  // "Follow one write" (useLpnJourney): lines about an LPN are clickable,
+  // and every line about the tracked LPN is highlighted.
+  trackedLpnKey?: string | null;
+  onSelectLpn?: (lpnKey: string, lpnLabel: string) => void;
+}) {
   return (
     <div className="sim-panel">
       <div className="sim-panel-title">로그</div>
       {log.length === 0 && <div className="mini-table-empty">아직 기록된 로그가 없어요 - 재생 버튼을 눌러보세요</div>}
+      {log.length > 0 && onSelectLpn && !trackedLpnKey && (
+        <div className="log-hint">LPN 이 있는 줄을 클릭하면 그 데이터의 여정을 따라가요</div>
+      )}
       <div className="log-list">
         {log.map((e) => (
-          <div className="log-entry" key={e.index}>
+          <div
+            className={`log-entry${e.lpnKey && onSelectLpn ? ' log-entry-clickable' : ''}${
+              e.lpnKey && e.lpnKey === trackedLpnKey ? ' log-entry-tracked' : ''
+            }`}
+            key={e.index}
+            onClick={e.lpnKey && onSelectLpn ? () => onSelectLpn(e.lpnKey!, e.lpnLabel ?? '') : undefined}
+            title={e.lpnKey && onSelectLpn ? `클릭하면 LPN ${e.lpnLabel} 의 데이터가 어디로 옮겨다니는지 따라가요` : undefined}
+          >
             <span className="log-index">{`[${String(e.index).padStart(5, '0')}] `}</span>
             <span className="log-time">{`${e.time} `}</span>
             {renderLogText(e.text)}

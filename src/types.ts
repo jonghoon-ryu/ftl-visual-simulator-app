@@ -17,6 +17,9 @@ export interface BlockRow {
   label: string;
   pages: PageCell[];
   chip?: number;
+  // Block number within its chip - lets FlashGrid build pageKey()s (e.g. to
+  // outline the page useLpnJourney is following). Absent on mock rows.
+  block?: number;
   // True for the render right after this whole block's erase transaction
   // completed - outlines the row so the just-erased block is easy to spot
   // instead of blending into every other block full of plain 'free' cells.
@@ -50,6 +53,11 @@ export interface LogEntry {
   index: number;
   time: string;
   text: string;
+  // Set when the line is about one logical page (a host write/read or a
+  // GC/WL move) - lets MappingTable make it clickable to follow that LPN
+  // (useLpnJourney). streamLpaKey() form, plus the "0x0b2" label.
+  lpnKey?: string;
+  lpnLabel?: string;
 }
 
 export interface WearRow {

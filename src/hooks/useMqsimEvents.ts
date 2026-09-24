@@ -39,10 +39,14 @@ function addressText(a: MqsimPageAddress): string {
 // `prevAddress` is this LPN's physical address just before this event, from
 // the caller's running LPN -> address map - undefined for a first-ever
 // write to that LPN (nothing to contrast it with).
+export function formatLpa(lpa: bigint): string {
+  return `0x${lpa.toString(16).padStart(3, '0')}`;
+}
+
 function describeEvent(event: MqsimEvent, prevAddress?: MqsimPageAddress): string | null {
   switch (event.type) {
     case 'mapping_updated': {
-      const lpaHex = `0x${(event.lpa ?? 0n).toString(16).padStart(3, '0')}`;
+      const lpaHex = formatLpa(event.lpa ?? 0n);
       const a = event.address;
       if (!a) return null;
       if (event.isWrite && prevAddress) {
@@ -109,7 +113,7 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
   const [counters, setCounters] = useState<SimulationCounters>({ hostWrites: 0, hostReads: 0, migrationWrites: 0 });
   const dynamicWlSeenRef = useRef(0);
   const pendingCountersRef = useRef({ hostWrites: 0, hostReads: 0, migrationWrites: 0 });
-  const pendingLogRef = useRef<string[]>([]);
+  const pendingLogRef = useRef<{ text: string; lpnKey?: string; lpnLabel?: string }[]>([]);
   // LPN -> its physical address just before the write currently being
   // described - lets a "Write" log line show "old location -> new
   // location" for an overwrite, same idea as useMqsimOverwrites' own copy
@@ -151,7 +155,7 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
       // assigned here, before the reverse, so they still increase in
       // chronological (not display) order.
       const time = formatClockTime(new Date());
-      const newEntries = pendingLog.map((text) => ({ index: nextIndexRef.current++, time, text })).reverse();
+      const newEntries = pendingLog.map((line) => ({ index: nextIndexRef.current++, time, ...line })).reverse();
       setLog((prev) => [...newEntries, ...prev].slice(0, MAX_LOG_ENTRIES));
       pendingLogRef.current = [];
     }
@@ -205,7 +209,14 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
       }
       if (text === null) return;
 
-      pendingLogRef.current.push(text);
+      const aboutOneLpn =
+        event.lpa !== undefined &&
+        (event.type === 'mapping_updated' || event.type === 'gc_page_migrated' || event.type === 'wl_page_migrated');
+      pendingLogRef.current.push(
+        aboutOneLpn
+          ? { text, lpnKey: streamLpaKey(event.streamId, event.lpa!), lpnLabel: formatLpa(event.lpa!) }
+          : { text },
+      );
     });
   }, [subscribeEvents, ready]);
 
