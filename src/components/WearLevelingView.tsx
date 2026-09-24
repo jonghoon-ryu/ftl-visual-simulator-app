@@ -33,6 +33,8 @@ export function WearLevelingView({ rows, caption, trigger, bannerVisible }: Prop
   // the rest of the run instead of a one-step flash, since a beginner has
   // no realistic chance of watching for the exact moment live.
   const wlTargetCount = rows.filter((row) => row.wlTriggerCount > 0).length;
+  // Only the live-engine rows know which flow a block's data came from.
+  const showDataKind = rows.some((row) => row.dataKind !== undefined);
   return (
     <div className="sim-grid-panel">
       <div className="sim-panel-title">Block 별 Erase Count ( 마모 평준화 대상 )</div>
@@ -67,6 +69,7 @@ export function WearLevelingView({ rows, caption, trigger, bannerVisible }: Prop
       ) : null}
       <div className="wl-row wl-header">
         <div className="wl-label" />
+        {showDataKind && <div className="wl-data">데이터</div>}
         <div className="wl-track" />
         <div className="wl-count">Erase Count</div>
         <div className="wl-trigger-count">발동 횟수</div>
@@ -74,6 +77,11 @@ export function WearLevelingView({ rows, caption, trigger, bannerVisible }: Prop
       {rows.map((row) => (
         <div className={`wl-row${row.wlTriggerCount > 0 ? ' wl-target' : ''}`} key={row.label}>
           <div className="wl-label">{row.label}</div>
+          {showDataKind && (
+            <div className="wl-data">
+              {row.dataKind ? <span className={`wl-data-tag ${row.dataKind}`}>{row.dataKind}</span> : '-'}
+            </div>
+          )}
           <div className="wl-track">
             <div
               className={`wl-fill ${row.level}`}
@@ -91,6 +99,12 @@ export function WearLevelingView({ rows, caption, trigger, bannerVisible }: Prop
         <span><span className="swatch moving" />warm</span>
         <span><span className="swatch invalid" />hot ( 많이 닳음 )</span>
       </div>
+      {showDataKind && (
+        <div className="sim-caption wl-data-caption">
+          데이터 열: <b>cold</b> = 한 번 쓰고 다시 안 건드리는 데이터 (정적 마모평준화가 옮기는 대상), <b>hot</b> =
+          계속 덮어쓰는 데이터. 막대 색(마모 정도)과는 다른 기준이에요.
+        </div>
+      )}
     </div>
   );
 }

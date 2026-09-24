@@ -1,5 +1,6 @@
 import { blockKey } from './pageKey';
 import type { WearRow } from '../types';
+import { WL_COLD_STREAM_ID, WL_HOT_STREAM_ID } from '../data/mqsimConfigs';
 
 // Converts the WASM engine's real per-block snapshot into the WearRow[]
 // shape WearLevelingView.tsx renders. Unlike the static mock data (a fixed
@@ -24,12 +25,21 @@ export function toWearRows(state: MqsimState | null, wlTargetCounts: Map<string,
   return state.blocks.map((block) => {
     const ratio = block.eraseCount / maxEraseCount;
     const level: WearRow['level'] = ratio >= 0.8 ? 'hot' : ratio <= 0.3 ? 'cool' : 'warm';
+    const holdsData = block.pages.some((page) => page !== 'free');
+    const dataKind: WearRow['dataKind'] = !holdsData
+      ? null
+      : block.streamId === WL_COLD_STREAM_ID
+        ? 'cold'
+        : block.streamId === WL_HOT_STREAM_ID
+          ? 'hot'
+          : null;
     return {
       label: multiChip ? `Chip ${block.chip} · Block ${block.block}` : `Block ${block.block}`,
       eraseCount: block.eraseCount,
       maxEraseCount,
       level,
       wlTriggerCount: wlTargetCounts.get(blockKey(block.chip, block.block)) ?? 0,
+      dataKind,
     };
   });
 }

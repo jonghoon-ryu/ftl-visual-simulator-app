@@ -64,6 +64,13 @@ export interface WearRow {
   // 2026-09-20: "차라리 마모 평준화 발동 열을 새로 만들어서 이 열에 마모
   // 평준화 발동 숫자를 표기") instead of the old inline "⭐ 발동!" text.
   wlTriggerCount: number;
+  // Which of "마모평준화 시연"'s two flows this block's data belongs to:
+  // 'cold' = the write-once flow (the data static WL exists to relocate),
+  // 'hot' = the constantly overwritten flow, null = the block holds no data
+  // (free, or a frontier nothing has been written to yet). Undefined for
+  // the static mock rows, which don't model flows at all - the column is
+  // only shown when rows carry it.
+  dataKind?: 'cold' | 'hot' | null;
 }
 
 // The exact condition that made static WL fire (WL_Started_Event's min/max

@@ -574,6 +574,41 @@
   white-space: nowrap;
 }
 
+/* Which flow's data a block holds ("마모평준화 시연" only) - deliberately
+   neutral blue/grey tags, not the orange/red wear colours, since cold/hot
+   *data* is a different axis from how worn the block is. */
+.wl-data {
+  min-width: 44px;
+  font-size: 11px;
+  color: #8b93a7;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.wl-data-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  border: 1px solid transparent;
+}
+
+.wl-data-tag.cold {
+  color: #7fb4ff;
+  background: #7fb4ff14;
+  border-color: #7fb4ff40;
+}
+
+.wl-data-tag.hot {
+  color: #c9cdd8;
+  background: #c9cdd814;
+  border-color: #c9cdd840;
+}
+
+.wl-data-caption {
+  margin-top: 6px;
+}
+
 .wl-trigger-count {
   min-width: 56px;
   text-align: right;
