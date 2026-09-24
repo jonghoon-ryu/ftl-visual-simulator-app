@@ -100,6 +100,9 @@ export function useMqsimEngine(ssdConfigXml: string, workloadXml: string) {
   const refresh = useCallback(async () => {
     const nextState = await call<MqsimState>({ type: 'getState' });
     setState(nextState);
+    // Also returned, for callers that need this exact snapshot right away
+    // (e.g. useFreeBlockHistory's commit) rather than on the next render.
+    return nextState;
   }, [call]);
 
   useEffect(() => {

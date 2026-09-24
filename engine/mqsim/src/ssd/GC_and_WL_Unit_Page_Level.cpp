@@ -289,7 +289,9 @@ namespace SSD_Components
 			//If there are ongoing requests targeting the candidate block, the gc execution should be postponed
 			if (block_manager->Can_execute_gc_wl(gc_candidate_address)) {
 				Stats::Total_gc_executions++;
-				Simulation_Events::Notify_gc_started(pbke->Blocks[gc_candidate_block_id].Stream_id, gc_candidate_address);
+				Simulation_Events::Notify_gc_started(pbke->Blocks[gc_candidate_block_id].Stream_id, gc_candidate_address,
+					block->Current_page_write_index - block->Invalid_page_count, block->Invalid_page_count, pages_no_per_block,
+					pbke->Get_free_block_pool_size(), block_pool_gc_threshold);
 				tsu->Prepare_for_transaction_submit();
 
 				NVM_Transaction_Flash_ER* gc_erase_tr = new NVM_Transaction_Flash_ER(Transaction_Source_Type::GC_WL, pbke->Blocks[gc_candidate_block_id].Stream_id, gc_candidate_address);

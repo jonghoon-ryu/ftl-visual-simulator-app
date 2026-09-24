@@ -209,6 +209,21 @@ namespace SSD_Components
 		// Total across every plane - lets a UI explain a run that ended with
 		// writes still parked because the device filled up (see the WASM
 		// getState() stats' writesWaitingForSpace).
+		// Free-block pool size of every plane, in channel/chip/die/plane order
+		// - the WASM getState() stats' freeBlocksPerPlane.
+		std::vector<unsigned int> Get_free_block_counts()
+		{
+			std::vector<unsigned int> counts;
+			NVM::FlashMemory::Physical_Page_Address addr;
+			for (unsigned int c = 0; c < channel_count; c++)
+				for (unsigned int ch = 0; ch < chip_no_per_channel; ch++)
+					for (unsigned int d = 0; d < die_no_per_chip; d++)
+						for (unsigned int p = 0; p < plane_no_per_die; p++) {
+							addr.ChannelID = c; addr.ChipID = ch; addr.DieID = d; addr.PlaneID = p;
+							counts.push_back(block_manager->Get_pool_size(addr));
+						}
+			return counts;
+		}
 		unsigned int Count_writes_waiting_for_free_space()
 		{
 			unsigned int count = 0;

@@ -109,6 +109,9 @@ namespace SSD_Components
 		// Schedules a deferred Check_gc_required() for this plane - see
 		// gc_retry_needed() for why the Address Mapping Unit needs this.
 		void Request_gc_check(const NVM::FlashMemory::Physical_Page_Address& plane_address);
+		// GC starts on a plane once its free-block pool drops below this
+		// (GC_Exec_Threshold x blocks, floored at max_ongoing_gc_reqs_per_plane).
+		unsigned int Get_gc_threshold_blocks() const { return block_pool_gc_threshold; }
 		GC_Block_Selection_Policy_Type Get_gc_policy();
 		unsigned int Get_GC_policy_specific_parameter();//Returns the parameter specific to the GC block selection policy: threshold for random_pp, set_size for RGA
 		unsigned int Get_minimum_number_of_free_pages_before_GC();

@@ -220,7 +220,9 @@ namespace SSD_Components
 			Simulation_Events::Notify_wl_started(block->Stream_id, gc_wl_candidate_address,
 				block->Erase_count, erase_info.MaxEraseCount, erase_info.MaxEraseBlockId, static_wearleveling_threshold);
 		} else {
-			Simulation_Events::Notify_gc_started(block->Stream_id, gc_wl_candidate_address);
+			Simulation_Events::Notify_gc_started(block->Stream_id, gc_wl_candidate_address,
+				block->Current_page_write_index - block->Invalid_page_count, block->Invalid_page_count, pages_no_per_block,
+				pbke->Get_free_block_pool_size(), block_pool_gc_threshold);
 		}
 		tsu->Prepare_for_transaction_submit();
 		NVM_Transaction_Flash_ER* gc_wl_erase_tr = new NVM_Transaction_Flash_ER(Transaction_Source_Type::GC_WL, block->Stream_id, gc_wl_candidate_address);

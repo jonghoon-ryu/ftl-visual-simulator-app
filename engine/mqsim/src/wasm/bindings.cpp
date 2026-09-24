@@ -120,6 +120,11 @@ namespace
 		payload.set("type", std::string("gc_started"));
 		payload.set("streamId", event.Stream_id);
 		payload.set("block", address_to_val(event.Block_address));
+		payload.set("validPages", event.Valid_pages);
+		payload.set("invalidPages", event.Invalid_pages);
+		payload.set("pagesPerBlock", event.Pages_per_block);
+		payload.set("freeBlocks", event.Free_blocks);
+		payload.set("gcThresholdBlocks", event.Gc_threshold_blocks);
 		g_event_callback(payload);
 	}
 
@@ -324,6 +329,16 @@ val get_state()
 	stats.set("issuedProgramCmd", SSD_Components::Stats::IssuedProgramCMD);
 	stats.set("gcExecutions", SSD_Components::Stats::Total_gc_executions);
 	stats.set("wlExecutions", SSD_Components::Stats::Total_wl_executions);
+	{
+		val free_blocks = val::array();
+		if (g_instance) {
+			for (unsigned int count : MQSim_Interface::Get_free_block_counts(g_instance)) {
+				free_blocks.call<void>("push", count);
+			}
+		}
+		stats.set("freeBlocksPerPlane", free_blocks);
+		stats.set("gcThresholdBlocks", g_instance ? MQSim_Interface::Get_gc_threshold_blocks(g_instance) : 0u);
+	}
 	stats.set("gcRetryLimitHits", SSD_Components::Stats::Gc_retry_limit_hits);
 	stats.set("writesWaitingForSpace", g_instance ? MQSim_Interface::Get_writes_waiting_for_free_space(g_instance) : 0u);
 

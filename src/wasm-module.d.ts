@@ -70,6 +70,10 @@ interface MqsimStats {
   // Times the engine gave up retrying GC on a stalled plane - nonzero means
   // a stall that is an engine problem, not just a full device.
   gcRetryLimitHits: number;
+  // Free-block pool size of each plane (one per chip in this project), and
+  // the pool size below which GC starts on a plane.
+  freeBlocksPerPlane: number[];
+  gcThresholdBlocks: number;
 }
 
 interface MqsimState {
@@ -111,6 +115,14 @@ interface MqsimEvent {
   maxEraseCount?: number;
   maxEraseBlockId?: number;
   threshold?: number;
+  // gc_started only: why this victim - its page counts when GC started
+  // (validPages are what must be moved) and the plane's free-block pool vs
+  // the pool size below which GC starts.
+  validPages?: number;
+  invalidPages?: number;
+  pagesPerBlock?: number;
+  freeBlocks?: number;
+  gcThresholdBlocks?: number;
 }
 
 interface MqsimModule {

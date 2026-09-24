@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+import { CHIP_COLORS } from '../lib/chipColors';
 import type { BlockRow } from '../types';
 
 const LABELS: Record<string, string> = {
@@ -14,10 +16,6 @@ const LABELS: Record<string, string> = {
 // them).
 const ALL_STATES: (keyof typeof LABELS)[] = ['valid', 'invalid', 'moving', 'free'];
 
-// One accent per chip - ParamPanel currently caps chip count at 4, so 4 is
-// enough; indexed with % so a larger chip count still degrades gracefully
-// instead of going undefined.
-const CHIP_COLORS = ['#4dabf7', '#b980f0', '#ff8ac2', '#4ecdc4'];
 
 // Distinct grays for the 'free' cell state, one per chip - the per-chip
 // colored cell border was removed earlier (too much visual noise stacked
@@ -30,9 +28,13 @@ const CHIP_FREE_GRAYS = ['#383c4d', '#454a5f', '#2e313d', '#4f4438'];
 interface Props {
   blocks: BlockRow[];
   caption: string;
+  // Rendered above the grid, under the caption (e.g. GcVictimExplanation).
+  banner?: ReactNode;
+  // Rendered below the legend, inside this panel (e.g. FreeBlockChart).
+  footer?: ReactNode;
 }
 
-export function FlashGrid({ blocks, caption }: Props) {
+export function FlashGrid({ blocks, caption, banner, footer }: Props) {
   // All blocks share the same page count in every preset - take it from
   // the first one so the header row lines up with each column below.
   const pageCount = blocks[0]?.pages.length ?? 0;
@@ -41,6 +43,7 @@ export function FlashGrid({ blocks, caption }: Props) {
     <div className="sim-grid-panel">
       <div className="sim-panel-title">Flash Array</div>
       {caption && <div className="sim-caption">{caption}</div>}
+      {banner}
       <div className="grid-row grid-header-row">
         <div className="chip-badge chip-badge-spacer">Chip</div>
         <div className="row-label">Page</div>
@@ -92,6 +95,7 @@ export function FlashGrid({ blocks, caption }: Props) {
           </span>
         ))}
       </div>
+      {footer}
     </div>
   );
 }

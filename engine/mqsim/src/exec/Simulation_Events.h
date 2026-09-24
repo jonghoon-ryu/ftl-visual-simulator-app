@@ -56,14 +56,23 @@ namespace Simulation_Events
 	{
 		stream_id_type Stream_id;
 		NVM::FlashMemory::Physical_Page_Address Block_address;
+		// Why this victim, for a UI to explain (see FlashGrid's GC banner):
+		// its page counts at the moment GC starts (valid pages are what has
+		// to be moved) and the plane's free-block pool vs GC's threshold.
+		unsigned int Valid_pages;
+		unsigned int Invalid_pages;
+		unsigned int Pages_per_block;
+		unsigned int Free_blocks;
+		unsigned int Gc_threshold_blocks;
 	};
 
 	extern void (*On_gc_started)(const GC_Started_Event&);
 
-	inline void Notify_gc_started(stream_id_type stream_id, const NVM::FlashMemory::Physical_Page_Address& block_address)
+	inline void Notify_gc_started(stream_id_type stream_id, const NVM::FlashMemory::Physical_Page_Address& block_address,
+		unsigned int valid_pages, unsigned int invalid_pages, unsigned int pages_per_block, unsigned int free_blocks, unsigned int gc_threshold_blocks)
 	{
 		if (On_gc_started) {
-			GC_Started_Event event{ stream_id, block_address };
+			GC_Started_Event event{ stream_id, block_address, valid_pages, invalid_pages, pages_per_block, free_blocks, gc_threshold_blocks };
 			On_gc_started(event);
 		}
 	}

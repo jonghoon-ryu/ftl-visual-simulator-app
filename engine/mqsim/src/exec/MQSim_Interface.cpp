@@ -300,6 +300,18 @@ namespace MQSim_Interface
 		return static_cast<SSD_Components::Address_Mapping_Unit_Page_Level*>(ftl->Address_Mapping_Unit)->Count_writes_waiting_for_free_space();
 	}
 
+	std::vector<unsigned int> Get_free_block_counts(Simulation_Instance* instance)
+	{
+		SSD_Components::FTL* ftl = static_cast<SSD_Components::FTL*>(instance->Ssd->Firmware);
+		return static_cast<SSD_Components::Address_Mapping_Unit_Page_Level*>(ftl->Address_Mapping_Unit)->Get_free_block_counts();
+	}
+
+	unsigned int Get_gc_threshold_blocks(Simulation_Instance* instance)
+	{
+		SSD_Components::FTL* ftl = static_cast<SSD_Components::FTL*>(instance->Ssd->Firmware);
+		return ftl->GC_and_WL_Unit->Get_gc_threshold_blocks();
+	}
+
 	void Finalize_scenario(Simulation_Instance* instance)
 	{
 		delete instance->Host;

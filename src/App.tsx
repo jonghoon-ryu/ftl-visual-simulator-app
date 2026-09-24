@@ -3,6 +3,9 @@ import './App.css';
 import { FlashGrid } from './components/FlashGrid';
 import { MappingTable } from './components/MappingTable';
 import { ParamPanel } from './components/ParamPanel';
+import { FreeBlockChart } from './components/FreeBlockChart';
+import { GcVictimExplanation } from './components/GcVictimExplanation';
+import { useFreeBlockHistory } from './hooks/useFreeBlockHistory';
 import { StatsPanel } from './components/StatsPanel';
 import { Toolbar } from './components/Toolbar';
 import { UsageGuide } from './components/UsageGuide';
@@ -108,11 +111,13 @@ function App() {
   const migrations = useMqsimMigrations(engine.subscribeEvents, engine.ready);
   const overwrites = useMqsimOverwrites(engine.subscribeEvents, engine.ready);
   const wlHighlight = useMqsimWlHighlight(engine.subscribeEvents, engine.ready);
+  const freeBlocks = useFreeBlockHistory(engine.subscribeEvents, engine.ready);
   const playback = useSimulationPlayback({
     engine,
     onRefresh: async (opts) => {
-      await engine.refresh();
+      const refreshed = await engine.refresh();
       events.commit();
+      freeBlocks.commit(refreshed);
       // batchEnded: this tick's run() call reached the simulation's natural
       // end mid-batch - any pending moving/erasing overlay reflects a huge
       // multi-step batch, not a single meaningful moment, and nothing will
@@ -143,6 +148,7 @@ function App() {
       migrations.reset();
       overwrites.reset();
       wlHighlight.reset();
+      freeBlocks.reset();
     },
     ticksMultiplier: TICKS_MULTIPLIER[activeId] ?? 1,
     // "매핑 기본" plays one log line at a time instead of a fixed number of
@@ -240,6 +246,10 @@ function App() {
   // device before anything is overwritten, so GC has nothing to reclaim and
   // the demo ends there by design (see DEFAULT_MAPPING_PARAMS). Without
   // this, playback just stops with no visible reason.
+  // Only where GC actually runs - "매핑 기본" is tuned so GC almost never
+  // fires, so its line would just sit flat above the threshold.
+  const freeBlockChart =
+    wired && (configKey === 'gc' || configKey === 'wear-leveling') ? <FreeBlockChart history={freeBlocks.history} /> : null;
   const deviceFull = wired && !playback.hasMore && (engine.state?.stats.writesWaitingForSpace ?? 0) > 0;
   const logEntries = wired ? events.log : active.log;
   const caption = wired ? '' : active.caption;
@@ -272,9 +282,24 @@ function App() {
           }}
         />
         <div className="sim-body">
-          {blockRows && <FlashGrid blocks={blockRows} caption={caption} />}
+          {blockRows && (
+            <FlashGrid
+              blocks={blockRows}
+              caption={caption}
+              banner={
+                wired && configKey === 'gc' ? <GcVictimExplanation gc={freeBlocks.lastGc} params={activeParams} /> : null
+              }
+              footer={freeBlockChart}
+            />
+          )}
           {wearRows && (
-            <WearLevelingView rows={wearRows} caption={caption} trigger={wlTrigger} bannerVisible={wlBannerVisible} />
+            <WearLevelingView
+              rows={wearRows}
+              caption={caption}
+              trigger={wlTrigger}
+              bannerVisible={wlBannerVisible}
+              footer={freeBlockChart}
+            />
           )}
           {/* All three wired presets get the 로그 column now - previously
               마모평준화 시연 was excluded (it never had a mapping table),

@@ -1,8 +1,11 @@
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import type { WearRow, WlTriggerInfo } from '../types';
 
 interface Props {
   rows: WearRow[];
+  // Rendered at the bottom of this panel (e.g. FreeBlockChart).
+  footer?: ReactNode;
   caption: string;
   // Most recent WL trigger's exact condition (useMqsimWlHighlight) - null
   // before WL has ever fired this run. Powers the "왜 발동했나요?" button
@@ -18,7 +21,7 @@ interface Props {
   bannerVisible: boolean;
 }
 
-export function WearLevelingView({ rows, caption, trigger, bannerVisible }: Props) {
+export function WearLevelingView({ rows, caption, trigger, bannerVisible, footer }: Props) {
   // Collapsed by default even once a trigger exists - showing it
   // automatically would fight with ▶ auto-pausing right when this becomes
   // available (see App.tsx's onRefresh / useSimulationPlayback's
@@ -105,6 +108,7 @@ export function WearLevelingView({ rows, caption, trigger, bannerVisible }: Prop
           계속 덮어쓰는 데이터. 막대 색(마모 정도)과는 다른 기준이에요.
         </div>
       )}
+      {footer}
     </div>
   );
 }

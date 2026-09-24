@@ -468,6 +468,43 @@
   line-height: 1.5;
 }
 
+/* GC 시연's victim explanation (GcVictimExplanation) - same shape as
+   .wl-status/.wl-explanation, tinted the invalid-page red (what GC reclaims)
+   so it doesn't read as the WL banner. */
+.gc-status {
+  font-size: 12px;
+  color: #f38b91;
+  background: #f16d7514;
+  border: 1px solid #f16d7540;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+}
+
+.gc-status-button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.gc-status-button:hover {
+  background: #f16d751f;
+  border-color: #f16d7566;
+}
+
+.gc-explanation {
+  font-size: 12px;
+  color: #c9cdd8;
+  background: #262a3a;
+  border: 1px solid #3a3f55;
+  border-radius: 6px;
+  padding: 4px 12px;
+  margin: -8px 0 14px;
+  line-height: 1.6;
+}
+
 /* Clickable variant of .wl-status - toggles .wl-explanation below it once a
    trigger has fired. Reuses .wl-status's look so it doesn't read as a new,
    unrelated element; only the pointer affordances are added. */
@@ -816,4 +853,154 @@
     padding: 9px 14px;
     font-size: 12px;
   }
+}
+
+/* Free-block timeline (FreeBlockChart) - "빈 block 이 임계값 아래로 가면 GC".
+   Line in the app accent, threshold dashed and recessive, GC dots in the
+   same red as invalid pages (what GC reclaims), WL star in the WL yellow. */
+.free-chart {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #33374a;
+}
+
+.free-chart-title {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: #9aa0b4;
+  margin-bottom: 6px;
+}
+
+.free-chart-empty,
+.free-chart-caption {
+  font-size: 11px;
+  color: #7d8296;
+  line-height: 1.5;
+}
+
+.free-chart-caption {
+  margin-top: 6px;
+}
+
+.free-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 11px;
+  color: #9aa0b4;
+  margin-bottom: 6px;
+}
+
+.free-chart-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.free-legend-line {
+  width: 14px;
+  height: 2px;
+  background: #7fa2ff;
+  border-radius: 1px;
+}
+
+.free-legend-threshold {
+  width: 14px;
+  border-top: 2px dashed #7d8296;
+}
+
+.free-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f16d75;
+}
+
+.free-legend-star {
+  color: #f5b942;
+  font-size: 11px;
+}
+
+.free-chart-row {
+  position: relative;
+  margin-bottom: 4px;
+}
+
+.free-chart-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: #9aa0b4;
+}
+
+.free-chip-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.free-chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 110px;
+}
+
+.free-axis {
+  stroke: #33374a;
+  stroke-width: 1;
+}
+
+.free-tick {
+  fill: #7d8296;
+  font-size: 9px;
+}
+
+.free-threshold {
+  stroke: #7d8296;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.free-line {
+  fill: none;
+  stroke: #7fa2ff;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.free-crosshair {
+  stroke: #9aa0b4;
+  stroke-width: 1;
+  opacity: 0.5;
+}
+
+.free-gc-dot {
+  fill: #f16d75;
+  stroke: #1c1e26;
+  stroke-width: 2;
+}
+
+.free-wl-star {
+  fill: #f5b942;
+  font-size: 12px;
+  stroke: #1c1e26;
+  stroke-width: 1;
+  paint-order: stroke;
+}
+
+.free-hit {
+  fill: transparent;
+}
+
+.free-tooltip {
+  font-size: 11px;
+  color: #d7dae3;
+  background: #262a3a;
+  border: 1px solid #3a3f55;
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin-top: 2px;
+  line-height: 1.5;
 }
