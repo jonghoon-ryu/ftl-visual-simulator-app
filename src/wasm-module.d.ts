@@ -67,6 +67,9 @@ interface MqsimStats {
   // nonzero once the run has ended means the device filled up and the
   // remaining writes could never be serviced.
   writesWaitingForSpace: number;
+  // Times the engine gave up retrying GC on a stalled plane - nonzero means
+  // a stall that is an engine problem, not just a full device.
+  gcRetryLimitHits: number;
 }
 
 interface MqsimState {
@@ -117,6 +120,8 @@ interface MqsimModule {
   run(n: number): boolean;
   stepIo(): boolean;
   stepEvent(): boolean;
+  // stepEvent() n times - see bindings.cpp's run_events().
+  runEvents(n: number): boolean;
   getState(): MqsimState;
   setEventCallback(callback: ((event: MqsimEvent) => void) | null): void;
 }

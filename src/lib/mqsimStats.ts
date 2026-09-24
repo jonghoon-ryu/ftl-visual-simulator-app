@@ -2,13 +2,18 @@ import type { StatItem } from '../types';
 import type { SimulationCounters } from '../hooks/useMqsimEvents';
 
 // WAF (Write Amplification Factor) = flash-side page writes / host-side
-// page writes. issuedProgramCmd already counts every physical page program
-// (user writes + GC/WL copy-writes); hostWrites (from useMqsimEvents) counts
-// only host-triggered logical page writes - see that hook's doc comment for
-// why it's the right denominator instead of a raw request count.
+// page writes = (host writes + GC/WL page moves) / host writes. Both sides
+// are counted when the destination page is allocated (useMqsimEvents).
+// This used to divide the engine's IssuedProgramCMD by hostWrites, but
+// IssuedProgramCMD only counts once the program *command* reaches the chip
+// - writes still queued in the scheduler were in the denominator but not
+// yet the numerator, so mid-run WAF read below 1x (e.g. 20 host writes vs
+// 6 issued commands early in "매핑 기본"), which can't happen for real. The
+// two agree once the run ends. Mapping-table page writes aren't counted -
+// none of this project's presets issue any (the whole table fits in the
+// CMT; Issued_Flash_Program_CMD_For_Mapping is 0).
 export function toStatItems(state: MqsimState | null, counters: SimulationCounters): StatItem[] {
-  const issuedProgramCmd = state?.stats.issuedProgramCmd ?? 0;
-  const waf = counters.hostWrites === 0 ? null : issuedProgramCmd / counters.hostWrites;
+  const waf = counters.hostWrites === 0 ? null : (counters.hostWrites + counters.migrationWrites) / counters.hostWrites;
 
   // Both derived straight from the block snapshot already in state.blocks -
   // no separate engine export needed (unlike WAF/gcExecutions/wlExecutions,
@@ -29,7 +34,7 @@ export function toStatItems(state: MqsimState | null, counters: SimulationCounte
     {
       label: 'WAF',
       value: waf === null ? '-' : `${waf.toFixed(2)}×`,
-      hint: waf === null ? '아직 쓰기가 없어요' : '1 번 쓰기 위한 실제 write 횟수',
+      hint: waf === null ? '아직 쓰기가 없어요' : '1 번 쓰기 위한 실제 write 횟수 (호스트 쓰기 + GC/WL 이동)',
     },
     {
       label: 'Valid page 비율',

@@ -145,6 +145,11 @@ function App() {
       wlHighlight.reset();
     },
     ticksMultiplier: TICKS_MULTIPLIER[activeId] ?? 1,
+    // "매핑 기본" plays one log line at a time instead of a fixed number of
+    // event-groups - see useSimulationPlayback's playUnit. The other two
+    // presets keep event-group pacing: their log lines are dense enough,
+    // and TICKS_MULTIPLIER is tuned around it.
+    playUnit: activeId === 'mapping' ? 'logEvents' : 'eventGroups',
   });
 
   // Reconfigures the engine whenever the active preset's params (or the

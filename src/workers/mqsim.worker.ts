@@ -21,6 +21,7 @@ type Request =
   | { id: number; type: 'configure'; ssdConfigXml: string; workloadXml: string }
   | { id: number; type: 'step' }
   | { id: number; type: 'run'; n: number }
+  | { id: number; type: 'runEvents'; n: number }
   | { id: number; type: 'stepIo' }
   | { id: number; type: 'stepEvent' }
   | { id: number; type: 'getState' };
@@ -71,6 +72,9 @@ ctx.onmessage = async (e) => {
         break;
       case 'stepEvent':
         result = mod.stepEvent();
+        break;
+      case 'runEvents':
+        result = mod.runEvents(req.n);
         break;
       case 'getState':
         result = mod.getState();

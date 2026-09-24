@@ -16,7 +16,7 @@ interface RefreshResult {
 }
 
 interface Options {
-  engine: Pick<MqsimEngine, 'ready' | 'step' | 'run' | 'stepEvent' | 'configure'>;
+  engine: Pick<MqsimEngine, 'ready' | 'step' | 'run' | 'stepEvent' | 'runEvents' | 'configure'>;
   // `batchEnded` is true only for the ▶ play loop's tick when that tick's
   // run() call itself reached the end of the simulation (no more events) -
   // see its call site below for why this needs to be distinguished from an
@@ -30,14 +30,31 @@ interface Options {
   // reasonable real-time span without changing the slider's 1-8 UI range.
   // Defaults to 1 (used by "매핑 기본", which only needs a few dozen).
   ticksMultiplier?: number;
+  // What one ▶ tick advances by. 'eventGroups' (default): speed x
+  // ticksMultiplier raw event-groups. 'logEvents': whole log lines (see
+  // bindings.cpp's run_events()), speed/LOG_EVENTS_SPEED_DIVISOR of them per
+  // tick - for "매핑 기본", whose log lines are sparse in event-group terms:
+  // with 'eventGroups' the screen sat unchanged for a minute or more while
+  // the DRAM write cache absorbed writes, which read as frozen.
+  playUnit?: 'eventGroups' | 'logEvents';
 }
+
+// 'logEvents' pace: speed 8 (the default) = one log line per tick (~3/s at
+// TICK_INTERVAL_MS 300), speed 1 = one every 8 ticks.
+const LOG_EVENTS_SPEED_DIVISOR = 8;
 
 // Drives step()/run() for Toolbar's playback controls, via the worker-
 // backed engine client (useMqsimEngine) - so this hook's own calls are all
 // async. Kept separate from useMqsimEngine (which only loads/inits the
 // engine once) since this hook's state - isPlaying, speed, hasMore - is
 // about *driving* an already-loaded engine, not loading it.
-export function useSimulationPlayback({ engine, onRefresh, onRestart, ticksMultiplier = 1 }: Options) {
+export function useSimulationPlayback({
+  engine,
+  onRefresh,
+  onRestart,
+  ticksMultiplier = 1,
+  playUnit = 'eventGroups',
+}: Options) {
   const [isPlaying, setIsPlaying] = useState(false);
   // Default 8 (the slider's max), not 1 - Ryu's ask (2026-09-20) for "매핑
   // 기본"/"GC 시연" to start at full speed. There's only one playback
@@ -52,10 +69,13 @@ export function useSimulationPlayback({ engine, onRefresh, onRestart, ticksMulti
   // an effect (runs after commit), not during render - mutating a ref's
   // .current directly in the render body is unsafe under Concurrent/Strict
   // Mode.
-  const latestRef = useRef({ engine, onRefresh, ticksMultiplier });
+  const latestRef = useRef({ engine, onRefresh, ticksMultiplier, playUnit });
   useEffect(() => {
-    latestRef.current = { engine, onRefresh, ticksMultiplier };
+    latestRef.current = { engine, onRefresh, ticksMultiplier, playUnit };
   });
+  // Fractional log lines owed to 'logEvents' playback (speeds below
+  // LOG_EVENTS_SPEED_DIVISOR advance less than one line per tick).
+  const logEventBudgetRef = useRef(0);
   // Guards against a tick starting before the previous one's postMessage
   // round-trip has resolved - shouldn't normally happen at 300ms with this
   // project's tiny demo workloads, but a worker call is genuinely async now
@@ -114,11 +134,22 @@ export function useSimulationPlayback({ engine, onRefresh, onRestart, ticksMulti
 
   useEffect(() => {
     if (!isPlaying || !engine.ready) return;
+    logEventBudgetRef.current = 0;
     const id = setInterval(() => {
       if (tickInFlightRef.current) return;
+      const { engine: tickEngine, ticksMultiplier: multiplier, playUnit: unit } = latestRef.current;
+      let tick: Promise<boolean>;
+      if (unit === 'logEvents') {
+        logEventBudgetRef.current += speed / LOG_EVENTS_SPEED_DIVISOR;
+        const lines = Math.floor(logEventBudgetRef.current);
+        if (lines < 1) return;
+        logEventBudgetRef.current -= lines;
+        tick = tickEngine.runEvents(lines);
+      } else {
+        tick = tickEngine.run(speed * multiplier);
+      }
       tickInFlightRef.current = true;
-      latestRef.current.engine
-        .run(speed * latestRef.current.ticksMultiplier)
+      tick
         .then(async (more) => {
           // A play tick's run() call can process tens of thousands of
           // event-groups at once (see ticksMultiplier in App.tsx) - when it

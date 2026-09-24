@@ -324,6 +324,7 @@ val get_state()
 	stats.set("issuedProgramCmd", SSD_Components::Stats::IssuedProgramCMD);
 	stats.set("gcExecutions", SSD_Components::Stats::Total_gc_executions);
 	stats.set("wlExecutions", SSD_Components::Stats::Total_wl_executions);
+	stats.set("gcRetryLimitHits", SSD_Components::Stats::Gc_retry_limit_hits);
 	stats.set("writesWaitingForSpace", g_instance ? MQSim_Interface::Get_writes_waiting_for_free_space(g_instance) : 0u);
 
 	val state = val::object();
@@ -391,6 +392,21 @@ bool step_event()
 	return has_more;
 }
 
+// step_event() n times - n loggable events, however many internal
+// event-groups that takes. Backs ▶ for presets whose visible events are
+// sparse in event-group terms: run(n) there spends long stretches (e.g.
+// while the DRAM write cache absorbs writes and nothing reaches flash)
+// processing event-groups that produce no log line and no screen change,
+// which reads as a frozen screen even though the simulation is working.
+bool run_events(int n)
+{
+	bool has_more = true;
+	for (int i = 0; i < n && has_more; i++) {
+		has_more = step_event();
+	}
+	return has_more;
+}
+
 // Re-initializes with new config/workload text, discarding the current run -
 // same steps as init(), kept as a separate binding name to match the
 // documented parameter-change/reset use case.
@@ -406,6 +422,7 @@ EMSCRIPTEN_BINDINGS(mqsim_module)
 	function("run", &run);
 	function("stepIo", &step_io);
 	function("stepEvent", &step_event);
+	function("runEvents", &run_events);
 	function("configure", &configure);
 	function("setEventCallback", &set_event_callback);
 	function("getState", &get_state);

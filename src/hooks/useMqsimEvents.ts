@@ -16,6 +16,11 @@ const DYNAMIC_WL_LOG_SAMPLE_RATE = 20;
 export interface SimulationCounters {
   hostWrites: number;
   hostReads: number;
+  // GC/WL page moves - each one is a flash page write the host never asked
+  // for. Counted from gc_page_migrated/wl_page_migrated, which fire when the
+  // move's destination page is allocated - the same moment mapping_updated
+  // (hostWrites) fires for a host write, so the two stay in step for WAF.
+  migrationWrites: number;
 }
 
 // Block/page indices zero-padded to a fixed width (both ParamPanel sliders
@@ -101,9 +106,9 @@ function formatClockTime(d: Date): string {
 // a whole tick's worth of events now costs one render, not thousands.
 export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], ready: boolean) {
   const [log, setLog] = useState<LogEntry[]>([]);
-  const [counters, setCounters] = useState<SimulationCounters>({ hostWrites: 0, hostReads: 0 });
+  const [counters, setCounters] = useState<SimulationCounters>({ hostWrites: 0, hostReads: 0, migrationWrites: 0 });
   const dynamicWlSeenRef = useRef(0);
-  const pendingCountersRef = useRef({ hostWrites: 0, hostReads: 0 });
+  const pendingCountersRef = useRef({ hostWrites: 0, hostReads: 0, migrationWrites: 0 });
   const pendingLogRef = useRef<string[]>([]);
   // LPN -> its physical address just before the write currently being
   // described - lets a "Write" log line show "old location -> new
@@ -117,12 +122,12 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
   const nextIndexRef = useRef(0);
 
   const reset = () => {
-    pendingCountersRef.current = { hostWrites: 0, hostReads: 0 };
+    pendingCountersRef.current = { hostWrites: 0, hostReads: 0, migrationWrites: 0 };
     pendingLogRef.current = [];
     lpaToAddressRef.current = new Map();
     nextIndexRef.current = 0;
     setLog([]);
-    setCounters({ hostWrites: 0, hostReads: 0 });
+    setCounters({ hostWrites: 0, hostReads: 0, migrationWrites: 0 });
     dynamicWlSeenRef.current = 0;
   };
 
@@ -130,12 +135,13 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
   // during that step into render state in a single setCounters/setLog pair.
   const commit = useCallback(() => {
     const pendingCounters = pendingCountersRef.current;
-    if (pendingCounters.hostWrites > 0 || pendingCounters.hostReads > 0) {
+    if (pendingCounters.hostWrites > 0 || pendingCounters.hostReads > 0 || pendingCounters.migrationWrites > 0) {
       setCounters((prev) => ({
         hostWrites: prev.hostWrites + pendingCounters.hostWrites,
         hostReads: prev.hostReads + pendingCounters.hostReads,
+        migrationWrites: prev.migrationWrites + pendingCounters.migrationWrites,
       }));
-      pendingCountersRef.current = { hostWrites: 0, hostReads: 0 };
+      pendingCountersRef.current = { hostWrites: 0, hostReads: 0, migrationWrites: 0 };
     }
 
     const pendingLog = pendingLogRef.current;
@@ -169,6 +175,9 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
       if (event.type === 'mapping_updated') {
         if (event.isWrite) pendingCountersRef.current.hostWrites += 1;
         else pendingCountersRef.current.hostReads += 1;
+      }
+      if (event.type === 'gc_page_migrated' || event.type === 'wl_page_migrated') {
+        pendingCountersRef.current.migrationWrites += 1;
       }
 
       let shouldLog = true;
