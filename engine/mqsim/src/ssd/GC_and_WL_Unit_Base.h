@@ -60,11 +60,19 @@ namespace SSD_Components
 	// How long to wait before re-running a GC check that started nothing
 	// while the plane's writes are stalled - see gc_retry_needed().
 	const sim_time_type GC_RETRY_DELAY = 1000;
+	// Safety net for that retry: stop after this many unproductive checks in
+	// a row. A policy that can never reach the reclaimable block (FIFO did,
+	// before its Block_usage_history leak was fixed) would otherwise retry
+	// forever - a simulation that never ends is worse than one that stalls.
+	const unsigned int GC_MAX_RETRIES = 1000;
 
 	struct Check_Gc_Required_Params
 	{
 		unsigned int Free_block_pool_size;
 		NVM::FlashMemory::Physical_Page_Address Plane_address;
+		// How many gc_retry_needed() retries in a row led here (0 for any
+		// other trigger) - see GC_MAX_RETRIES.
+		unsigned int Retry_count = 0;
 	};
 
 	struct Run_Static_Wl_Params
@@ -123,6 +131,7 @@ namespace SSD_Components
 		// this now runs as its own deferred event instead of inline there.
 		void execute_parked_gc_wl_if_ready(const NVM::FlashMemory::Physical_Page_Address& block_address);
 		bool gc_retry_needed(const NVM::FlashMemory::Physical_Page_Address& plane_address);
+		bool has_room_to_migrate(const PlaneBookKeepingType* pbke, const flash_block_ID_type victim_block_id);
 		bool is_safe_gc_wl_candidate(const PlaneBookKeepingType* pbke, const flash_block_ID_type gc_wl_candidate_block_id);//Checks if block_address is a safe candidate for gc execution, i.e., 1) it is not a write frontier, and 2) there is no ongoing program operation
 		bool check_static_wl_required(const NVM::FlashMemory::Physical_Page_Address plane_address);
 		bool get_static_wl_erase_info(const NVM::FlashMemory::Physical_Page_Address& plane_address,

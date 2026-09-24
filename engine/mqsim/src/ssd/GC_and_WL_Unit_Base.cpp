@@ -292,9 +292,10 @@ namespace SSD_Components
 				PlaneBookKeepingType* pbke = block_manager->Get_plane_bookkeeping_entry(params->Plane_address);
 				size_t ongoing_erases_before = pbke->Ongoing_erase_operations.size();
 				Check_gc_required(params->Free_block_pool_size, params->Plane_address);
-				if (pbke->Ongoing_erase_operations.size() == ongoing_erases_before && gc_retry_needed(params->Plane_address)) {
+				if (pbke->Ongoing_erase_operations.size() == ongoing_erases_before && params->Retry_count < GC_MAX_RETRIES
+					&& gc_retry_needed(params->Plane_address)) {
 					Simulator->Register_sim_event(Simulator->Time() + GC_RETRY_DELAY, this,
-						new Check_Gc_Required_Params{ pbke->Get_free_block_pool_size(), params->Plane_address }, (int)GC_Deferred_Event_Type::CHECK_GC_REQUIRED);
+						new Check_Gc_Required_Params{ pbke->Get_free_block_pool_size(), params->Plane_address, params->Retry_count + 1 }, (int)GC_Deferred_Event_Type::CHECK_GC_REQUIRED);
 				}
 				delete params;
 				break;
@@ -332,8 +333,43 @@ namespace SSD_Components
 	// translation()); from then on, this retry keeps it going.
 	// Retrying (instead of, say, making RGA fall back to greedy) keeps every
 	// selection policy's own behavior unchanged. Only retries while a
-	// reclaimable block actually exists, so it can't loop forever on a plane
-	// that truly has nothing to collect.
+	// reclaimable block actually exists, and at most GC_MAX_RETRIES times in
+	// a row - a policy with a blind spot (FIFO had one) must not turn a
+	// stall into a simulation that never ends.
+	// DEVIATION FROM UPSTREAM MQSim (needed because of this project's own
+	// max_ongoing_gc_reqs_per_plane scale tweak - see SSD_Device.cpp):
+	// upstream never checks, before starting a GC/WL, whether the plane has
+	// room for the pages it is about to move. It relied on the free-pool
+	// floor (max_ongoing_gc_reqs_per_plane, 10 upstream) that blocks user
+	// writes: each concurrent GC moves at most one block's worth of pages,
+	// so a floor of N covers N concurrent GCs. This project lowered that
+	// floor to 3, a user write frontier can still take a block at exactly
+	// 3 (leaving 2), and a multi-flow preset has one GC write frontier per
+	// flow - so 3 concurrent GCs with mostly-valid victims (RANDOM_P/
+	// RANDOM_PP pick any full block) ran the pool dry: "Requesting a free
+	// block from an empty pool!". Admits a GC/WL only if the free pool can
+	// hold every page still to be moved by the ones already running plus
+	// this victim's valid pages. A victim with no valid pages always
+	// passes - erasing it only ever gives space back.
+	bool GC_and_WL_Unit_Base::has_room_to_migrate(const PlaneBookKeepingType* pbke, const flash_block_ID_type victim_block_id)
+	{
+		const Block_Pool_Slot_Type& victim = pbke->Blocks[victim_block_id];
+		unsigned int pages_to_move = victim.Current_page_write_index - victim.Invalid_page_count;
+		if (pages_to_move == 0) {
+			return true;
+		}
+		for (flash_block_ID_type block_id : pbke->Ongoing_erase_operations) {
+			const Block_Pool_Slot_Type& block = pbke->Blocks[block_id];
+			// A parked GC/WL (no erase transaction yet) still has all its
+			// valid pages to move; a running one has whatever migrations
+			// haven't completed.
+			pages_to_move += block.Erase_transaction == NULL
+				? block.Current_page_write_index - block.Invalid_page_count
+				: (unsigned int)block.Erase_transaction->Page_movement_activities.size();
+		}
+		return pages_to_move <= pbke->Free_block_pool.size() * pages_no_per_block;
+	}
+
 	void GC_and_WL_Unit_Base::Request_gc_check(const NVM::FlashMemory::Physical_Page_Address& plane_address)
 	{
 		Simulator->Register_sim_event(Simulator->Time() + 1, this,
@@ -495,7 +531,8 @@ namespace SSD_Components
 		// Re-checked here, not just when this deferred event was scheduled -
 		// the plane may have changed in between (see get_static_wl_erase_info()).
 		if (!get_static_wl_erase_info(plane_address, wl_candidate_block_id, min_erase_count, max_erase_block_id, max_erase_count)
-			|| max_erase_count - min_erase_count < static_wearleveling_threshold) {
+			|| max_erase_count - min_erase_count < static_wearleveling_threshold
+			|| !has_room_to_migrate(pbke, wl_candidate_block_id)) {
 			return;
 		}
 

@@ -158,6 +158,17 @@ namespace SSD_Components
 					while (!is_safe_gc_wl_candidate(pbke, gc_candidate_block_id) && repeat++ < block_no_per_plane) {
 						gc_candidate_block_id = random_generator.Uniform_uint(0, block_no_per_plane - 1);
 					}
+					// BUG FIX (this project, upstream MQSim): the loop gives up
+					// after block_no_per_plane draws and upstream then used
+					// whatever it last drew, safe or not - a live write
+					// frontier picked this way crashes with "Inconsistency in
+					// the global mapping table when locking an LPA!" (seen at
+					// 8 blocks x 4 chips). Same "never fall through with an
+					// unverified pick" fix as GREEDY/FIFO/RGA: skip this GC
+					// opportunity instead. Same for RANDOM_P/RANDOM_PP below.
+					if (!is_safe_gc_wl_candidate(pbke, gc_candidate_block_id)) {
+						return;
+					}
 					break;
 				}
 				case SSD_Components::GC_Block_Selection_Policy_Type::RANDOM_P:
@@ -169,6 +180,9 @@ namespace SSD_Components
 					while ((pbke->Blocks[gc_candidate_block_id].Current_page_write_index < pages_no_per_block || !is_safe_gc_wl_candidate(pbke, gc_candidate_block_id))
 						&& repeat++ < block_no_per_plane) {
 						gc_candidate_block_id = random_generator.Uniform_uint(0, block_no_per_plane - 1);
+					}
+					if (pbke->Blocks[gc_candidate_block_id].Current_page_write_index < pages_no_per_block || !is_safe_gc_wl_candidate(pbke, gc_candidate_block_id)) {
+						return;
 					}
 					break;
 				}
@@ -183,6 +197,11 @@ namespace SSD_Components
 						|| !is_safe_gc_wl_candidate(pbke, gc_candidate_block_id))
 						&& repeat++ < block_no_per_plane) {
 						gc_candidate_block_id = random_generator.Uniform_uint(0, block_no_per_plane - 1);
+					}
+					if (pbke->Blocks[gc_candidate_block_id].Current_page_write_index < pages_no_per_block
+						|| pbke->Blocks[gc_candidate_block_id].Invalid_page_count < random_pp_threshold
+						|| !is_safe_gc_wl_candidate(pbke, gc_candidate_block_id)) {
+						return;
 					}
 					break;
 				}
@@ -209,9 +228,22 @@ namespace SSD_Components
 					for (size_t attempt = 0; attempt < attempts; attempt++) {
 						flash_block_ID_type candidate_block_id = pbke->Block_usage_history.front();
 						pbke->Block_usage_history.pop();
+						// BUG FIX (this project, upstream MQSim): the candidate
+						// must also have something to reclaim. Popping a block
+						// with zero invalid pages here made the shared "No
+						// invalid page to erase" check below return with the
+						// block already removed from Block_usage_history - it
+						// was never re-queued, so once it later gained invalid
+						// pages FIFO could never pick it again (a stall once
+						// it was the plane's only reclaimable block). For the
+						// same reason every other check that could still reject
+						// it after the switch (has_room_to_migrate()) is done
+						// here, while it can still be re-queued.
 						if (pbke->Blocks[candidate_block_id].Current_page_write_index == pages_no_per_block
+							&& pbke->Blocks[candidate_block_id].Invalid_page_count > 0
 							&& pbke->Ongoing_erase_operations.find(candidate_block_id) == pbke->Ongoing_erase_operations.end()
-							&& is_safe_gc_wl_candidate(pbke, candidate_block_id)) {
+							&& is_safe_gc_wl_candidate(pbke, candidate_block_id)
+							&& has_room_to_migrate(pbke, candidate_block_id)) {
 							gc_candidate_block_id = candidate_block_id;
 							found_candidate = true;
 							break;
@@ -238,6 +270,9 @@ namespace SSD_Components
 
 			//No invalid page to erase
 			if (block->Current_page_write_index == 0 || block->Invalid_page_count == 0) {
+				return;
+			}
+			if (!has_room_to_migrate(pbke, gc_candidate_block_id)) {
 				return;
 			}
 			
