@@ -158,6 +158,19 @@ test('side tabs: only GC 시연 has 비교 실험실, and 설정 · 통계 is it
   expect(problems).toEqual([]);
 });
 
+test('사용법 guide opens and describes the current layout', async ({ page }) => {
+  const problems = await openApp(page);
+  await page.getByRole('button', { name: '사용법' }).click();
+  const guide = page.locator('.usage-guide-panel');
+  await expect(guide).toBeVisible();
+  for (const text of ['레슨 바', '비교 실험실', '설정 · 통계', 'TRIM', '핫/콜드 분리', '고급 설정']) {
+    await expect(guide).toContainText(text);
+  }
+  await page.getByRole('button', { name: '닫기' }).click();
+  await expect(guide).toHaveCount(0);
+  expect(problems).toEqual([]);
+});
+
 test('마모평준화 시연 plays and shows per-block erase counts', async ({ page }) => {
   const problems = await openApp(page);
   await preset(page, '마모평준화 시연').click();
