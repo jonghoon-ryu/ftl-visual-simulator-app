@@ -54,6 +54,8 @@ function describeEvent(event: MqsimEvent, prevAddress?: MqsimPageAddress): strin
       }
       return `LPN ${lpaHex} -> ${addressText(a)}, ${event.isWrite ? 'Write' : 'Read'}`;
     }
+    case 'lpa_trimmed':
+      return event.address ? `LPN ${formatLpa(event.lpa ?? 0n)}: ${addressText(event.address)}, TRIM (호스트가 삭제 → invalid)` : null;
     case 'gc_started':
       return event.block ? `Chip ${event.block.chip}, Block ${event.block.block}, GC Start` : null;
     case 'gc_page_migrated':
@@ -207,11 +209,17 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
       if ((event.type === 'gc_page_migrated' || event.type === 'wl_page_migrated') && event.lpa !== undefined && event.newBlock) {
         lpaToAddressRef.current.set(streamLpaKey(event.streamId, event.lpa), event.newBlock);
       }
+      if (event.type === 'lpa_trimmed' && event.lpa !== undefined) {
+        lpaToAddressRef.current.delete(streamLpaKey(event.streamId, event.lpa));
+      }
       if (text === null) return;
 
       const aboutOneLpn =
         event.lpa !== undefined &&
-        (event.type === 'mapping_updated' || event.type === 'gc_page_migrated' || event.type === 'wl_page_migrated');
+        (event.type === 'mapping_updated' ||
+          event.type === 'gc_page_migrated' ||
+          event.type === 'wl_page_migrated' ||
+          event.type === 'lpa_trimmed');
       pendingLogRef.current.push(
         aboutOneLpn
           ? { text, lpnKey: streamLpaKey(event.streamId, event.lpa!), lpnLabel: formatLpa(event.lpa!) }

@@ -5,7 +5,7 @@ import type { MqsimEngine } from './useMqsimEngine';
 // One place a logical page's data has lived. `how` says how it got there:
 // a host write (first write or overwrite) or a GC / static-WL move.
 export interface JourneyStep {
-  how: 'write' | 'overwrite' | 'gc' | 'wl';
+  how: 'write' | 'overwrite' | 'gc' | 'wl' | 'trim';
   chip: number;
   block: number;
   page: number;
@@ -43,10 +43,14 @@ export function useLpnJourney(subscribeEvents: MqsimEngine['subscribeEvents'], r
     const steps = historyRef.current.get(key) ?? [];
     const alive = (step: JourneyStep) =>
       (eraseSeqRef.current.get(blockKey(step.chip, step.block)) ?? 0) === step.blockEraseSeq;
-    const last = steps[steps.length - 1];
+    // A trim step records the page that was invalidated; it is not a place the
+    // data lives. After a trim every earlier copy is old and nothing is current.
+    const placed = steps.filter((s) => s.how !== 'trim');
+    const trimmed = steps.length > 0 && steps[steps.length - 1].how === 'trim';
+    const last = trimmed ? undefined : placed[placed.length - 1];
     const oldKeys = new Set<string>();
     let erasedCount = 0;
-    steps.slice(0, -1).forEach((step) => {
+    (trimmed ? placed : placed.slice(0, -1)).forEach((step) => {
       if (alive(step)) oldKeys.add(pageKey(step.chip, step.block, step.page));
       else erasedCount++;
     });
@@ -83,6 +87,9 @@ export function useLpnJourney(subscribeEvents: MqsimEngine['subscribeEvents'], r
       } else if (event.type === 'gc_page_migrated' || event.type === 'wl_page_migrated') {
         address = event.newBlock;
         how = event.type === 'gc_page_migrated' ? 'gc' : 'wl';
+      } else if (event.type === 'lpa_trimmed') {
+        address = event.address;
+        how = 'trim';
       }
       if (!how || !address || event.lpa === undefined) return;
       const key = streamLpaKey(event.streamId, event.lpa);

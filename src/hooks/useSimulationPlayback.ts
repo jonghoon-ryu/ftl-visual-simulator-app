@@ -170,5 +170,11 @@ export function useSimulationPlayback({
     return () => clearInterval(id);
   }, [isPlaying, engine.ready, speed]);
 
-  return { isPlaying, speed, hasMore, setSpeed, stepEventOnce, stepEventMany, togglePlay, restart };
+  // Re-reads the engine state and runs the caller's onRefresh - for changes the
+  // simulation did not make by itself (e.g. a TRIM issued from the UI).
+  const refreshNow = useCallback(async () => {
+    await latestRef.current.onRefresh();
+  }, []);
+
+  return { isPlaying, speed, hasMore, setSpeed, stepEventOnce, stepEventMany, togglePlay, restart, refreshNow };
 }

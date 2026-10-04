@@ -24,6 +24,7 @@ type Request =
   | { id: number; type: 'runEvents'; n: number }
   | { id: number; type: 'stepIo' }
   | { id: number; type: 'stepEvent' }
+  | { id: number; type: 'trimRange'; start: number; count: number }
   | { id: number; type: 'getState' };
 
 type Response =
@@ -78,6 +79,9 @@ ctx.onmessage = async (e) => {
         break;
       case 'getState':
         result = mod.getState();
+        break;
+      case 'trimRange':
+        result = { trimmed: mod.trimRange(req.start, req.count), total: mod.totalLogicalPages() };
         break;
     }
     ctx.postMessage({ id: req.id, ok: true, result });

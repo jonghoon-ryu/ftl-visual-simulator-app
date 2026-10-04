@@ -7,6 +7,7 @@ import { FreeBlockChart } from './components/FreeBlockChart';
 import { GcVictimExplanation } from './components/GcVictimExplanation';
 import { GcPolicyComparison } from './components/GcPolicyComparison';
 import { WafOpCurve } from './components/WafOpCurve';
+import { TrimPanel } from './components/TrimPanel';
 import { AccessPatternComparison } from './components/AccessPatternComparison';
 import { PredictQuiz } from './components/PredictQuiz';
 import { useFreeBlockHistory } from './hooks/useFreeBlockHistory';
@@ -142,6 +143,7 @@ function App() {
     [configKey, activeParams, activeWorkload],
   );
 
+  const trimCursorRef = useRef(0);
   const engine = useMqsimEngine(ssdConfigXml, workloadXml);
   const events = useMqsimEvents(engine.subscribeEvents, engine.ready);
   const migrations = useMqsimMigrations(engine.subscribeEvents, engine.ready);
@@ -184,6 +186,7 @@ function App() {
       return { shouldPause: wlHighlight.commit() };
     },
     onRestart: () => {
+      trimCursorRef.current = 0;
       events.reset();
       migrations.reset();
       overwrites.reset();
@@ -247,6 +250,21 @@ function App() {
   }, [ssdConfigXml, workloadXml, engine.ready]);
 
   const wired = Boolean(WIRED_PRESET_DEFAULTS[activeId]) && engine.ready;
+
+  // TRIM from the UI: a slice of the logical address space that moves on each
+  // press, so repeated presses reach data the previous one did not.
+  const handleTrim = async (percent: number) => {
+    const total = engine.state?.mapping.length ?? 0;
+    if (total === 0) return 0;
+    const count = Math.max(1, Math.floor((total * percent) / 100));
+    const start = trimCursorRef.current % total;
+    const first = await engine.trimRange(start, Math.min(count, total - start));
+    let trimmed = first.trimmed;
+    if (count > total - start) trimmed += (await engine.trimRange(0, count - (total - start))).trimmed;
+    trimCursorRef.current = (start + count) % total;
+    await playback.refreshNow();
+    return trimmed;
+  };
 
   // → advances one loggable event, same as clicking "1 step" (Toolbar.tsx) -
   // matches that button's own enabled condition exactly. Skipped while
@@ -348,6 +366,14 @@ function App() {
                     <ReadLatencyChart samples={readLatency.samples} readPercentage={activeWorkload.readPercentage} />
                   )}
                   {wired && configKey === 'gc' && <GcPolicyComparison params={activeParams} workload={activeWorkload} />}
+                  {wired && configKey === 'gc' && (
+                    <TrimPanel
+                      params={activeParams}
+                      workload={activeWorkload}
+                      onTrim={handleTrim}
+                      canTrim={!playback.isPlaying}
+                    />
+                  )}
                   {wired && configKey === 'gc' && <AccessPatternComparison params={activeParams} workload={activeWorkload} />}
                   {wired && configKey === 'gc' && <WafOpCurve params={activeParams} workload={activeWorkload} />}
                 </>

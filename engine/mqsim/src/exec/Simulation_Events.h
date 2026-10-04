@@ -25,6 +25,26 @@ namespace Simulation_Events
 
 	extern void (*On_mapping_updated)(const Mapping_Updated_Event&);
 
+	// PROJECT ADDITION: the host trimmed this logical page (see
+	// Address_Mapping_Unit_Page_Level::Trim_lpa). Address is the physical page
+	// that just became invalid.
+	struct Lpa_Trimmed_Event
+	{
+		stream_id_type Stream_id;
+		LPA_type Lpa;
+		NVM::FlashMemory::Physical_Page_Address Address;
+	};
+
+	extern void (*On_lpa_trimmed)(const Lpa_Trimmed_Event&);
+
+	inline void Notify_lpa_trimmed(stream_id_type stream_id, LPA_type lpa, const NVM::FlashMemory::Physical_Page_Address& address)
+	{
+		if (On_lpa_trimmed) {
+			Lpa_Trimmed_Event event{ stream_id, lpa, address };
+			On_lpa_trimmed(event);
+		}
+	}
+
 	inline void Notify_mapping_updated(stream_id_type stream_id, LPA_type lpa, PPA_type ppa, bool is_write, const NVM::FlashMemory::Physical_Page_Address& address)
 	{
 		if (On_mapping_updated) {

@@ -534,6 +534,52 @@ namespace SSD_Components
 		return snapshot;
 	}
 
+	LPA_type Address_Mapping_Unit_Page_Level::Get_total_logical_pages(stream_id_type stream_id)
+	{
+		return domains[stream_id]->Total_logical_pages_no;
+	}
+
+	bool Address_Mapping_Unit_Page_Level::Trim_lpa(stream_id_type stream_id, LPA_type lpa)
+	{
+		AddressMappingDomain* domain = domains[stream_id];
+		if (lpa >= domain->Total_logical_pages_no) {
+			return false;
+		}
+		// A GC/WL migration of this page is in flight: its data is being
+		// copied right now, so leave it alone (a real FTL would also defer).
+		if (is_lpa_locked_for_gc(stream_id, lpa)) {
+			return false;
+		}
+
+		// Same two-way read as Get_mapping_table_snapshot(): the CMT entry if
+		// it is cached (without Retrieve_ppa()'s LRU side effect), otherwise
+		// the globally stored value.
+		const bool cached = ideal_mapping_table || domain->CMT->Exists(stream_id, lpa);
+		PPA_type ppa;
+		if (ideal_mapping_table) {
+			ppa = domain->GlobalMappingTable[lpa].PPA;
+		} else if (cached) {
+			ppa = domain->CMT->Peek_ppa(stream_id, lpa);
+		} else {
+			ppa = domain->GlobalMappingTable[lpa].PPA;
+		}
+		if (ppa == NO_PPA) {
+			return false;
+		}
+
+		NVM::FlashMemory::Physical_Page_Address addr;
+		Convert_ppa_to_address(ppa, addr);
+		block_manager->Invalidate_page_in_block(stream_id, addr);
+		if (ideal_mapping_table || !cached) {
+			domain->GlobalMappingTable[lpa].PPA = NO_PPA;
+			domain->GlobalMappingTable[lpa].WrittenStateBitmap = 0;
+		} else {
+			domain->CMT->Update_mapping_info(stream_id, lpa, NO_PPA, 0);
+		}
+		Simulation_Events::Notify_lpa_trimmed(stream_id, lpa, addr);
+		return true;
+	}
+
 	void Address_Mapping_Unit_Page_Level::Translate_lpa_to_ppa_and_dispatch(const std::list<NVM_Transaction*>& transactionList)
 	{
 		for (std::list<NVM_Transaction*>::const_iterator it = transactionList.begin();

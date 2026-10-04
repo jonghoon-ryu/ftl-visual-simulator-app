@@ -294,6 +294,26 @@ namespace MQSim_Interface
 		return ftl->BlockManager->Get_block_state_snapshot();
 	}
 
+	unsigned int Trim_lpa_range(Simulation_Instance* instance, stream_id_type stream_id, LPA_type start_lpa, LPA_type count)
+	{
+		SSD_Components::FTL* ftl = static_cast<SSD_Components::FTL*>(instance->Ssd->Firmware);
+		SSD_Components::Address_Mapping_Unit_Page_Level* amu =
+			static_cast<SSD_Components::Address_Mapping_Unit_Page_Level*>(ftl->Address_Mapping_Unit);
+		unsigned int trimmed = 0;
+		for (LPA_type lpa = start_lpa; lpa < start_lpa + count; lpa++) {
+			if (amu->Trim_lpa(stream_id, lpa)) {
+				trimmed++;
+			}
+		}
+		return trimmed;
+	}
+
+	LPA_type Get_total_logical_pages(Simulation_Instance* instance, stream_id_type stream_id)
+	{
+		SSD_Components::FTL* ftl = static_cast<SSD_Components::FTL*>(instance->Ssd->Firmware);
+		return static_cast<SSD_Components::Address_Mapping_Unit_Page_Level*>(ftl->Address_Mapping_Unit)->Get_total_logical_pages(stream_id);
+	}
+
 	unsigned int Get_writes_waiting_for_free_space(Simulation_Instance* instance)
 	{
 		SSD_Components::FTL* ftl = static_cast<SSD_Components::FTL*>(instance->Ssd->Firmware);

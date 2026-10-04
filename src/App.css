@@ -1517,3 +1517,11 @@
   background: #1a2140;
   border-radius: 4px;
 }
+
+/* TRIM panel (TrimPanel.tsx) */
+.trim-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}

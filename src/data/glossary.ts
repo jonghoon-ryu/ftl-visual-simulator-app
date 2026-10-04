@@ -63,6 +63,10 @@ export const glossary = {
     term: '매핑 방식',
     short: 'LPN 을 물리 위치로 바꾸는 표(매핑 테이블)를 어떤 단위로 관리하느냐예요. Page-level 은 page 하나하나를 따로 기억해요.',
   },
+  trim: {
+    term: 'TRIM',
+    short: '파일을 지웠을 때 운영체제가 SSD 에 "이 주소의 데이터는 이제 필요 없다" 고 알려주는 명령이에요. FTL 은 그 page 를 invalid 로 표시해서 GC 가 옮길 필요가 없게 만들어요.',
+  },
   dramCache: {
     term: 'DRAM 쓰기 캐시',
     short: 'SSD 안의 빠른 메모리가 쓰기를 먼저 받아두는 곳이에요. 같은 page 를 반복해서 쓰면 flash 까지 내려가는 쓰기가 줄어요.',

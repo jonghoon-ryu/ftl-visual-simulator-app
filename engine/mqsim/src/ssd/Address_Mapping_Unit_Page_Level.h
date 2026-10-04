@@ -195,6 +195,13 @@ namespace SSD_Components
 		// stream, for UI/inspection use (WASM getState()). Read-only: never
 		// touches CMT LRU order or any other simulation state.
 		std::vector<Mapping_Snapshot_Entry> Get_mapping_table_snapshot(stream_id_type stream_id = 0);
+		// PROJECT ADDITION (upstream MQSim has no TRIM/deallocate): tell the FTL
+		// that the host no longer needs this logical page. Its current physical
+		// page becomes invalid (so GC need not move it) and the mapping entry is
+		// cleared. Returns false - and does nothing - if the page was never
+		// written, was already trimmed, or is locked by an in-flight GC/WL move.
+		bool Trim_lpa(stream_id_type stream_id, LPA_type lpa);
+		LPA_type Get_total_logical_pages(stream_id_type stream_id);
 		void Translate_lpa_to_ppa_and_dispatch(const std::list<NVM_Transaction*>& transactionList);
 		void Get_data_mapping_info_for_gc(const stream_id_type stream_id, const LPA_type lpa, PPA_type& ppa, page_status_type& page_state);
 		void Get_translation_mapping_info_for_gc(const stream_id_type stream_id, const MVPN_type mvpn, MPPN_type& mppa, sim_time_type& timestamp);

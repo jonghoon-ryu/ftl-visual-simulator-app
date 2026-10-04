@@ -88,6 +88,25 @@ namespace
 		}
 	}
 
+	// Simulation_Events::On_lpa_trimmed target (PROJECT ADDITION, see
+	// Address_Mapping_Unit_Page_Level::Trim_lpa). Not "loggable" for
+	// step_event()'s purposes - trims are driven from JS between steps, never
+	// from inside one.
+	void forward_lpa_trimmed(const Simulation_Events::Lpa_Trimmed_Event& event)
+	{
+		if (g_event_callback.isUndefined() || g_event_callback.isNull()) {
+			return;
+		}
+		val payload = val::object();
+		payload.set("type", std::string("lpa_trimmed"));
+		payload.set("streamId", event.Stream_id);
+		payload.set("lpa", event.Lpa);
+		val address = address_to_val(event.Address);
+		address.set("page", event.Address.PageID);
+		payload.set("address", address);
+		g_event_callback(payload);
+	}
+
 	// Simulation_Events::On_mapping_updated target - the only place in this
 	// file that knows about Simulation_Events's event struct shape. Converts
 	// it to a plain JS object and forwards to whatever JS registered.
@@ -251,6 +270,7 @@ void init(const std::string& ssd_config_xml, const std::string& workload_xml)
 	// it unconditionally on every init() keeps this the one place that
 	// "arms" event delivery, no matter which entry point triggered it.
 	Simulation_Events::On_mapping_updated = forward_mapping_updated;
+	Simulation_Events::On_lpa_trimmed = forward_lpa_trimmed;
 	Simulation_Events::On_gc_started = forward_gc_started;
 	Simulation_Events::On_gc_page_migrated = forward_gc_page_migrated;
 	Simulation_Events::On_gc_block_erased = forward_gc_block_erased;
@@ -431,6 +451,19 @@ bool run_events(int n)
 	return has_more;
 }
 
+// TRIMs `count` logical pages from `start_lpa` (stream 0); returns how many
+// actually held data. See MQSim_Interface::Trim_lpa_range. LPA arguments are
+// doubles (JS numbers) since embind's 64-bit integers come back as BigInt.
+unsigned int trim_range(double start_lpa, double count)
+{
+	return MQSim_Interface::Trim_lpa_range(g_instance, 0, (LPA_type)start_lpa, (LPA_type)count);
+}
+
+double total_logical_pages()
+{
+	return (double)MQSim_Interface::Get_total_logical_pages(g_instance, 0);
+}
+
 // Re-initializes with new config/workload text, discarding the current run -
 // same steps as init(), kept as a separate binding name to match the
 // documented parameter-change/reset use case.
@@ -448,6 +481,8 @@ EMSCRIPTEN_BINDINGS(mqsim_module)
 	function("stepEvent", &step_event);
 	function("runEvents", &run_events);
 	function("configure", &configure);
+	function("trimRange", &trim_range);
+	function("totalLogicalPages", &total_logical_pages);
 	function("setEventCallback", &set_event_callback);
 	function("getState", &get_state);
 }

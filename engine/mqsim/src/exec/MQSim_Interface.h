@@ -90,6 +90,13 @@ namespace MQSim_Interface
 	std::vector<unsigned int> Get_free_block_counts(Simulation_Instance* instance);
 	unsigned int Get_gc_threshold_blocks(Simulation_Instance* instance);
 
+	// PROJECT ADDITION: TRIM `count` logical pages starting at `start_lpa` of
+	// one stream; returns how many actually had data to trim (pages never
+	// written, already trimmed, or mid-GC are skipped). See
+	// Address_Mapping_Unit_Page_Level::Trim_lpa.
+	unsigned int Trim_lpa_range(Simulation_Instance* instance, stream_id_type stream_id, LPA_type start_lpa, LPA_type count);
+	LPA_type Get_total_logical_pages(Simulation_Instance* instance, stream_id_type stream_id);
+
 	// Releases the SSD_Device/Host_System for this one scenario.
 	void Finalize_scenario(Simulation_Instance* instance);
 

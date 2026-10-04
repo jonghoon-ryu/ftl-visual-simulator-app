@@ -53,6 +53,14 @@ const QUESTIONS: Partial<Record<PresetId, Question[]>> = {
       howToCheck: 'Workload 의 "DRAM 쓰기 캐시" 를 끄고 재생해보세요. 통계의 "호스트 요청 → flash 쓰기" 와 GC 실행 횟수를 캐시를 켰을 때와 비교해보세요.',
     },
     {
+      prompt: '호스트가 어떤 데이터를 TRIM(삭제 알림)하면, 나중에 GC 는 어떻게 달라질까요?',
+      options: ['달라지지 않는다', '그 page 는 invalid 라서 옮기지 않아도 돼 GC 가 더 싸진다', 'TRIM 한 page 는 즉시 지워진다'],
+      answer: 1,
+      explanation:
+        'TRIM 을 모르면 FTL 은 삭제된 데이터도 valid 라고 믿고 GC 때마다 계속 옮깁니다. TRIM 을 받으면 그 page 를 invalid 로 표시해서 GC 가 옮길 필요가 없어지고, WAF 가 내려가요. 다만 page 는 지우는 단위가 block 이라서 즉시 지워지지는 않고, 그 block 이 GC 로 지워질 때 공간이 돌아옵니다.',
+      howToCheck: '아래 "TRIM" 의 "LPN 10% TRIM 하기" 를 눌러 격자에서 초록(valid) page 가 빨간(invalid) 으로 바뀌는 걸 보고, "TRIM 효과 비교" 로 WAF 차이를 확인해보세요.',
+    },
+    {
       prompt: '기본 설정에서, 다음 GC 알고리즘 중 WAF 가 가장 낮은 것은?',
       options: ['RGA', 'Greedy', 'Random', 'FIFO'],
       answer: 2,

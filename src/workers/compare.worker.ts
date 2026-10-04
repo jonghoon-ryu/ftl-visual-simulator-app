@@ -19,6 +19,10 @@ export interface CompareJob {
   label: string;
   ssdConfigXml: string;
   workloadXml: string;
+  // Optional: simulate a host that keeps TRIMming. After every `chunk`
+  // event-groups, TRIM `percent`% of all logical pages, walking through the
+  // address space (a different slice each time).
+  trim?: { percent: number; chunk: number };
 }
 
 export interface CompareResult {
@@ -27,6 +31,7 @@ export interface CompareResult {
   pagesMoved: number;
   gcExecutions: number;
   deviceFull: boolean;
+  trimmedPages: number;
 }
 
 type CompareRequest = { type: 'compare'; runId: number; jobs: CompareJob[] };
@@ -41,6 +46,7 @@ const CHUNK = 200000;
 let modulePromise: Promise<MqsimModule> | null = null;
 let hostWrites = 0;
 let pagesMoved = 0;
+let trimmedPages = 0;
 
 function getModule(): Promise<MqsimModule> {
   if (!modulePromise) {
@@ -48,6 +54,7 @@ function getModule(): Promise<MqsimModule> {
       mod.setEventCallback((event) => {
         if (event.type === 'mapping_updated' && event.isWrite) hostWrites++;
         else if (event.type === 'gc_page_migrated' || event.type === 'wl_page_migrated') pagesMoved++;
+        else if (event.type === 'lpa_trimmed') trimmedPages++;
       });
       return mod;
     });
@@ -62,9 +69,21 @@ ctx.onmessage = async (e) => {
     for (const job of jobs) {
       hostWrites = 0;
       pagesMoved = 0;
+      trimmedPages = 0;
       mod.init(job.ssdConfigXml, job.workloadXml);
-      while (mod.run(CHUNK)) {
-        // run to the end
+      if (job.trim) {
+        const total = mod.totalLogicalPages();
+        const perRound = Math.max(1, Math.floor((total * job.trim.percent) / 100));
+        let round = 0;
+        while (mod.run(job.trim.chunk)) {
+          const start = (round * perRound) % total;
+          mod.trimRange(start, Math.min(perRound, total - start));
+          round++;
+        }
+      } else {
+        while (mod.run(CHUNK)) {
+          // run to the end
+        }
       }
       const stats = mod.getState().stats;
       ctx.postMessage({
@@ -76,6 +95,7 @@ ctx.onmessage = async (e) => {
           pagesMoved,
           gcExecutions: stats.gcExecutions,
           deviceFull: stats.writesWaitingForSpace > 0,
+          trimmedPages,
         },
       });
     }

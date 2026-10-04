@@ -51,6 +51,13 @@ concept visible:
 - **Follow one write** (all presets) — click an LPN in the log to see every
   physical page its data has occupied (write -> overwrite -> GC move ...),
   outlined on the grid: the out-of-place update in one picture.
+- **TRIM** (GC demo) — upstream MQSim has no TRIM, so the engine got a
+  `Trim_lpa()`: the host tells the FTL a logical page is no longer needed,
+  its physical page turns invalid and GC no longer has to move it. A button
+  TRIMs part of the data on the run on screen (valid pages visibly turn
+  invalid), and a comparison runs the current settings with and without a
+  TRIMming host (WAF 1.23x -> 1.03x at the defaults). Checked by
+  `npm run test:engine:trim`.
 - **DRAM write-cache toggle** — with the cache on, GC 시연 sends ~2.2M host
   requests but only ~500 page writes reach flash; off, nearly every request
   does and GC runs ~16x more (30 -> 497).

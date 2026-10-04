@@ -11,6 +11,7 @@ const HOW_TEXT: Record<JourneyStep['how'], string> = {
   overwrite: '덮어쓰기 - 같은 자리에 못 쓰고 새 page 에 씀',
   gc: 'GC 가 옮김 - victim block 을 비우려고',
   wl: '정적 마모평준화가 옮김',
+  trim: 'TRIM - 호스트가 이 데이터를 지웠다고 알려줌 (아래 page 는 무효가 됨)',
 };
 
 // "LPN 0x0b2 의 여정": every physical page one logical page's data has
@@ -32,7 +33,15 @@ export function LpnJourneyPanel({ journey, showsGrid, onClose }: Props) {
       ) : (
         <ol className="journey-steps">
           {steps.map((step, i) => {
-            const isNow = i === steps.length - 1;
+            if (step.how === 'trim') {
+              return (
+                <li key={i} className="now">
+                  <span className="journey-where">{HOW_TEXT.trim}</span>
+                </li>
+              );
+            }
+            const trimmedAtEnd = steps[steps.length - 1].how === 'trim';
+            const isNow = i === steps.length - 1 && !trimmedAtEnd;
             return (
               <li key={i} className={isNow ? 'now' : undefined}>
                 <span className="journey-where">

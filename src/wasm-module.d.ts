@@ -144,5 +144,8 @@ interface MqsimModule {
   // stepEvent() n times - see bindings.cpp's run_events().
   runEvents(n: number): boolean;
   getState(): MqsimState;
+  // TRIM `count` logical pages from `start` (stream 0); returns how many held data.
+  trimRange(start: number, count: number): number;
+  totalLogicalPages(): number;
   setEventCallback(callback: ((event: MqsimEvent) => void) | null): void;
 }
