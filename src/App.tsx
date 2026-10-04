@@ -7,6 +7,7 @@ import { FreeBlockChart } from './components/FreeBlockChart';
 import { GcVictimExplanation } from './components/GcVictimExplanation';
 import { GcPolicyComparison } from './components/GcPolicyComparison';
 import { WafOpCurve } from './components/WafOpCurve';
+import { HotColdPanel } from './components/HotColdPanel';
 import { TrimPanel } from './components/TrimPanel';
 import { AccessPatternComparison } from './components/AccessPatternComparison';
 import { PredictQuiz } from './components/PredictQuiz';
@@ -374,6 +375,7 @@ function App() {
                       canTrim={!playback.isPlaying}
                     />
                   )}
+                  {wired && configKey === 'gc' && <HotColdPanel />}
                   {wired && configKey === 'gc' && <AccessPatternComparison params={activeParams} workload={activeWorkload} />}
                   {wired && configKey === 'gc' && <WafOpCurve params={activeParams} workload={activeWorkload} />}
                 </>

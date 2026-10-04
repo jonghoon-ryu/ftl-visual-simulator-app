@@ -67,6 +67,10 @@ export const glossary = {
     term: 'TRIM',
     short: '파일을 지웠을 때 운영체제가 SSD 에 "이 주소의 데이터는 이제 필요 없다" 고 알려주는 명령이에요. FTL 은 그 page 를 invalid 로 표시해서 GC 가 옮길 필요가 없게 만들어요.',
   },
+  hotCold: {
+    term: 'Hot / Cold 데이터',
+    short: 'hot 은 자주 덮어쓰는 데이터, cold 는 한 번 쓰고 거의 안 바뀌는 데이터예요. 둘을 같은 block 에 섞어 쓰면 GC 가 block 을 비울 때 아직 유효한 cold 데이터를 계속 옮기게 돼요. 따로 모아 쓰는 것이 hot/cold 분리예요.',
+  },
   dramCache: {
     term: 'DRAM 쓰기 캐시',
     short: 'SSD 안의 빠른 메모리가 쓰기를 먼저 받아두는 곳이에요. 같은 page 를 반복해서 쓰면 flash 까지 내려가는 쓰기가 줄어요.',

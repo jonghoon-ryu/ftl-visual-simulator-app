@@ -58,6 +58,13 @@ concept visible:
   invalid), and a comparison runs the current settings with and without a
   TRIMming host (WAF 1.23x -> 1.03x at the defaults). Checked by
   `npm run test:engine:trim`.
+- **Hot/cold separation** (GC demo) — the same data (20% hot taking 80% of
+  the writes, 80% cold taking 20%) is written through one stream, so hot and
+  cold pages share blocks, or through two streams with their own write
+  blocks. Runs on its own small fixed device and shows per-block contents at
+  the end; WAF 1.28x mixed vs 1.20x separated (3-seed average ~1.28 vs
+  ~1.19). The gap is modest because MQSim already writes GC-migrated data to
+  a separate frontier.
 - **DRAM write-cache toggle** — with the cache on, GC 시연 sends ~2.2M host
   requests but only ~500 page writes reach flash; off, nearly every request
   does and GC runs ~16x more (30 -> 497).

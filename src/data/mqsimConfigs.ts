@@ -516,7 +516,10 @@ function wlColdWriteCount(params: SsdParams): number {
 interface SyntheticFlowOptions {
   cachingMode: 'WRITE_CACHE' | 'TURNED_OFF';
   workingSetPercent: number;
-  addressDistribution: WorkloadParams['addressDistribution'];
+  addressDistribution: WorkloadParams['addressDistribution'] | 'RANDOM_HOTCOLD';
+  // Defaults keep the existing presets' XML byte-identical.
+  hotRegionPercent?: number;
+  queueDepth?: number;
   seed: number;
   stopTime: number;
   totalRequests: number;
@@ -537,14 +540,14 @@ function syntheticFlowXml(params: SsdParams, flow: SyntheticFlowOptions): string
 			<Synthetic_Generator_Type>QUEUE_DEPTH</Synthetic_Generator_Type>
 			<Read_Percentage>${flow.readPercentage}</Read_Percentage>
 			<Address_Distribution>${flow.addressDistribution}</Address_Distribution>
-			<Percentage_of_Hot_Region>0</Percentage_of_Hot_Region>
+			<Percentage_of_Hot_Region>${flow.hotRegionPercent ?? 0}</Percentage_of_Hot_Region>
 			<Generated_Aligned_Addresses>true</Generated_Aligned_Addresses>
 			<Address_Alignment_Unit>${ioAddressAlignmentUnitSectors(params)}</Address_Alignment_Unit>
 			<Request_Size_Distribution>FIXED</Request_Size_Distribution>
 			<Average_Request_Size>${AVERAGE_REQUEST_SIZE_SECTORS}</Average_Request_Size>
 			<Variance_Request_Size>0</Variance_Request_Size>
 			<Seed>${flow.seed}</Seed>
-			<Average_No_of_Reqs_in_Queue>4</Average_No_of_Reqs_in_Queue>
+			<Average_No_of_Reqs_in_Queue>${flow.queueDepth ?? 4}</Average_No_of_Reqs_in_Queue>
 			<Intensity>32768</Intensity>
 			<Stop_Time>${flow.stopTime}</Stop_Time>
 			<Total_Requests_To_Generate>${flow.totalRequests}</Total_Requests_To_Generate>
@@ -581,6 +584,77 @@ export function buildWlWorkloadXml(params: SsdParams, workload: WorkloadParams =
   return `<?xml version="1.0" encoding="us-ascii"?>
 <MQSim_IO_Scenarios>
 	<IO_Scenario>${cold}${hot}
+	</IO_Scenario>
+</MQSim_IO_Scenarios>
+`;
+}
+
+// "핫/콜드 분리" comparison (HotColdPanel) - its own small device, independent of
+// the preset sliders. One data set: 20% of the data (hot) gets 80% of the
+// writes, the other 80% (cold) gets the remaining 20%. Measured at this
+// geometry over 3 seeds: mixed WAF ~1.28 vs separated ~1.19.
+export const HOT_COLD_PARAMS: SsdParams = {
+  ...DEFAULT_MAPPING_PARAMS,
+  chipCount: 1,
+  blockNoPerPlane: 32,
+  pageNoPerBlock: 16,
+  overprovisioningRatio: 0.1,
+  gcExecThreshold: 0.1,
+};
+
+// Share of the logical space holding live data, the hot share of that data,
+// and the hot share of the writes (= 1 - hot data share, which is how MQSim's
+// RANDOM_HOTCOLD distribution ties them together).
+const HOT_COLD_LIVE_PERCENT = 50;
+const HOT_DATA_PERCENT = 20;
+const HOT_COLD_STOP_TIME = 6000000000;
+
+// Fraction of all logical pages (counting from LPN 0) that are hot in the
+// "mixed" scenario: hot data's share of the live data's share of the space.
+// Lets the comparison label each valid page hot or cold when both kinds share
+// one flow.
+export const HOT_COLD_MIXED_HOT_LPN_FRACTION = (HOT_COLD_LIVE_PERCENT * HOT_DATA_PERCENT) / 10000;
+
+// 'mixed': ONE flow (one stream, one write frontier) over all the live data,
+// hot and cold interleaved in time. 'separated': TWO flows = two streams, each
+// with its own write frontier, so hot and cold data never share a block;
+// MQSim splits the address space evenly between flows, hence the doubled
+// working-set percentages. Hot flow (stream 0) keeps 4x the queue depth of the
+// cold flow (stream 1) to reproduce the same 80/20 write split. DRAM cache is
+// off - it would absorb the hot writes and hide the effect.
+export function buildHotColdWorkloadXml(params: SsdParams, mode: 'mixed' | 'separated'): string {
+  const common = {
+    cachingMode: 'TURNED_OFF' as const,
+    readPercentage: 0,
+    stopTime: HOT_COLD_STOP_TIME,
+    totalRequests: 1000000,
+  };
+  const flows =
+    mode === 'mixed'
+      ? syntheticFlowXml(params, {
+          ...common,
+          workingSetPercent: HOT_COLD_LIVE_PERCENT,
+          addressDistribution: 'RANDOM_HOTCOLD',
+          hotRegionPercent: HOT_DATA_PERCENT,
+          seed: params.workloadSeed,
+        })
+      : syntheticFlowXml(params, {
+          ...common,
+          workingSetPercent: HOT_COLD_LIVE_PERCENT * 2 * (HOT_DATA_PERCENT / 100),
+          addressDistribution: 'RANDOM_UNIFORM',
+          queueDepth: 4,
+          seed: params.workloadSeed,
+        }) +
+        syntheticFlowXml(params, {
+          ...common,
+          workingSetPercent: HOT_COLD_LIVE_PERCENT * 2 * (1 - HOT_DATA_PERCENT / 100),
+          addressDistribution: 'RANDOM_UNIFORM',
+          queueDepth: 1,
+          seed: params.workloadSeed + 1,
+        });
+  return `<?xml version="1.0" encoding="us-ascii"?>
+<MQSim_IO_Scenarios>
+	<IO_Scenario>${flows}
 	</IO_Scenario>
 </MQSim_IO_Scenarios>
 `;

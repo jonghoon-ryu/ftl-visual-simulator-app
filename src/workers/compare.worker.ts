@@ -23,6 +23,18 @@ export interface CompareJob {
   // event-groups, TRIM `percent`% of all logical pages, walking through the
   // address space (a different slice each time).
   trim?: { percent: number; chunk: number };
+  // Optional: also report each block's final contents split into hot-valid,
+  // cold-valid, invalid and free pages. 'stream': pages of blocks owned by
+  // stream `hotStream` are hot, others cold. 'lpn': a valid page is hot if its
+  // LPN is below `hotLpnFraction` of all logical pages.
+  composition?: { mode: 'stream'; hotStream: number } | { mode: 'lpn'; hotLpnFraction: number };
+}
+
+export interface BlockComposition {
+  hot: number;
+  cold: number;
+  invalid: number;
+  free: number;
 }
 
 export interface CompareResult {
@@ -32,6 +44,7 @@ export interface CompareResult {
   gcExecutions: number;
   deviceFull: boolean;
   trimmedPages: number;
+  blocks?: BlockComposition[];
 }
 
 type CompareRequest = { type: 'compare'; runId: number; jobs: CompareJob[] };
@@ -85,7 +98,35 @@ ctx.onmessage = async (e) => {
           // run to the end
         }
       }
-      const stats = mod.getState().stats;
+      const finalState = mod.getState();
+      const stats = finalState.stats;
+      let blocks: BlockComposition[] | undefined;
+      if (job.composition) {
+        const comp = job.composition;
+        const hotAt = new Set<string>();
+        if (comp.mode === 'lpn') {
+          const limit = Math.floor(mod.totalLogicalPages() * comp.hotLpnFraction);
+          for (const row of finalState.mapping) {
+            if (row.mapped && row.address && row.lpa < BigInt(limit)) {
+              hotAt.add(`${row.address.chip}:${row.address.block}:${row.address.page}`);
+            }
+          }
+        }
+        blocks = finalState.blocks.map((b) => {
+          const c: BlockComposition = { hot: 0, cold: 0, invalid: 0, free: 0 };
+          b.pages.forEach((state, page) => {
+            if (state === 'invalid') c.invalid++;
+            else if (state === 'free') c.free++;
+            else {
+              const hot =
+                comp.mode === 'stream' ? b.streamId === comp.hotStream : hotAt.has(`${b.chip}:${b.block}:${page}`);
+              if (hot) c.hot++;
+              else c.cold++;
+            }
+          });
+          return c;
+        });
+      }
       ctx.postMessage({
         type: 'result',
         runId,
@@ -96,6 +137,7 @@ ctx.onmessage = async (e) => {
           gcExecutions: stats.gcExecutions,
           deviceFull: stats.writesWaitingForSpace > 0,
           trimmedPages,
+          blocks,
         },
       });
     }
