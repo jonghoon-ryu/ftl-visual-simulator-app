@@ -29,3 +29,7 @@ engine/tests/unit/build/
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright
+test-results/
+playwright-report/

@@ -58,7 +58,7 @@ const QUESTIONS: Partial<Record<PresetId, Question[]>> = {
       answer: 1,
       explanation:
         'TRIM 을 모르면 FTL 은 삭제된 데이터도 valid 라고 믿고 GC 때마다 계속 옮깁니다. TRIM 을 받으면 그 page 를 invalid 로 표시해서 GC 가 옮길 필요가 없어지고, WAF 가 내려가요. 다만 page 는 지우는 단위가 block 이라서 즉시 지워지지는 않고, 그 block 이 GC 로 지워질 때 공간이 돌아옵니다.',
-      howToCheck: '아래 "TRIM" 의 "LPN 10% TRIM 하기" 를 눌러 격자에서 초록(valid) page 가 빨간(invalid) 으로 바뀌는 걸 보고, "TRIM 효과 비교" 로 WAF 차이를 확인해보세요.',
+      howToCheck: '아래 "비교 실험실" 을 펼치고 "TRIM" 의 "지금 TRIM 하기" 를 눌러 격자에서 초록(valid) page 가 빨간(invalid) 으로 바뀌는 걸 보고, "TRIM 효과 비교" 로 WAF 차이를 확인해보세요.',
     },
     {
       prompt: '기본 설정에서, 다음 GC 알고리즘 중 WAF 가 가장 낮은 것은?',
@@ -66,7 +66,7 @@ const QUESTIONS: Partial<Record<PresetId, Question[]>> = {
       answer: 2,
       explanation:
         '교과서대로라면 invalid 를 보고 고르는 Greedy/RGA 가 유리할 것 같지만, 이 데모에서는 Random 이 1.19× 로 가장 낮아요 (RGA/Greedy 1.23×, Cost-Benefit 1.24×). Random 은 무작위로 고른 block 에 청소할 게 없으면 그 GC 기회를 건너뛰어서 GC 를 덜 하기 때문이에요. block 이 적은 작은 규모에서는 이런 일이 생깁니다.',
-      howToCheck: '아래 "GC 알고리즘 비교" 버튼으로 7개를 직접 돌려 표로 확인해보세요.',
+      howToCheck: '아래 "비교 실험실" 을 펼치고 "GC 알고리즘 비교" 버튼으로 7개를 직접 돌려 표로 확인해보세요.',
     },
   ],
   'wear-leveling': [

@@ -227,13 +227,20 @@ function App() {
   // to avoid reconfiguring on every intermediate drag value.
   const prevConfigKeyRef = useRef(configKey);
   const isFirstConfigRenderRef = useRef(true);
+  const prevReadyRef = useRef(false);
   useEffect(() => {
     if (isFirstConfigRenderRef.current) {
       isFirstConfigRenderRef.current = false;
       prevConfigKeyRef.current = configKey;
       return;
     }
-    if (!engine.ready) return;
+    // The engine just finished init(), which already applied these exact
+    // params - restarting here (after the debounce below) silently undid a ▶
+    // pressed in the first ~400ms after load (found by the Playwright smoke
+    // test, which clicks ▶ the instant it becomes enabled).
+    const becameReady = engine.ready && !prevReadyRef.current;
+    prevReadyRef.current = engine.ready;
+    if (!engine.ready || becameReady) return;
 
     const presetSwitched = prevConfigKeyRef.current !== configKey;
     prevConfigKeyRef.current = configKey;
@@ -366,18 +373,27 @@ function App() {
                   {wired && configKey === 'gc' && (
                     <ReadLatencyChart samples={readLatency.samples} readPercentage={activeWorkload.readPercentage} />
                   )}
-                  {wired && configKey === 'gc' && <GcPolicyComparison params={activeParams} workload={activeWorkload} />}
                   {wired && configKey === 'gc' && (
-                    <TrimPanel
-                      params={activeParams}
-                      workload={activeWorkload}
-                      onTrim={handleTrim}
-                      canTrim={!playback.isPlaying}
-                    />
+                    // Comparison experiments are collapsed so the page a beginner
+                    // lands on is just the grid, the free-block chart and the
+                    // read-latency chart; each experiment runs the whole simulation
+                    // again in a worker, so it is something to opt into.
+                    <details className="lab-section">
+                      <summary>비교 실험실 — GC 알고리즘 · TRIM · 핫/콜드 · 순차/무작위 · Over-provisioning (눌러서 펼치기)</summary>
+                      {wired && configKey === 'gc' && <GcPolicyComparison params={activeParams} workload={activeWorkload} />}
+                      {wired && configKey === 'gc' && (
+                        <TrimPanel
+                          params={activeParams}
+                          workload={activeWorkload}
+                          onTrim={handleTrim}
+                          canTrim={!playback.isPlaying}
+                        />
+                      )}
+                      {wired && configKey === 'gc' && <HotColdPanel />}
+                      {wired && configKey === 'gc' && <AccessPatternComparison params={activeParams} workload={activeWorkload} />}
+                      {wired && configKey === 'gc' && <WafOpCurve params={activeParams} workload={activeWorkload} />}
+                    </details>
                   )}
-                  {wired && configKey === 'gc' && <HotColdPanel />}
-                  {wired && configKey === 'gc' && <AccessPatternComparison params={activeParams} workload={activeWorkload} />}
-                  {wired && configKey === 'gc' && <WafOpCurve params={activeParams} workload={activeWorkload} />}
                 </>
               }
             />

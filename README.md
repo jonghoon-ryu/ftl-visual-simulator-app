@@ -110,6 +110,13 @@ concept visible:
    [wear-leveling integration doc](https://jonghoon-ryu.github.io/ftl-visual-simulator/plan/wear-leveling-integration/)
    for the investigation that motivated writing these.
 
+7. **Browser smoke tests**: `npm run test:e2e` (Playwright, `e2e/`) drives
+   the real UI in the system Chrome (no browser download): the intro, the
+   lesson bar, all three presets playing, glossary hover, live TRIM, and every
+   comparison experiment returning a result, failing on any console error.
+   It needs `src/wasm-build` (see `engine/build-wasm.sh`). Not part of the
+   deploy workflow.
+
 27 real, pre-existing MQSim bugs were found and fixed along the way -
 portability/UB issues, a use-after-free, uninitialized fields, dropped
 config parameters, a scheduler suspend/resume deadlock chain, static

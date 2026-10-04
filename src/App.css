@@ -1583,3 +1583,23 @@
   margin-right: 4px;
   vertical-align: middle;
 }
+
+/* Collapsed comparison experiments (GC demo footer) */
+.lab-section {
+  margin-top: 10px;
+  border: 1px solid #33374a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #1a1d26;
+}
+
+.lab-section > summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #9db4ff;
+}
+
+.lab-section[open] > summary {
+  margin-bottom: 8px;
+}

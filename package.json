@@ -10,13 +10,15 @@
     "preview": "vite preview",
     "test:engine": "bash engine/run-regression-tests.sh",
     "test:engine:unit": "bash engine/run-unit-tests.sh",
-    "test:engine:trim": "node --experimental-strip-types engine/tests/trim/trim-check.mts"
+    "test:engine:trim": "node --experimental-strip-types engine/tests/trim/trim-check.mts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
