@@ -1305,3 +1305,215 @@
   fill: #d7dae3;
   font-size: 10px;
 }
+
+/* Glossary popover (Term.tsx) */
+.term {
+  position: relative;
+  border-bottom: 1px dotted #7d8296;
+  cursor: help;
+}
+
+.term:focus {
+  outline: 1px solid #4a6cf7;
+  outline-offset: 2px;
+}
+
+.term-pop {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 150;
+  width: 240px;
+  margin-top: 4px;
+  padding: 8px 10px;
+  background: #11131a;
+  color: #d7dae0;
+  border: 1px solid #4a6cf7;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
+  text-align: left;
+  white-space: normal;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.term-pop strong {
+  display: block;
+  margin-bottom: 3px;
+  color: #fff;
+}
+
+.term:hover .term-pop,
+.term:focus .term-pop {
+  display: block;
+}
+
+/* Lesson bar (LessonBar.tsx) */
+.lesson-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 8px 14px;
+  background: #1a2140;
+  border-bottom: 1px solid #33374a;
+  font-size: 12px;
+}
+
+.lesson-bar-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.lesson-bar-step {
+  font-weight: 700;
+  color: #9db4ff;
+}
+
+.lesson-bar-goal {
+  color: #c7cbe0;
+  line-height: 1.5;
+}
+
+.lesson-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lesson-bar-actions button {
+  font-family: inherit;
+  font-size: 12px;
+  background: #2a3050;
+  color: #d7dae0;
+  border: 1px solid #3a4163;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.lesson-bar-actions button:hover:not(:disabled) {
+  background: #3a4163;
+}
+
+.lesson-bar-actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.lesson-bar-actions .lesson-bar-link {
+  background: transparent;
+  border-color: transparent;
+  color: #9db4ff;
+  text-decoration: underline;
+}
+
+/* Advanced params fold (ParamPanel.tsx) */
+.param-advanced {
+  margin-top: 6px;
+  border-top: 1px solid #33374a;
+  padding-top: 6px;
+}
+
+.param-advanced > summary {
+  cursor: pointer;
+  font-size: 11.5px;
+  color: #9db4ff;
+  margin-bottom: 6px;
+}
+
+/* "Why FTL" intro demo (WhyFtlIntro.tsx) */
+.why-ftl-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.why-ftl-block {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.why-ftl-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 0;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.why-ftl-idx {
+  font-size: 9px;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+.why-ftl-cell.valid { background: #4fd18b; color: #0e2a1b; }
+.why-ftl-cell.invalid { background: #f16d75; color: #3a0e10; }
+.why-ftl-cell.free { background: #383c4d; color: #7d8296; }
+
+.why-ftl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.why-ftl-actions button,
+.why-ftl-start {
+  font-family: inherit;
+  font-size: 12.5px;
+  background: #2a3050;
+  color: #d7dae0;
+  border: 1px solid #3a4163;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.why-ftl-actions button:hover,
+.why-ftl-start:hover {
+  background: #3a4163;
+}
+
+.why-ftl-start {
+  background: #4a6cf7;
+  border-color: #4a6cf7;
+  color: #fff;
+  font-weight: 700;
+}
+
+.why-ftl-message {
+  min-height: 3.2em;
+  padding: 8px 10px;
+  background: #11131a;
+  border-radius: 6px;
+  line-height: 1.55;
+  font-size: 12.5px;
+}
+
+.why-ftl-table {
+  margin-top: 8px;
+  font-size: 12.5px;
+}
+
+.why-ftl-entry {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 1px 8px;
+  background: #1a2140;
+  border-radius: 4px;
+}

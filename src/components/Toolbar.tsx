@@ -88,7 +88,7 @@ export function Toolbar({ presets, activeId, onSelect, playback, hideStepButtons
               disabled={disabled || !hasMore || isPlaying}
               onClick={onStepEventOnce}
             >
-              1 step
+              로그 1줄
             </button>
             <button
               type="button"
@@ -97,7 +97,7 @@ export function Toolbar({ presets, activeId, onSelect, playback, hideStepButtons
               disabled={disabled || !hasMore || isPlaying}
               onClick={onStepEventMany}
             >
-              5 steps
+              로그 5줄
             </button>
           </div>
         )}

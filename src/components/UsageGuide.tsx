@@ -92,11 +92,11 @@ export function UsageGuide({ onClose }: Props) {
                 있습니다.
               </li>
               <li>
-                <strong>1 step</strong> - 로그에 새 줄이 정확히 하나 생길 때까지만 진행합니다 (→ 키로도 가능). Write
+                <strong>로그 1줄</strong> - 로그에 새 줄이 정확히 하나 생길 때까지만 진행합니다 (→ 키로도 가능). Write
                 하나, Read 하나, GC/WL 의 시작·페이지 이동·소거 중 하나 - 딱 하나의 사건만 보고 싶을 때 씁니다.
               </li>
               <li>
-                <strong>5 steps</strong> - 1 step 을 다섯 번 반복합니다.
+                <strong>로그 5줄</strong> - 로그 1줄 을 다섯 번 반복합니다.
               </li>
             </ul>
           </section>

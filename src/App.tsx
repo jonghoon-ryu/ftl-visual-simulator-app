@@ -15,6 +15,8 @@ import { ReadLatencyChart } from './components/ReadLatencyChart';
 import { LpnJourneyPanel } from './components/LpnJourneyPanel';
 import { StatsPanel } from './components/StatsPanel';
 import { Toolbar } from './components/Toolbar';
+import { LessonBar } from './components/LessonBar';
+import { WhyFtlIntro } from './components/WhyFtlIntro';
 import { UsageGuide } from './components/UsageGuide';
 import { WearLevelingView } from './components/WearLevelingView';
 import { WorkloadPanel } from './components/WorkloadPanel';
@@ -93,6 +95,23 @@ function buildWorkloadXmlFor(presetId: PresetId, params: SsdParams, workload: Wo
 function App() {
   const [activeId, setActiveId] = useState<PresetId>('mapping');
   const [showUsageGuide, setShowUsageGuide] = useState(false);
+  // First-time visitors start in the "why FTL" intro; later visits skip it
+  // (storage can be unavailable, so every access is guarded).
+  const [showIntro, setShowIntro] = useState(() => {
+    try {
+      return localStorage.getItem('ftl-intro-seen') !== '1';
+    } catch {
+      return true;
+    }
+  });
+  const closeIntro = () => {
+    setShowIntro(false);
+    try {
+      localStorage.setItem('ftl-intro-seen', '1');
+    } catch {
+      // ignore - the intro just shows again next visit
+    }
+  };
   const active = presets.find((p) => p.id === activeId) ?? presets[0];
 
   const [paramsByPreset, setParamsByPreset] = useState<Record<string, SsdParams>>({
@@ -283,6 +302,7 @@ function App() {
   return (
     <div className="sim-app">
       <div className="sim-mockup">
+        <LessonBar activeId={activeId} onSelect={setActiveId} onOpenIntro={() => setShowIntro(true)} />
         <Toolbar
           presets={presets}
           activeId={activeId}
@@ -400,6 +420,7 @@ function App() {
         사용법
       </button>
       {showUsageGuide && <UsageGuide onClose={() => setShowUsageGuide(false)} />}
+      {showIntro && <WhyFtlIntro onClose={closeIntro} />}
     </div>
   );
 }

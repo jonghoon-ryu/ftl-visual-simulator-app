@@ -1,3 +1,4 @@
+import { Term } from './Term';
 import { STATIC_WL_THRESHOLD_RANGE, type SsdParams } from '../data/mqsimConfigs';
 import type { PresetId } from '../types';
 
@@ -101,6 +102,145 @@ export function ParamPanel({ presetId, params, onChange, disabled }: Props) {
     <div className="sim-panel">
       <div className="param-row">
         <div className="param-label">
+          <span>칩(Chip) 개수</span>
+        </div>
+        <div className="param-radio-group" role="radiogroup" aria-label="칩 개수">
+          {CHIP_COUNT_OPTIONS.map((count) => (
+            <label key={count} className="param-radio-option">
+              <input
+                type="radio"
+                name="chip-count"
+                disabled={disabled}
+                checked={params.chipCount === count}
+                onChange={() => onChange({ ...params, chipCount: count })}
+              />
+              {count}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="param-row">
+        <div className="param-label">
+          <span><Term id="block">Block 개수</Term></span>
+          <span>{params.blockNoPerPlane}</span>
+        </div>
+        <input
+          className="param-slider"
+          type="range"
+          min={MIN_BLOCK_NO_PER_PLANE[presetId]}
+          max={64}
+          step={1}
+          disabled={disabled}
+          value={params.blockNoPerPlane}
+          onChange={(e) => onChange({ ...params, blockNoPerPlane: Number(e.target.value) })}
+        />
+      </div>
+
+      <div className="param-row">
+        <div className="param-label">
+          <span>Block 당 <Term id="page">Page</Term> 개수</span>
+          <span>{params.pageNoPerBlock}</span>
+        </div>
+        <input
+          className="param-slider"
+          type="range"
+          min={4}
+          max={64}
+          step={1}
+          disabled={disabled}
+          value={params.pageNoPerBlock}
+          onChange={(e) => onChange({ ...params, pageNoPerBlock: Number(e.target.value) })}
+        />
+      </div>
+
+      <div className="param-row">
+        <div className="param-label">
+          <span><Term id="op">Over-provisioning</Term></span>
+          <span>{Math.round(params.overprovisioningRatio * 100)}%</span>
+        </div>
+        <input
+          className="param-slider"
+          type="range"
+          min={0}
+          max={30}
+          step={1}
+          disabled={disabled}
+          value={Math.round(params.overprovisioningRatio * 100)}
+          onChange={(e) => onChange({ ...params, overprovisioningRatio: Number(e.target.value) / 100 })}
+        />
+      </div>
+
+      <div className="param-row">
+        <div className="param-label">
+          <span><Term id="gcThreshold">GC 임계값</Term></span>
+          <span>{Math.round(params.gcExecThreshold * 100)}%</span>
+        </div>
+        <input
+          className="param-slider"
+          type="range"
+          min={gcThresholdRange.min}
+          max={gcThresholdRange.max}
+          step={1}
+          disabled={disabled}
+          value={Math.round(params.gcExecThreshold * 100)}
+          onChange={(e) => onChange({ ...params, gcExecThreshold: Number(e.target.value) / 100 })}
+        />
+        <div className="param-hint">
+          빈 block 비율이 이 아래로 떨어지면 GC 시작
+          {presetId === 'mapping' && ' - 이 프리셋은 GC 가 거의 발동하지 않도록 설계돼 있어 범위를 좁혀뒀습니다'}
+        </div>
+      </div>
+
+      {presetId === 'wear-leveling' && (
+        <div className="param-row">
+          <div className="param-label">
+            <span><Term id="staticWl">마모평준화 임계값</Term></span>
+            <span>{params.staticWlThreshold}</span>
+          </div>
+          <input
+            className="param-slider"
+            type="range"
+            min={STATIC_WL_THRESHOLD_RANGE.min}
+            max={STATIC_WL_THRESHOLD_RANGE.max}
+            step={1}
+            disabled={disabled}
+            value={params.staticWlThreshold}
+            onChange={(e) => onChange({ ...params, staticWlThreshold: Number(e.target.value) })}
+          />
+          <div className="param-hint">
+            가장 많이 닳은 block 과 가장 적게 닳은 block 의 erase 횟수 차이가 이 값 이상이 되면 정적 마모평준화
+            발동 - 낮을수록 자주, 높을수록 드물게 발동합니다 (이 데모의 실행 길이에서는 5 이상이면 발동하지 않아요)
+          </div>
+        </div>
+      )}
+
+      <div className="param-row">
+        <div className="param-label">
+          <span><Term id="victim">GC 알고리즘</Term></span>
+          <span>{GC_POLICY_LABELS[params.gcBlockSelectionPolicy]}</span>
+        </div>
+        <select
+          className="param-select"
+          disabled={disabled}
+          value={params.gcBlockSelectionPolicy}
+          onChange={(e) =>
+            onChange({ ...params, gcBlockSelectionPolicy: e.target.value as SsdParams['gcBlockSelectionPolicy'] })
+          }
+        >
+          {GC_POLICY_OPTIONS.map((policy) => (
+            <option key={policy} value={policy}>
+              {GC_POLICY_LABELS[policy]}
+            </option>
+          ))}
+        </select>
+        <div className="param-hint">지워질 block(victim)을 고르는 방식 - 알고리즘마다 옮기는 page 수(=GC 비용)가 달라요. GC 시연의 "GC 알고리즘 비교"로 7개를 한 번에 비교해볼 수 있어요</div>
+      </div>
+
+      <details className="param-advanced">
+        <summary>고급 설정 (처음엔 건드리지 않아도 돼요)</summary>
+      <div className="param-row">
+        <div className="param-label">
           <span>Page 크기</span>
           <span>{params.pageCapacityBytes / 1024}KB</span>
         </div>
@@ -126,122 +266,7 @@ export function ParamPanel({ presetId, params, onChange, disabled }: Props) {
 
       <div className="param-row">
         <div className="param-label">
-          <span>칩(Chip) 개수</span>
-        </div>
-        <div className="param-radio-group" role="radiogroup" aria-label="칩 개수">
-          {CHIP_COUNT_OPTIONS.map((count) => (
-            <label key={count} className="param-radio-option">
-              <input
-                type="radio"
-                name="chip-count"
-                disabled={disabled}
-                checked={params.chipCount === count}
-                onChange={() => onChange({ ...params, chipCount: count })}
-              />
-              {count}
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div className="param-row">
-        <div className="param-label">
-          <span>Block 개수</span>
-          <span>{params.blockNoPerPlane}</span>
-        </div>
-        <input
-          className="param-slider"
-          type="range"
-          min={MIN_BLOCK_NO_PER_PLANE[presetId]}
-          max={64}
-          step={1}
-          disabled={disabled}
-          value={params.blockNoPerPlane}
-          onChange={(e) => onChange({ ...params, blockNoPerPlane: Number(e.target.value) })}
-        />
-      </div>
-
-      <div className="param-row">
-        <div className="param-label">
-          <span>Block 당 Page 개수</span>
-          <span>{params.pageNoPerBlock}</span>
-        </div>
-        <input
-          className="param-slider"
-          type="range"
-          min={4}
-          max={64}
-          step={1}
-          disabled={disabled}
-          value={params.pageNoPerBlock}
-          onChange={(e) => onChange({ ...params, pageNoPerBlock: Number(e.target.value) })}
-        />
-      </div>
-
-      <div className="param-row">
-        <div className="param-label">
-          <span>Over-provisioning</span>
-          <span>{Math.round(params.overprovisioningRatio * 100)}%</span>
-        </div>
-        <input
-          className="param-slider"
-          type="range"
-          min={0}
-          max={30}
-          step={1}
-          disabled={disabled}
-          value={Math.round(params.overprovisioningRatio * 100)}
-          onChange={(e) => onChange({ ...params, overprovisioningRatio: Number(e.target.value) / 100 })}
-        />
-      </div>
-
-      <div className="param-row">
-        <div className="param-label">
-          <span>GC 임계값</span>
-          <span>{Math.round(params.gcExecThreshold * 100)}%</span>
-        </div>
-        <input
-          className="param-slider"
-          type="range"
-          min={gcThresholdRange.min}
-          max={gcThresholdRange.max}
-          step={1}
-          disabled={disabled}
-          value={Math.round(params.gcExecThreshold * 100)}
-          onChange={(e) => onChange({ ...params, gcExecThreshold: Number(e.target.value) / 100 })}
-        />
-        <div className="param-hint">
-          빈 block 비율이 이 아래로 떨어지면 GC 시작
-          {presetId === 'mapping' && ' - 이 프리셋은 GC 가 거의 발동하지 않도록 설계돼 있어 범위를 좁혀뒀습니다'}
-        </div>
-      </div>
-
-      {presetId === 'wear-leveling' && (
-        <div className="param-row">
-          <div className="param-label">
-            <span>마모평준화 임계값</span>
-            <span>{params.staticWlThreshold}</span>
-          </div>
-          <input
-            className="param-slider"
-            type="range"
-            min={STATIC_WL_THRESHOLD_RANGE.min}
-            max={STATIC_WL_THRESHOLD_RANGE.max}
-            step={1}
-            disabled={disabled}
-            value={params.staticWlThreshold}
-            onChange={(e) => onChange({ ...params, staticWlThreshold: Number(e.target.value) })}
-          />
-          <div className="param-hint">
-            가장 많이 닳은 block 과 가장 적게 닳은 block 의 erase 횟수 차이가 이 값 이상이 되면 정적 마모평준화
-            발동 - 낮을수록 자주, 높을수록 드물게 발동합니다 (이 데모의 실행 길이에서는 5 이상이면 발동하지 않아요)
-          </div>
-        </div>
-      )}
-
-      <div className="param-row">
-        <div className="param-label">
-          <span>명령 일시정지 (suspend)</span>
+          <span><Term id="suspend">명령 일시정지 (suspend)</Term></span>
           <span>{SUSPENSION_LABELS[params.cmdSuspension]}</span>
         </div>
         <select
@@ -264,43 +289,21 @@ export function ParamPanel({ presetId, params, onChange, disabled }: Props) {
 
       <div className="param-row">
         <div className="param-label">
-          <span>GC 알고리즘</span>
-          <span>{GC_POLICY_LABELS[params.gcBlockSelectionPolicy]}</span>
-        </div>
-        <select
-          className="param-select"
-          disabled={disabled}
-          value={params.gcBlockSelectionPolicy}
-          onChange={(e) =>
-            onChange({ ...params, gcBlockSelectionPolicy: e.target.value as SsdParams['gcBlockSelectionPolicy'] })
-          }
-        >
-          {GC_POLICY_OPTIONS.map((policy) => (
-            <option key={policy} value={policy}>
-              {GC_POLICY_LABELS[policy]}
-            </option>
-          ))}
-        </select>
-        <div className="param-hint">지워질 block(victim)을 고르는 방식 - 알고리즘마다 옮기는 page 수(=GC 비용)가 달라요. GC 시연의 "GC 알고리즘 비교"로 7개를 한 번에 비교해볼 수 있어요</div>
-      </div>
-
-      <div className="param-row">
-        <div className="param-label">
-          <span>매핑 방식</span>
+          <span><Term id="mapping">매핑 방식</Term></span>
           <span>Page-level</span>
         </div>
         <select className="param-select" disabled={disabled} value={params.addressMapping} onChange={() => {}}>
           <option value="PAGE_LEVEL">Page-level</option>
           <option value="HYBRID" disabled>
-            Hybrid (구현 예정)
+            Hybrid (MQSim 원본에도 없음)
           </option>
         </select>
-        <div className="param-hint">Hybrid 는 MQSim 원본에도 미구현</div>
+        <div className="param-hint">Hybrid 는 MQSim 원본에도 구현돼 있지 않아 고를 수 없어요</div>
       </div>
 
       <div className="param-row">
         <div className="param-label">
-          <span>엔진 시드</span>
+          <span><Term id="seed">엔진 시드</Term></span>
         </div>
         <input
           className="param-number"
@@ -328,6 +331,7 @@ export function ParamPanel({ presetId, params, onChange, disabled }: Props) {
         />
         <div className="param-hint">어떤 LPN 을 읽고 쓸지 정하는 워크로드 생성기의 시드</div>
       </div>
+      </details>
     </div>
   );
 }
