@@ -323,7 +323,7 @@ SSD_Device::SSD_Device(Device_Parameter_Set *parameters, std::vector<IO_Flow_Par
 		// beginner-facing demo scale (tens of blocks, so the flash grid fits on
 		// one screen) it was large enough to force GC's and the hard-block's
 		// thresholds to collide and permanently deadlock "GC 시연" - see
-		// /ftl-visual-simulator/plan/tweaked-code/ for the full writeup. Lowered
+		// /ftl-visual-simulator/reference/code-change/tweaked-code/ for the full writeup. Lowered
 		// to 4, then to 3 (2026-09-20, alongside raising the default block count
 		// to 12 and Overprovisioning_Ratio to 10%) - the clamp this constant
 		// imposes on GC_Exec_Threshold was flattening its entire 0-50% range into

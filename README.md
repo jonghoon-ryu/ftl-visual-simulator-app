@@ -32,12 +32,18 @@ All three concept presets run on the real WASM engine end-to-end:
   cold data to relocate. Static WL fires 7 times at the default threshold
   (3), each moving a full block; the threshold is adjustable (1-5).
 
+**Layout.** The right-hand column has two tabs: **설정 · 통계** (parameters,
+workload, stats — the default) and **비교 실험실** (comparison experiments,
+shown for **GC 시연 only**). A lesson bar on top walks through mapping -> GC ->
+wear leveling, and a first-visit intro ("왜 FTL 이 필요할까?") shows why an FTL
+exists. Jargon terms have hover/focus definitions.
+
 ### Learning features
 
 The app is meant for learning FTL internals, so each feature makes one
 concept visible:
 
-- **Free-block chart** (GC/WL demos) — free blocks per chip over time, the
+- **Free-block chart** (GC demo: bottom of the 비교 실험실 tab; WL demo: under the erase-count view) — free blocks per chip over time, the
   GC threshold as a dashed line, and GC/WL start markers: the sawtooth shows
   exactly when and why GC starts.
 - **"왜 이 block 을 골랐나요?"** (GC demo) — the latest GC victim's
@@ -46,6 +52,7 @@ concept visible:
   policy (all 7, including this project's Cost-Benefit) in a background worker and tabulates GC runs, pages moved
   and WAF. At the defaults plain Random comes out cheapest, which the app
   says plainly rather than repeating the textbook claim.
+- **Sequential vs random writes** (GC demo) — the same settings run with each write pattern; sequential comes out cheaper (WAF 1.14x vs 1.23x at the defaults).
 - **WAF vs over-provisioning curve** (GC demo) — OP 0-30% measured with the
   current settings (1.49x -> 1.05x at the defaults).
 - **Follow one write** (all presets) — click an LPN in the log to see every
@@ -117,7 +124,7 @@ concept visible:
    It needs `src/wasm-build` (see `engine/build-wasm.sh`). Not part of the
    deploy workflow.
 
-27 real, pre-existing MQSim bugs were found and fixed along the way -
+28 real, pre-existing MQSim bugs were found and fixed along the way -
 portability/UB issues, a use-after-free, uninitialized fields, dropped
 config parameters, a scheduler suspend/resume deadlock chain, static
 wear-leveling target selection, several simulations that silently stalled
@@ -145,6 +152,8 @@ npm run build           # typecheck + production build
 npm run lint            # oxlint
 npm run test:engine     # native golden regression tests for engine/mqsim
 npm run test:engine:unit # GMock/GTest unit tests for engine/mqsim (needs network on first run)
+npm run test:engine:trim # TRIM bookkeeping checks against the WASM build
+npm run test:e2e        # Playwright browser smoke tests (system Chrome; needs src/wasm-build)
 ```
 
 Building the WASM module requires an active [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html)
