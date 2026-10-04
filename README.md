@@ -107,7 +107,7 @@ concept visible:
    GC/WL threshold) can be checked deterministically in milliseconds instead
    of running a real workload for millions of event-groups hoping to
    stumble into it naturally — see the
-   [wear-leveling integration doc](https://jonghoon-ryu.github.io/ftl-visual-simulator/plan/wear-leveling-integration/)
+   [development plan](https://jonghoon-ryu.github.io/ftl-visual-simulator/plan/)
    for the investigation that motivated writing these.
 
 7. **Browser smoke tests**: `npm run test:e2e` (Playwright, `e2e/`) drives
@@ -125,7 +125,7 @@ wear-leveling target selection, several simulations that silently stalled
 never submitted its erase, ...), and GC victim-selection bugs in the
 RANDOM/FIFO policies. Each has an investigation write-up; the summary table
 is at
-[reference/bug-list/table](https://jonghoon-ryu.github.io/ftl-visual-simulator/reference/bug-list/table/).
+[reference/bug-list/table](https://jonghoon-ryu.github.io/ftl-visual-simulator/reference/code-change/bug-list/table/).
 A few deliberate deviations from upstream behavior (documented in code as
 `DEVIATION FROM UPSTREAM MQSim`) exist where this project's small demo scale
 needs them.

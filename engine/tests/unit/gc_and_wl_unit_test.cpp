@@ -43,7 +43,7 @@ protected:
 	// genuinely idle free blocks. is_safe_gc_wl_candidate() explicitly
 	// rejects any of the three frontiers as a WL target (see GC_and_WL_Unit_
 	// Base.cpp) - this is the exact structural reason, documented at
-	// https://jonghoon-ryu.github.io/ftl-visual-simulator/reference/wl-threshold-not-wired-bug/,
+	// https://jonghoon-ryu.github.io/ftl-visual-simulator/reference/code-change/bug-list/wl-threshold-not-wired-bug/,
 	// that static WL only ever finds a real target once one of those idle
 	// blocks becomes the coldest *and* isn't itself a frontier.
 	//
@@ -121,7 +121,7 @@ TEST_F(StaticWearLevelingTest, DoesNotTriggerBelowThreshold) {
 }
 
 // The bug at
-// https://jonghoon-ryu.github.io/ftl-visual-simulator/reference/wl-threshold-not-wired-bug/
+// https://jonghoon-ryu.github.io/ftl-visual-simulator/reference/code-change/bug-list/wl-threshold-not-wired-bug/
 // (SSD_Device.cpp never passing Static_Wearleveling_Threshold through to
 // this class's constructor, so it always used the compiled-in default of
 // 100) would have been caught immediately by a test like this one - it

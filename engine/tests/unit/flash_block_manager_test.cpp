@@ -6,7 +6,7 @@ using NVM::FlashMemory::Physical_Page_Address;
 using mqsim_test::FakeFlashBlockManager;
 
 // Regression test for the bug documented at
-// https://jonghoon-ryu.github.io/ftl-visual-simulator/reference/wl-bug-deviation/ -
+// https://jonghoon-ryu.github.io/ftl-visual-simulator/reference/code-change/bug-list/wl-bug-deviation/ -
 // upstream MQSim's Get_min_max_erase_difference() returned the difference of
 // the two blocks' *indices* instead of their *erase counts* (and could
 // underflow to ~4 billion via unsigned subtraction when the higher-erase
@@ -16,7 +16,7 @@ using mqsim_test::FakeFlashBlockManager;
 // of event-groups hoping erase counts happen to drift apart naturally
 // (which is what this project's native step-count harness had to do before
 // this test existed - see
-// https://jonghoon-ryu.github.io/ftl-visual-simulator/plan/wear-leveling-integration/).
+// https://jonghoon-ryu.github.io/ftl-visual-simulator/plan/).
 TEST(GetMinMaxEraseDifference, ReturnsEraseCountGapNotBlockIndexGap) {
 	// 4 blocks, 1 channel/chip/die/plane, 1 concurrent stream, 4 pages/block -
 	// tiny geometry, only Erase_count matters for this test.

@@ -70,7 +70,7 @@ namespace SSD_Components
 		// reachable from an interactive/step-driven UI that can pause or
 		// reconfigure mid-run. Full writeup, including how this was found
 		// and verified with AddressSanitizer:
-		// https://jonghoon-ryu.github.io/ftl-visual-simulator/reference/reconfigure-crash-bug/
+		// https://jonghoon-ryu.github.io/ftl-visual-simulator/reference/code-change/bug-list/reconfigure-crash-bug/
 		switch (sharing_mode)
 		{
 			case SSD_Components::Cache_Sharing_Mode::SHARED:

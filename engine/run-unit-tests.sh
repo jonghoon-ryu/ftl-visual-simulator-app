@@ -8,7 +8,7 @@ set -euo pipefail
 # at a time behind hand-written fakes/mocks of its collaborators, so they
 # can check exact conditions (a specific erase-count spread, a specific
 # threshold) deterministically in milliseconds - see
-# https://jonghoon-ryu.github.io/ftl-visual-simulator/plan/wear-leveling-integration/
+# https://jonghoon-ryu.github.io/ftl-visual-simulator/plan/
 # for the investigation that motivated writing these: confirming static
 # wear-leveling actually triggers took a native harness running millions of
 # simulated event-groups before this test suite existed.
