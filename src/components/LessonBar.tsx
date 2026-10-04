@@ -17,7 +17,7 @@ const LESSONS: Lesson[] = [
   {
     presetId: 'gc',
     title: 'GC (청소)',
-    goal: '빈 block 이 줄어들면 FTL 이 청소(GC)를 시작해요. ▶ 를 누르고 아래 차트의 톱니 모양과 "왜 이 block 을 골랐나요?" 를 찾아보세요.',
+    goal: '빈 block 이 줄어들면 FTL 이 청소(GC)를 시작해요. ▶ 를 누르고 "비교 실험실" 탭 맨 아래 "빈 block 수 변화" 차트의 톱니 모양과, 격자 위의 "왜 이 block 을 골랐나요?" 를 찾아보세요.',
   },
   {
     presetId: 'wear-leveling',

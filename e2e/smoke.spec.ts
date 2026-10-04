@@ -139,6 +139,15 @@ test('side tabs: only GC 시연 has 비교 실험실, and 설정 · 통계 is it
   await expect(page.getByRole('tabpanel', { name: '비교 실험실' }).locator('.gc-compare')).toHaveCount(5);
   await expect(page.getByRole('tabpanel', { name: '설정 · 통계' })).toBeHidden();
 
+  // The live charts sit at the bottom of the lab tab (after the five experiments),
+  // not under the flash grid.
+  const lab = page.getByRole('tabpanel', { name: '비교 실험실' });
+  await expect(lab.locator('.free-chart-title', { hasText: '빈 block 수 변화' })).toBeVisible();
+  await expect(lab.locator('.free-chart-title', { hasText: '읽기 지연' })).toBeVisible();
+  await expect(page.locator('.sim-grid-panel .free-chart-title')).toHaveCount(0);
+  const titles = await lab.locator('.free-chart-title').allTextContents();
+  expect(titles[titles.length - 1]).toContain('읽기 지연');
+
   // Leaving GC 시연 while on the lab tab must not leave settings hidden elsewhere,
   // and coming back starts on settings again.
   await preset(page, '매핑 기본').click();

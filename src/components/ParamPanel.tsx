@@ -283,7 +283,7 @@ export function ParamPanel({ presetId, params, onChange, disabled }: Props) {
         </select>
         <div className="param-hint">
           program(쓰기)·erase(지우기)는 읽기보다 훨씬 오래 걸려요. 켜면 칩이 그 작업을 잠깐 멈추고 기다리던 읽기를 먼저
-          처리해서, GC 가 도는 동안 가장 느린 읽기가 줄어들어요. 읽기 비율을 올리고 GC 시연의 "읽기 지연" 차트로 비교해보세요.
+          처리해서, GC 가 도는 동안 가장 느린 읽기가 줄어들어요. 읽기 비율을 올리고 GC 시연의 "비교 실험실" 탭 맨 아래 "읽기 지연" 차트로 비교해보세요.
         </div>
       </div>
 

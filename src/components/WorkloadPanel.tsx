@@ -66,7 +66,7 @@ export function WorkloadPanel({ workload, onChange, disabled }: Props) {
         />
         <div className="param-hint">
           호스트 요청 중 읽기의 비율. 한 번도 안 쓴 LPN 을 읽으면 flash 를 거치지 않고 바로 끝나요(실제 SSD 가 0 을
-          돌려주듯). GC 시연에서 올리면 "읽기 지연" 차트로 GC 가 읽기를 얼마나 느리게 만드는지 볼 수 있어요.
+          돌려주듯). GC 시연에서 올리면 "비교 실험실" 탭 맨 아래의 "읽기 지연" 차트로 GC 가 읽기를 얼마나 느리게 만드는지 볼 수 있어요.
         </div>
       </div>
 

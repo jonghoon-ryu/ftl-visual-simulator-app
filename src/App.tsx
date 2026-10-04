@@ -380,14 +380,6 @@ function App() {
               }
               trackedCurrentKey={lpnJourney.journey?.currentKey}
               trackedOldKeys={lpnJourney.journey?.oldKeys}
-              footer={
-                <>
-                  {freeBlockChart}
-                  {wired && configKey === 'gc' && (
-                    <ReadLatencyChart samples={readLatency.samples} readPercentage={activeWorkload.readPercentage} />
-                  )}
-                </>
-              }
             />
           )}
           {wearRows && (
@@ -499,6 +491,9 @@ function App() {
                 <HotColdPanel />
                 <AccessPatternComparison params={activeParams} workload={activeWorkload} />
                 <WafOpCurve params={activeParams} workload={activeWorkload} />
+                {/* Live charts that follow the run on screen sit last, below the experiments. */}
+                {freeBlockChart}
+                <ReadLatencyChart samples={readLatency.samples} readPercentage={activeWorkload.readPercentage} />
               </>
             </div>
             )}

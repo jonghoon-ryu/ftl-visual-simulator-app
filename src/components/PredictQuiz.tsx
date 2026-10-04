@@ -34,7 +34,7 @@ const QUESTIONS: Partial<Record<PresetId, Question[]>> = {
       answer: 1,
       explanation:
         '빈 block 이 완전히 바닥나면 쓰기를 받을 수 없어서, FTL 은 빈 block 이 임계값 아래로 내려가는 순간 미리 GC 를 시작합니다. GC 임계값 슬라이더가 바로 그 기준이에요.',
-      howToCheck: '아래 "빈 block 수 변화" 차트에서 GC 시작 점(●)이 모두 점선(임계값) 아래에 찍혀요.',
+      howToCheck: '오른쪽 "비교 실험실" 탭 맨 아래의 "빈 block 수 변화" 차트에서 GC 시작 점(●)이 모두 점선(임계값) 아래에 찍혀요.',
     },
     {
       prompt: '기본 알고리즘 RGA 는 어떤 block 을 GC victim 으로 고를까요?',
