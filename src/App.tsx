@@ -329,14 +329,24 @@ function App() {
   const logEntries = wired ? events.log : active.log;
   const caption = wired ? '' : active.caption;
 
+  // The comparison experiments only exist for "GC 시연", so the tab strip only
+  // shows there; elsewhere the right column is just settings + stats. Leaving
+  // GC 시연 also returns to the settings tab (selectPreset below).
+  const showLabTab = wired && configKey === 'gc';
+  const activeSideTab = showLabTab ? sideTab : 'settings';
+  const selectPreset = (id: PresetId) => {
+    setSideTab('settings');
+    setActiveId(id);
+  };
+
   return (
     <div className="sim-app">
       <div className="sim-mockup">
-        <LessonBar activeId={activeId} onSelect={setActiveId} onOpenIntro={() => setShowIntro(true)} />
+        <LessonBar activeId={activeId} onSelect={selectPreset} onOpenIntro={() => setShowIntro(true)} />
         <Toolbar
           presets={presets}
           activeId={activeId}
-          onSelect={setActiveId}
+          onSelect={selectPreset}
           hideStepButtons={activeId === 'wear-leveling'}
           playback={{
             isPlaying: playback.isPlaying,
@@ -417,33 +427,35 @@ function App() {
             </div>
           )}
           <div className="side-tabs">
-            <div className="side-tab-bar" role="tablist" aria-label="오른쪽 패널">
-              <button
-                type="button"
-                role="tab"
-                id="tab-settings"
-                aria-selected={sideTab === 'settings'}
-                aria-controls="panel-settings"
-                className={sideTab === 'settings' ? 'active' : ''}
-                onClick={() => setSideTab('settings')}
-              >
-                설정 · 통계
-              </button>
-              <button
-                type="button"
-                role="tab"
-                id="tab-lab"
-                aria-selected={sideTab === 'lab'}
-                aria-controls="panel-lab"
-                className={sideTab === 'lab' ? 'active' : ''}
-                onClick={() => setSideTab('lab')}
-              >
-                비교 실험실
-              </button>
-            </div>
+            {showLabTab && (
+              <div className="side-tab-bar" role="tablist" aria-label="오른쪽 패널">
+                <button
+                  type="button"
+                  role="tab"
+                  id="tab-settings"
+                  aria-selected={activeSideTab === 'settings'}
+                  aria-controls="panel-settings"
+                  className={activeSideTab === 'settings' ? 'active' : ''}
+                  onClick={() => setSideTab('settings')}
+                >
+                  설정 · 통계
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="tab-lab"
+                  aria-selected={activeSideTab === 'lab'}
+                  aria-controls="panel-lab"
+                  className={activeSideTab === 'lab' ? 'active' : ''}
+                  onClick={() => setSideTab('lab')}
+                >
+                  비교 실험실
+                </button>
+              </div>
+            )}
             {/* Both panels stay mounted and are just hidden, so switching tabs
                 never throws away a finished comparison or a half-edited setting. */}
-            <div className="side-tab-panel" role="tabpanel" id="panel-settings" aria-labelledby="tab-settings" hidden={sideTab !== 'settings'}>
+            <div className="side-tab-panel" role="tabpanel" id="panel-settings" aria-label="설정 · 통계" hidden={activeSideTab !== 'settings'}>
               <div className="sim-sidebar">
                 <ParamPanel
                   presetId={configKey}
@@ -471,29 +483,25 @@ function App() {
                 <StatsPanel stats={statItems} />
               </div>
             </div>
-            <div className="side-tab-panel lab" role="tabpanel" id="panel-lab" aria-labelledby="tab-lab" hidden={sideTab !== 'lab'}>
-              {wired && configKey === 'gc' ? (
-                <>
-                  <div className="lab-intro">
+            {showLabTab && (
+            <div className="side-tab-panel lab" role="tabpanel" id="panel-lab" aria-labelledby="tab-lab" hidden={activeSideTab !== 'lab'}>
+              <>
+                <div className="lab-intro">
                     같은 설정으로 시뮬레이션을 끝까지 다시 돌려서 비교하는 실험들이에요 (화면의 재생과는 별개로 계산).
-                  </div>
-                  <GcPolicyComparison params={activeParams} workload={activeWorkload} />
-                  <TrimPanel
+                </div>
+                <GcPolicyComparison params={activeParams} workload={activeWorkload} />
+                <TrimPanel
                     params={activeParams}
                     workload={activeWorkload}
                     onTrim={handleTrim}
                     canTrim={!playback.isPlaying}
                   />
-                  <HotColdPanel />
-                  <AccessPatternComparison params={activeParams} workload={activeWorkload} />
-                  <WafOpCurve params={activeParams} workload={activeWorkload} />
-                </>
-              ) : (
-                <div className="lab-intro">
-                  비교 실험은 <strong>GC 시연</strong> 프리셋에서 쓸 수 있어요. 위쪽 탭에서 GC 시연을 선택해보세요.
-                </div>
-              )}
+                <HotColdPanel />
+                <AccessPatternComparison params={activeParams} workload={activeWorkload} />
+                <WafOpCurve params={activeParams} workload={activeWorkload} />
+              </>
             </div>
+            )}
           </div>
         </div>
       </div>

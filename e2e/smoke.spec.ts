@@ -119,20 +119,33 @@ test('GC 시연 comparison experiments all return results', async ({ page }) => 
   expect(problems).toEqual([]);
 });
 
-test('side tabs: 설정 · 통계 by default, 비교 실험실 only has content in GC 시연', async ({ page }) => {
+test('side tabs: only GC 시연 has 비교 실험실, and 설정 · 통계 is its default', async ({ page }) => {
   const problems = await openApp(page);
-  await expect(page.getByRole('tab', { name: '설정 · 통계' })).toHaveAttribute('aria-selected', 'true');
+  const labTab = page.getByRole('tab', { name: '비교 실험실' });
+
+  // 매핑 기본 and 마모평준화 시연: no tab strip, just settings + stats.
+  await expect(labTab).toHaveCount(0);
   await expect(page.getByRole('tabpanel', { name: '설정 · 통계' })).toBeVisible();
   await expect(page.getByRole('tabpanel', { name: '설정 · 통계' }).locator('.stat-row').first()).toBeVisible();
+  await preset(page, '마모평준화 시연').click();
+  await expect(labTab).toHaveCount(0);
+  await expect(page.getByRole('tabpanel', { name: '설정 · 통계' })).toBeVisible();
 
-  await page.getByRole('tab', { name: '비교 실험실' }).click();
-  await expect(page.getByRole('tabpanel', { name: '비교 실험실' })).toContainText('GC 시연');
+  // GC 시연: both tabs, settings first.
+  await preset(page, 'GC 시연').click();
+  await expect(labTab).toBeVisible();
+  await expect(page.getByRole('tab', { name: '설정 · 통계' })).toHaveAttribute('aria-selected', 'true');
+  await labTab.click();
+  await expect(page.getByRole('tabpanel', { name: '비교 실험실' }).locator('.gc-compare')).toHaveCount(5);
   await expect(page.getByRole('tabpanel', { name: '설정 · 통계' })).toBeHidden();
 
-  await preset(page, 'GC 시연').click();
-  await expect(page.getByRole('tabpanel', { name: '비교 실험실' }).locator('.gc-compare')).toHaveCount(5);
-  await page.getByRole('tab', { name: '설정 · 통계' }).click();
+  // Leaving GC 시연 while on the lab tab must not leave settings hidden elsewhere,
+  // and coming back starts on settings again.
+  await preset(page, '매핑 기본').click();
+  await expect(labTab).toHaveCount(0);
   await expect(page.getByRole('tabpanel', { name: '설정 · 통계' })).toBeVisible();
+  await preset(page, 'GC 시연').click();
+  await expect(page.getByRole('tab', { name: '설정 · 통계' })).toHaveAttribute('aria-selected', 'true');
   expect(problems).toEqual([]);
 });
 
