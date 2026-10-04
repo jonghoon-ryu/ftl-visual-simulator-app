@@ -112,8 +112,8 @@ concept visible:
 
 7. **Browser smoke tests**: `npm run test:e2e` (Playwright, `e2e/`) drives
    the real UI in the system Chrome (no browser download): the intro, the
-   lesson bar, all three presets playing, glossary hover, live TRIM, and every
-   comparison experiment returning a result, failing on any console error.
+   lesson bar, the two right-hand tabs, all three presets playing, glossary
+   hover, live TRIM, and every comparison experiment returning a result, failing on any console error.
    It needs `src/wasm-build` (see `engine/build-wasm.sh`). Not part of the
    deploy workflow.
 

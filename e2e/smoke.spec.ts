@@ -83,7 +83,7 @@ test('GC 시연 plays, TRIM turns valid pages invalid', async ({ page }) => {
   expect(await valid.count()).toBeGreaterThan(0);
   const invalidBefore = await invalid.count();
 
-  await page.locator('.lab-section > summary').click();
+  await page.getByRole('tab', { name: '비교 실험실' }).click();
   await page.getByRole('button', { name: '지금 TRIM 하기' }).click();
   await expect(page.locator('.gc-compare', { hasText: '지금 TRIM 하기' })).toContainText('invalid 가 됐어요');
   expect(await invalid.count()).toBeGreaterThan(invalidBefore);
@@ -94,8 +94,11 @@ test('GC 시연 comparison experiments all return results', async ({ page }) => 
   test.setTimeout(240_000);
   const problems = await openApp(page);
   await preset(page, 'GC 시연').click();
-  await expect(page.locator('.lab-section')).not.toHaveAttribute('open', '');
-  await page.locator('.lab-section > summary').click();
+  // 설정 · 통계 is the default tab; the experiments are one click away.
+  await expect(page.getByRole('tab', { name: '설정 · 통계' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tabpanel', { name: '비교 실험실' })).toBeHidden();
+  await page.getByRole('tab', { name: '비교 실험실' }).click();
+  await expect(page.getByRole('tabpanel', { name: '비교 실험실' })).toBeVisible();
 
   // Panels are found by something that stays put while running - the button's
   // label changes to "비교 중..." as soon as it is clicked.
@@ -113,6 +116,23 @@ test('GC 시연 comparison experiments all return results', async ({ page }) => 
   }
   // Hot/cold also draws a per-block composition bar for each scenario.
   await expect(page.locator('.hc-bars')).toHaveCount(2);
+  expect(problems).toEqual([]);
+});
+
+test('side tabs: 설정 · 통계 by default, 비교 실험실 only has content in GC 시연', async ({ page }) => {
+  const problems = await openApp(page);
+  await expect(page.getByRole('tab', { name: '설정 · 통계' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tabpanel', { name: '설정 · 통계' })).toBeVisible();
+  await expect(page.getByRole('tabpanel', { name: '설정 · 통계' }).locator('.stat-row').first()).toBeVisible();
+
+  await page.getByRole('tab', { name: '비교 실험실' }).click();
+  await expect(page.getByRole('tabpanel', { name: '비교 실험실' })).toContainText('GC 시연');
+  await expect(page.getByRole('tabpanel', { name: '설정 · 통계' })).toBeHidden();
+
+  await preset(page, 'GC 시연').click();
+  await expect(page.getByRole('tabpanel', { name: '비교 실험실' }).locator('.gc-compare')).toHaveCount(5);
+  await page.getByRole('tab', { name: '설정 · 통계' }).click();
+  await expect(page.getByRole('tabpanel', { name: '설정 · 통계' })).toBeVisible();
   expect(problems).toEqual([]);
 });
 

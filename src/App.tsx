@@ -98,6 +98,9 @@ function buildWorkloadXmlFor(presetId: PresetId, params: SsdParams, workload: Wo
 function App() {
   const [activeId, setActiveId] = useState<PresetId>('mapping');
   const [showUsageGuide, setShowUsageGuide] = useState(false);
+  // Right-hand panel: the settings + stats are the default view; the comparison
+  // experiments (GC 시연 only) live on their own tab.
+  const [sideTab, setSideTab] = useState<'settings' | 'lab'>('settings');
   // First-time visitors start in the "why FTL" intro; later visits skip it
   // (storage can be unavailable, so every access is guarded).
   const [showIntro, setShowIntro] = useState(() => {
@@ -373,27 +376,6 @@ function App() {
                   {wired && configKey === 'gc' && (
                     <ReadLatencyChart samples={readLatency.samples} readPercentage={activeWorkload.readPercentage} />
                   )}
-                  {wired && configKey === 'gc' && (
-                    // Comparison experiments are collapsed so the page a beginner
-                    // lands on is just the grid, the free-block chart and the
-                    // read-latency chart; each experiment runs the whole simulation
-                    // again in a worker, so it is something to opt into.
-                    <details className="lab-section">
-                      <summary>비교 실험실 — GC 알고리즘 · TRIM · 핫/콜드 · 순차/무작위 · Over-provisioning (눌러서 펼치기)</summary>
-                      {wired && configKey === 'gc' && <GcPolicyComparison params={activeParams} workload={activeWorkload} />}
-                      {wired && configKey === 'gc' && (
-                        <TrimPanel
-                          params={activeParams}
-                          workload={activeWorkload}
-                          onTrim={handleTrim}
-                          canTrim={!playback.isPlaying}
-                        />
-                      )}
-                      {wired && configKey === 'gc' && <HotColdPanel />}
-                      {wired && configKey === 'gc' && <AccessPatternComparison params={activeParams} workload={activeWorkload} />}
-                      {wired && configKey === 'gc' && <WafOpCurve params={activeParams} workload={activeWorkload} />}
-                    </details>
-                  )}
                 </>
               }
             />
@@ -434,31 +416,84 @@ function App() {
               />
             </div>
           )}
-          <div className="sim-sidebar">
-            <ParamPanel
-              presetId={configKey}
-              params={activeParams}
-              onChange={(next) => setParamsByPreset((prev) => ({ ...prev, [configKey]: next }))}
-              disabled={!wired}
-            />
-            <WorkloadPanel
-              workload={activeWorkload}
-              onChange={(next) => setWorkloadByPreset((prev) => ({ ...prev, [configKey]: next }))}
-              disabled={!wired}
-            />
-          </div>
-          <div className="sim-stats-col">
-            {deviceFull && (
-              <div className="device-full-status">
-                <strong>장치가 가득 찼어요</strong>
-                <p>
-                  남은 쓰기 {engine.state?.stats.writesWaitingForSpace}개가 빈 page 를 기다리다 끝났어요. 빈 page 가
-                  없는데 GC 가 청소할 invalid page(덮어써서 무효가 된 page)도 남아 있지 않아서예요. Block 개수, Block 당
-                  Page 개수, 또는 Over-provisioning 을 늘려보세요.
-                </p>
+          <div className="side-tabs">
+            <div className="side-tab-bar" role="tablist" aria-label="오른쪽 패널">
+              <button
+                type="button"
+                role="tab"
+                id="tab-settings"
+                aria-selected={sideTab === 'settings'}
+                aria-controls="panel-settings"
+                className={sideTab === 'settings' ? 'active' : ''}
+                onClick={() => setSideTab('settings')}
+              >
+                설정 · 통계
+              </button>
+              <button
+                type="button"
+                role="tab"
+                id="tab-lab"
+                aria-selected={sideTab === 'lab'}
+                aria-controls="panel-lab"
+                className={sideTab === 'lab' ? 'active' : ''}
+                onClick={() => setSideTab('lab')}
+              >
+                비교 실험실
+              </button>
+            </div>
+            {/* Both panels stay mounted and are just hidden, so switching tabs
+                never throws away a finished comparison or a half-edited setting. */}
+            <div className="side-tab-panel" role="tabpanel" id="panel-settings" aria-labelledby="tab-settings" hidden={sideTab !== 'settings'}>
+              <div className="sim-sidebar">
+                <ParamPanel
+                  presetId={configKey}
+                  params={activeParams}
+                  onChange={(next) => setParamsByPreset((prev) => ({ ...prev, [configKey]: next }))}
+                  disabled={!wired}
+                />
+                <WorkloadPanel
+                  workload={activeWorkload}
+                  onChange={(next) => setWorkloadByPreset((prev) => ({ ...prev, [configKey]: next }))}
+                  disabled={!wired}
+                />
               </div>
-            )}
-            <StatsPanel stats={statItems} />
+              <div className="sim-stats-col">
+                {deviceFull && (
+                  <div className="device-full-status">
+                    <strong>장치가 가득 찼어요</strong>
+                    <p>
+                      남은 쓰기 {engine.state?.stats.writesWaitingForSpace}개가 빈 page 를 기다리다 끝났어요. 빈 page 가
+                      없는데 GC 가 청소할 invalid page(덮어써서 무효가 된 page)도 남아 있지 않아서예요. Block 개수, Block 당
+                      Page 개수, 또는 Over-provisioning 을 늘려보세요.
+                    </p>
+                  </div>
+                )}
+                <StatsPanel stats={statItems} />
+              </div>
+            </div>
+            <div className="side-tab-panel lab" role="tabpanel" id="panel-lab" aria-labelledby="tab-lab" hidden={sideTab !== 'lab'}>
+              {wired && configKey === 'gc' ? (
+                <>
+                  <div className="lab-intro">
+                    같은 설정으로 시뮬레이션을 끝까지 다시 돌려서 비교하는 실험들이에요 (화면의 재생과는 별개로 계산).
+                  </div>
+                  <GcPolicyComparison params={activeParams} workload={activeWorkload} />
+                  <TrimPanel
+                    params={activeParams}
+                    workload={activeWorkload}
+                    onTrim={handleTrim}
+                    canTrim={!playback.isPlaying}
+                  />
+                  <HotColdPanel />
+                  <AccessPatternComparison params={activeParams} workload={activeWorkload} />
+                  <WafOpCurve params={activeParams} workload={activeWorkload} />
+                </>
+              ) : (
+                <div className="lab-intro">
+                  비교 실험은 <strong>GC 시연</strong> 프리셋에서 쓸 수 있어요. 위쪽 탭에서 GC 시연을 선택해보세요.
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
