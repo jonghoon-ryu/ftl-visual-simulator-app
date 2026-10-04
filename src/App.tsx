@@ -7,6 +7,7 @@ import { FreeBlockChart } from './components/FreeBlockChart';
 import { GcVictimExplanation } from './components/GcVictimExplanation';
 import { GcPolicyComparison } from './components/GcPolicyComparison';
 import { WafOpCurve } from './components/WafOpCurve';
+import { AccessPatternComparison } from './components/AccessPatternComparison';
 import { PredictQuiz } from './components/PredictQuiz';
 import { useFreeBlockHistory } from './hooks/useFreeBlockHistory';
 import { useLpnJourney } from './hooks/useLpnJourney';
@@ -347,6 +348,7 @@ function App() {
                     <ReadLatencyChart samples={readLatency.samples} readPercentage={activeWorkload.readPercentage} />
                   )}
                   {wired && configKey === 'gc' && <GcPolicyComparison params={activeParams} workload={activeWorkload} />}
+                  {wired && configKey === 'gc' && <AccessPatternComparison params={activeParams} workload={activeWorkload} />}
                   {wired && configKey === 'gc' && <WafOpCurve params={activeParams} workload={activeWorkload} />}
                 </>
               }
