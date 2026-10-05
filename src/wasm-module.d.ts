@@ -53,6 +53,10 @@ interface MqsimBlockSnapshot extends MqsimBlockAddress {
   // (GC_wf) for some stream - where migrated pages are actively landing,
   // as opposed to hasOngoingGcWl above (the *victim* block being reclaimed).
   isGcWriteFrontier: boolean;
+  // Page programs already allocated to this block but not finished on the
+  // chip yet. Pages show 'valid' from allocation on, so a block can look
+  // full while this is > 0 - and then it is never a GC/WL victim.
+  ongoingProgramCount: number;
   // Which IO flow's data this block holds (0-based, flow order in the
   // workload XML), or null for a block erased back into the free pool.
   streamId: number | null;

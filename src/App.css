@@ -179,6 +179,7 @@
 .row-flag-victim { color: #f16d75; }
 .row-flag-gc-block { color: #f5b942; }
 .row-flag-active { color: #4a6cf7; }
+.row-flag-writing { color: #9b72e0; }
 
 .chip-badge {
   width: 20px;

@@ -235,6 +235,7 @@ namespace SSD_Components
 							entry.Stream_id = slot.Stream_id;
 							entry.Is_write_frontier = false;
 							entry.Is_gc_write_frontier = false;
+							entry.Ongoing_program_count = slot.Ongoing_user_program_count > 0 ? (unsigned int)slot.Ongoing_user_program_count : 0;
 							for (unsigned int stream_cntr = 0; stream_cntr < total_concurrent_streams_no; stream_cntr++) {
 								if (plane_record->Data_wf[stream_cntr] == &slot) {
 									entry.Is_write_frontier = true;

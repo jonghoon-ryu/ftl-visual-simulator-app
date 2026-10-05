@@ -91,6 +91,14 @@ export function FlashGrid({ blocks, caption, banner, footer, trackedCurrentKey, 
             {block.isVictim && <span className="row-flag row-flag-victim">Victim</span>}
             {block.gcDestination && <span className="row-flag row-flag-gc-block">GC block</span>}
             {block.writeFrontier && <span className="row-flag row-flag-active">active block</span>}
+            {block.programInFlight && (
+              <span
+                className="row-flag row-flag-writing"
+                title="이미 할당된 페이지의 쓰기가 아직 끝나지 않았습니다. 끝날 때까지 GC/마모평준화 대상이 되지 않습니다."
+              >
+                Writing
+              </span>
+            )}
           </div>
         );
       })}

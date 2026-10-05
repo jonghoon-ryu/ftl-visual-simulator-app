@@ -35,5 +35,6 @@ export function toBlockRows(
     isVictim: block.hasOngoingGcWl,
     gcDestination: block.isGcWriteFrontier,
     writeFrontier: block.isWriteFrontier,
+    programInFlight: block.ongoingProgramCount > 0,
   }));
 }

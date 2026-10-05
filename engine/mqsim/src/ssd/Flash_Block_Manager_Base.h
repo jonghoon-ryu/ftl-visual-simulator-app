@@ -69,6 +69,14 @@ namespace SSD_Components
 		// side of a migration, as opposed to Has_ongoing_gc_wl above, which
 		// marks the *victim* block being reclaimed).
 		bool Is_gc_write_frontier;
+		// Number of page programs (host or GC/WL migration) already allocated
+		// to this block but not yet finished on the flash chip
+		// (Ongoing_user_program_count). Pages are marked VALID in Pages the
+		// moment they are allocated, so a block can look completely full
+		// while this is still > 0 - and such a block is never a GC/WL victim
+		// (is_safe_gc_wl_candidate()), which is why static WL can skip an
+		// erase-count-0 block that looks full and ready.
+		unsigned int Ongoing_program_count;
 		// The stream (IO flow) whose data this block holds - NO_STREAM for a
 		// block that's been erased back into the free pool (Erase() resets
 		// it) or never allocated. Lets a UI tell which flow's data sits where,

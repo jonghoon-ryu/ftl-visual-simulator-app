@@ -38,6 +38,10 @@ export interface BlockRow {
   // True for as long as this block is the current host write frontier -
   // where new user writes are actively landing.
   writeFrontier?: boolean;
+  // True while page programs already allocated to this block are still in
+  // flight on the chip. The pages already show 'valid', but GC/WL will not
+  // pick this block until they finish. Rendered as "Writing".
+  programInFlight?: boolean;
 }
 
 export interface StatItem {
