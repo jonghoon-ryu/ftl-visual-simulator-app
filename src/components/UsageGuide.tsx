@@ -351,6 +351,25 @@ export function UsageGuide({ onClose }: Props) {
               </li>
             </ul>
           </section>
+
+          <section>
+            <h3>출처와 라이선스</h3>
+            <p>
+              이 앱의 시뮬레이션 엔진은 ETH Zürich SAFARI Research Group 의{' '}
+              <a href="https://github.com/CMU-SAFARI/MQSim" target="_blank" rel="noopener noreferrer">MQSim</a>{' '}
+              C++ 소스를 수정해 WebAssembly 로 컴파일한 것입니다. MQSim 은 MIT 라이선스로 배포됩니다.
+            </p>
+            <p>
+              Copyright (c) 2018, SAFARI Research Group at ETH Zurich University ·{' '}
+              <a href={`${import.meta.env.BASE_URL}licenses/MQSim-LICENSE.txt`} target="_blank" rel="noopener noreferrer">
+                라이선스 전문 (MIT)
+              </a>
+            </p>
+            <p>
+              원본에서 바뀐 부분(라이브러리화, 시각화용 이벤트 훅, 버그 수정)은 저장소의{' '}
+              <code>engine/mqsim/NOTICE.md</code> 와 소스 안의 주석에 정리되어 있습니다.
+            </p>
+          </section>
         </div>
       </div>
     </div>
