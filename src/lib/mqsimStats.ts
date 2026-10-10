@@ -47,6 +47,7 @@ export function toStatItems(state: MqsimState | null, counters: SimulationCounte
     {
       label: 'Valid page 비율',
       value: validPageRatio === null ? '-' : `${Math.round(validPageRatio * 100)}%`,
+      hint: '전체 물리 page 중 유효 데이터 비율 (OP 포함 - 그래서 100% 는 못 돼요) · 높을수록 GC 가 옮길 게 많아요',
     },
     { label: 'GC 실행 횟수', value: String(state?.stats.gcExecutions ?? 0) },
     { label: 'WL 실행 횟수', value: String(state?.stats.wlExecutions ?? 0) },
