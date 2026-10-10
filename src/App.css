@@ -13,7 +13,9 @@
   background: #1c1e26;
   color: #d7dae0;
   border-radius: 10px;
-  overflow: hidden;
+  /* clip, not hidden: it still trims to the rounded corners but doesn't make
+     this a scroll container, which would stop the sticky .side-tabs below. */
+  overflow: clip;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
 }
 
@@ -1638,6 +1640,52 @@
 .side-tab-panel.lab {
   flex-direction: column;
   padding: 6px 14px 14px;
+}
+
+/* When all columns sit side by side, pin the right column to the screen and
+   let each tab scroll on its own - so scrolling down to the live charts at the
+   bottom of 비교 실험실 no longer scrolls the flash grid and 로그 out of view.
+   Below this width the columns wrap and the page just scrolls as before. */
+@media (min-width: 1360px) {
+  .side-tabs {
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    max-height: 100vh;
+  }
+
+  .side-tab-panel {
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  /* Room to scroll past the end, so "↓ 실시간 차트" can bring the live
+     charts up to the top of the panel - the panel starts below the toolbar,
+     so without this its last ~130px sit under the fold at page scroll 0. */
+  .side-tab-panel.lab {
+    padding-bottom: 80vh;
+  }
+}
+
+.lab-jump {
+  font-family: inherit;
+  font-size: 11px;
+  color: #9fb4ff;
+  background: transparent;
+  border: 1px solid #33374a;
+  border-radius: 5px;
+  padding: 3px 9px;
+  margin-top: 8px;
+  cursor: pointer;
+}
+
+.lab-jump:hover {
+  border-color: #4a6cf7;
+  color: #fff;
+}
+
+.lab-live {
+  scroll-margin-top: 8px;
 }
 
 .lab-intro {

@@ -101,6 +101,23 @@ function App() {
   // Right-hand panel: the settings + stats are the default view; the comparison
   // experiments (GC 시연 only) live on their own tab.
   const [sideTab, setSideTab] = useState<'settings' | 'lab'>('settings');
+  // "↓ 실시간 차트" in 비교 실험실 scrolls here (the live charts sit below all the experiments).
+  const liveChartsRef = useRef<HTMLDivElement>(null);
+  // Scrolls only the tab panel (its own scroll area on wide screens), not the
+  // page - scrollIntoView would also scroll the window and push the top of the
+  // flash grid off screen. When the columns wrap the panel doesn't scroll on
+  // its own, so fall back to scrolling the page.
+  function jumpToLiveCharts() {
+    const target = liveChartsRef.current;
+    const panel = target?.closest<HTMLElement>('.side-tab-panel');
+    if (!target || !panel) return;
+    if (panel.scrollHeight > panel.clientHeight) {
+      const top = target.getBoundingClientRect().top - panel.getBoundingClientRect().top - 8;
+      panel.scrollBy({ top, behavior: 'smooth' });
+    } else {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
   // First-time visitors start in the "why FTL" intro; later visits skip it
   // (storage can be unavailable, so every access is guarded).
   const [showIntro, setShowIntro] = useState(() => {
@@ -480,6 +497,15 @@ function App() {
               <>
                 <div className="lab-intro">
                     같은 설정으로 시뮬레이션을 끝까지 다시 돌려서 비교하는 실험들이에요 (화면의 재생과는 별개로 계산).
+                    <div>
+                      <button
+                        type="button"
+                        className="lab-jump"
+                        onClick={jumpToLiveCharts}
+                      >
+                        ↓ 실시간 차트 (빈 block 수 변화 · 읽기 지연)
+                      </button>
+                    </div>
                 </div>
                 <GcPolicyComparison params={activeParams} workload={activeWorkload} />
                 <TrimPanel
@@ -492,8 +518,10 @@ function App() {
                 <AccessPatternComparison params={activeParams} workload={activeWorkload} />
                 <WafOpCurve params={activeParams} workload={activeWorkload} />
                 {/* Live charts that follow the run on screen sit last, below the experiments. */}
-                {freeBlockChart}
-                <ReadLatencyChart samples={readLatency.samples} readPercentage={activeWorkload.readPercentage} />
+                <div className="lab-live" ref={liveChartsRef}>
+                  {freeBlockChart}
+                  <ReadLatencyChart samples={readLatency.samples} readPercentage={activeWorkload.readPercentage} />
+                </div>
               </>
             </div>
             )}
