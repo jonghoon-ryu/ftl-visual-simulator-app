@@ -77,6 +77,14 @@ namespace SSD_Components
 		// (is_safe_gc_wl_candidate()), which is why static WL can skip an
 		// erase-count-0 block that looks full and ready.
 		unsigned int Ongoing_program_count;
+		// Read-only UI aids (this project): whether the block sits in the
+		// plane's Free_block_pool (erased, waiting to become a write frontier -
+		// the blocks Stop_servicing_writes() counts), and whether it is the
+		// plane's Translation_wf (reserved for mapping-table pages; empty for
+		// the whole run in this project's demos, whose mapping table fits in
+		// the CMT).
+		bool In_free_pool;
+		bool Is_translation_frontier;
 		// The stream (IO flow) whose data this block holds - NO_STREAM for a
 		// block that's been erased back into the free pool (Erase() resets
 		// it) or never allocated. Lets a UI tell which flow's data sits where,

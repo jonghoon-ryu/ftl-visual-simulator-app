@@ -241,6 +241,17 @@ namespace SSD_Components
 						}
 			return counts;
 		}
+		// Same plane order as Get_free_block_counts() (this project, UI only).
+		std::vector<unsigned int> Get_writes_waiting_per_plane()
+		{
+			std::vector<unsigned int> counts;
+			for (unsigned int c = 0; c < channel_count; c++)
+				for (unsigned int ch = 0; ch < chip_no_per_channel; ch++)
+					for (unsigned int d = 0; d < die_no_per_chip; d++)
+						for (unsigned int p = 0; p < plane_no_per_die; p++)
+							counts.push_back((unsigned int)Write_transactions_for_overfull_planes[c][ch][d][p].size());
+			return counts;
+		}
 		unsigned int Count_writes_waiting_for_free_space()
 		{
 			unsigned int count = 0;

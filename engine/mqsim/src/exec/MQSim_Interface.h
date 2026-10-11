@@ -89,6 +89,10 @@ namespace MQSim_Interface
 	// Free-block pool size per plane, and the pool size below which GC starts.
 	std::vector<unsigned int> Get_free_block_counts(Simulation_Instance* instance);
 	unsigned int Get_gc_threshold_blocks(Simulation_Instance* instance);
+	// UI only (this project): host writes parked per plane (same order as
+	// Get_free_block_counts) and the free-pool floor that parks them.
+	std::vector<unsigned int> Get_writes_waiting_per_plane(Simulation_Instance* instance);
+	unsigned int Get_write_floor_blocks(Simulation_Instance* instance);
 
 	// PROJECT ADDITION: TRIM `count` logical pages starting at `start_lpa` of
 	// one stream; returns how many actually had data to trim (pages never

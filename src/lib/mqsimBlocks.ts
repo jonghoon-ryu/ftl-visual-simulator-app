@@ -21,6 +21,10 @@ export function toBlockRows(
   // number as its own badge to the left of the label (and keys rows on
   // chip+block together), so "Block N" alone is fine even with multiple
   // chips.
+  // Chips whose free pool is below the write floor: their host writes are
+  // parked, so whatever is left in the pool is GC's reserve, not free space.
+  const floor = state.stats.writeFloorBlocks;
+  const belowFloor = (chip: number) => (state.stats.freeBlocksPerPlane[chip] ?? Infinity) < floor;
   return state.blocks.map((block) => ({
     label: `Block ${block.block}`,
     block: block.block,
@@ -38,5 +42,7 @@ export function toBlockRows(
     gcDestination: block.isGcWriteFrontier,
     writeFrontier: block.isWriteFrontier,
     programInFlight: block.ongoingProgramCount > 0,
+    mappingReserved: block.isMappingFrontier,
+    gcReserve: block.inFreePool && belowFloor(block.chip),
   }));
 }

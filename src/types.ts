@@ -43,8 +43,16 @@ export interface BlockRow {
   writeFrontier?: boolean;
   // True while page programs already allocated to this block are still in
   // flight on the chip. The pages already show 'valid', but GC/WL will not
-  // pick this block until they finish. Rendered as "Writing".
+  // pick this block until they finish. Rendered as "Program 중".
   programInFlight?: boolean;
+  // Reserved for mapping-table pages (the plane's Translation_wf) - stays
+  // empty here. Rendered as "매핑용" so an empty row isn't mistaken for
+  // space host data could use.
+  mappingReserved?: boolean;
+  // A free-pool block on a chip whose pool has dropped below the write
+  // floor, so host writes there are parked and these blocks are left for
+  // GC. Rendered as "GC 예비".
+  gcReserve?: boolean;
 }
 
 export interface StatItem {

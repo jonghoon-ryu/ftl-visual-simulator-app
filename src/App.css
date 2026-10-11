@@ -186,6 +186,8 @@
 .row-flag-gc-block { color: #f5b942; }
 .row-flag-active { color: #4a6cf7; }
 .row-flag-programming { color: #9b72e0; }
+.row-flag-reserved { color: #7d8296; }
+.row-flag-gc-reserve { color: #ff9a5c; }
 
 .chip-badge {
   width: 20px;

@@ -368,6 +368,18 @@ namespace MQSim_Interface
 		return ftl->GC_and_WL_Unit->Get_gc_threshold_blocks();
 	}
 
+	std::vector<unsigned int> Get_writes_waiting_per_plane(Simulation_Instance* instance)
+	{
+		SSD_Components::FTL* ftl = static_cast<SSD_Components::FTL*>(instance->Ssd->Firmware);
+		return static_cast<SSD_Components::Address_Mapping_Unit_Page_Level*>(ftl->Address_Mapping_Unit)->Get_writes_waiting_per_plane();
+	}
+
+	unsigned int Get_write_floor_blocks(Simulation_Instance* instance)
+	{
+		SSD_Components::FTL* ftl = static_cast<SSD_Components::FTL*>(instance->Ssd->Firmware);
+		return ftl->GC_and_WL_Unit->Get_write_floor_blocks();
+	}
+
 	void Finalize_scenario(Simulation_Instance* instance)
 	{
 		delete instance->Host;

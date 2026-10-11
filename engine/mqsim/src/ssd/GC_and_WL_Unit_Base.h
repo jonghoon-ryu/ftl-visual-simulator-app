@@ -116,6 +116,9 @@ namespace SSD_Components
 		// GC starts on a plane once its free-block pool drops below this
 		// (GC_Exec_Threshold x blocks, floored at max_ongoing_gc_reqs_per_plane).
 		unsigned int Get_gc_threshold_blocks() const { return block_pool_gc_threshold; }
+		// Free-pool size below which host writes to a plane are parked
+		// (Stop_servicing_writes()) - UI only (this project).
+		unsigned int Get_write_floor_blocks() const { return max_ongoing_gc_reqs_per_plane; }
 		GC_Block_Selection_Policy_Type Get_gc_policy();
 		unsigned int Get_GC_policy_specific_parameter();//Returns the parameter specific to the GC block selection policy: threshold for random_pp, set_size for RGA
 		unsigned int Get_minimum_number_of_free_pages_before_GC();

@@ -174,7 +174,10 @@ export function UsageGuide({ onClose }: Props) {
               block), <strong>GC block</strong>(다음 GC/WL 이동이 도착할 block - GC 가 아직 한 번도 안 켜졌어도
               항상 표시됩니다, MQSim 이 미리 예약해두기 때문), <strong>Victim</strong>(방금 GC 대상으로 선택된
               block), <strong>Program 중</strong>(이 block 의 page 에 flash program 이 아직 진행 중 - page 는 할당되는 순간 V 로
-              보이지만 실제 program(약 0.75ms)은 그 뒤에 끝나요. 끝날 때까지 GC/마모평준화 대상이 되지 않습니다).
+              보이지만 실제 program(약 0.75ms)은 그 뒤에 끝나요. 끝날 때까지 GC/마모평준화 대상이 되지 않습니다), <strong>매핑용</strong>(매핑 테이블 page 를 쓰려고 남겨 둔
+              block - 이 데모에서는 계속 비어 있지만 호스트 데이터는 못 써요), <strong>GC 예비</strong>(그 칩의 빈 block 이 GC
+              예비분 3개보다 적어져 호스트 쓰기가 멈췄을 때, 남은 빈 block 에 붙어요 - GC 가 page 를 옮길 자리라 역시 호스트
+              데이터는 못 써요).
             </p>
           </section>
 

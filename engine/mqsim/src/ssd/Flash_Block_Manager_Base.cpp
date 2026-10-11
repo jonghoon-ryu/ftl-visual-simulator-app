@@ -236,12 +236,23 @@ namespace SSD_Components
 							entry.Is_write_frontier = false;
 							entry.Is_gc_write_frontier = false;
 							entry.Ongoing_program_count = slot.Ongoing_user_program_count > 0 ? (unsigned int)slot.Ongoing_user_program_count : 0;
+							entry.In_free_pool = false;
+							for (const auto& pool_entry : plane_record->Free_block_pool) {
+								if (pool_entry.second == &slot) {
+									entry.In_free_pool = true;
+									break;
+								}
+							}
+							entry.Is_translation_frontier = false;
 							for (unsigned int stream_cntr = 0; stream_cntr < total_concurrent_streams_no; stream_cntr++) {
 								if (plane_record->Data_wf[stream_cntr] == &slot) {
 									entry.Is_write_frontier = true;
 								}
 								if (plane_record->GC_wf[stream_cntr] == &slot) {
 									entry.Is_gc_write_frontier = true;
+								}
+								if (plane_record->Translation_wf[stream_cntr] == &slot) {
+									entry.Is_translation_frontier = true;
 								}
 							}
 							entry.Pages.reserve(pages_no_per_block);

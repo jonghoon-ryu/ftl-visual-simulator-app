@@ -336,6 +336,8 @@ val get_state()
 			row.set("isWriteFrontier", entry.Is_write_frontier);
 			row.set("isGcWriteFrontier", entry.Is_gc_write_frontier);
 			row.set("ongoingProgramCount", entry.Ongoing_program_count);
+			row.set("inFreePool", entry.In_free_pool);
+			row.set("isMappingFrontier", entry.Is_translation_frontier);
 			row.set("streamId", entry.Stream_id == NO_STREAM ? val::null() : val((unsigned int)entry.Stream_id));
 			val pages = val::array();
 			for (const auto& page_state : entry.Pages) {
@@ -359,6 +361,14 @@ val get_state()
 		}
 		stats.set("freeBlocksPerPlane", free_blocks);
 		stats.set("gcThresholdBlocks", g_instance ? MQSim_Interface::Get_gc_threshold_blocks(g_instance) : 0u);
+		val waiting = val::array();
+		if (g_instance) {
+			for (unsigned int count : MQSim_Interface::Get_writes_waiting_per_plane(g_instance)) {
+				waiting.call<void>("push", count);
+			}
+		}
+		stats.set("writesWaitingPerPlane", waiting);
+		stats.set("writeFloorBlocks", g_instance ? MQSim_Interface::Get_write_floor_blocks(g_instance) : 0u);
 	}
 	{
 		MQSim_Interface::Read_Latency_Sample reads{ 0, 0, 0 };

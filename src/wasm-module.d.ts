@@ -57,6 +57,12 @@ interface MqsimBlockSnapshot extends MqsimBlockAddress {
   // chip yet. Pages show 'valid' from allocation on, so a block can look
   // full while this is > 0 - and then it is never a GC/WL victim.
   ongoingProgramCount: number;
+  // In the plane's free-block pool (erased, waiting to become a write
+  // frontier) - the blocks the write floor below counts.
+  inFreePool: boolean;
+  // The plane's mapping-table write frontier (Translation_wf) - reserved for
+  // mapping pages, so it stays empty in this project's demos.
+  isMappingFrontier: boolean;
   // Which IO flow's data this block holds (0-based, flow order in the
   // workload XML), or null for a block erased back into the free pool.
   streamId: number | null;
@@ -77,6 +83,10 @@ interface MqsimStats {
   // Free-block pool size of each plane (one per chip in this project), and
   // the pool size below which GC starts on a plane.
   freeBlocksPerPlane: number[];
+  // Host writes parked per plane (same order as freeBlocksPerPlane), and the
+  // free-pool size below which a plane's host writes are parked.
+  writesWaitingPerPlane: number[];
+  writeFloorBlocks: number;
   // Host requests completed so far (all flows) - one sector each here, so
   // compare with flash page writes to see what the DRAM write cache absorbed.
   hostRequestsServiced: number;

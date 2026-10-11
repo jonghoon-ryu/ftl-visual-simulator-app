@@ -21,6 +21,7 @@ import { Toolbar } from './components/Toolbar';
 import { LessonBar } from './components/LessonBar';
 import { WhyFtlIntro } from './components/WhyFtlIntro';
 import { UsageGuide } from './components/UsageGuide';
+import { DeviceFullNotice } from './components/DeviceFullNotice';
 import { WearLevelingView } from './components/WearLevelingView';
 import { WorkloadPanel } from './components/WorkloadPanel';
 import { presets } from './data/presets';
@@ -504,16 +505,7 @@ function App() {
                 />
               </div>
               <div className="sim-stats-col">
-                {deviceFull && (
-                  <div className="device-full-status">
-                    <strong>장치가 가득 찼어요</strong>
-                    <p>
-                      남은 쓰기 {engine.state?.stats.writesWaitingForSpace}개가 빈 page 를 기다리다 끝났어요. 빈 page 가
-                      없는데 GC 가 청소할 invalid page(덮어써서 무효가 된 page)도 남아 있지 않아서예요. Workload 의 작업 범위를
-                      줄이거나, Block 개수, Block 당 Page 개수, 또는 Over-provisioning 을 늘려보세요.
-                    </p>
-                  </div>
-                )}
+                {deviceFull && engine.state && <DeviceFullNotice state={engine.state} chipCount={activeParams.chipCount} />}
                 <StatsPanel stats={statItems} />
               </div>
             </div>
