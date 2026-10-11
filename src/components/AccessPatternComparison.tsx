@@ -68,8 +68,10 @@ export function AccessPatternComparison({ params, workload }: Props) {
         // Reads off: this compares WRITE patterns. MQSim's STREAMING generator
         // advances one shared address cursor for reads and writes, so with
         // reads mixed in each pass only rewrites a random ~70% of addresses
-        // and "sequential" loses its effect (30% reads: 1.26x vs random
-        // 1.27x; no reads: 1.01x vs 1.34x - engine/tests/cache/claims.mts).
+        // and "sequential" loses much of its effect (40% working set, 30%
+        // reads: 1.69x vs random 2.26x; no reads: 1.12x vs 2.21x - at the
+        // old 25% working set 30% reads even made it a tie, 1.26x vs 1.27x;
+        // engine/tests/cache/claims.mts).
         workloadXml: buildGcWorkloadXml(params, { ...workload, addressDistribution: id, readPercentage: 0 }),
       })),
     });

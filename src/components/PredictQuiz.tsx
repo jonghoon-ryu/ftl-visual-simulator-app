@@ -46,10 +46,10 @@ const QUESTIONS: Partial<Record<PresetId, Question[]>> = {
     },
     {
       prompt: 'DRAM 쓰기 캐시를 끄면 호스트 요청 하나당 GC 는 어떻게 될까요?',
-      options: ['줄어든다', '거의 같다', '크게 늘어난다'],
+      options: ['줄어든다', '거의 같다', '늘어난다'],
       answer: 2,
       explanation:
-        '캐시가 켜져 있으면 같은 page 에 대한 반복 쓰기를 DRAM 이 흡수해서, 요청 일부만 flash 에 닿아요. 끄면 거의 모든 요청이 flash 쓰기가 되니 요청 하나당 GC 가 약 2배가 됩니다. 기본 설정에서 끝까지 돌리면 켬: 요청 17,290 → flash 쓰기 7,447, GC 580번 / 끔: 요청 6,811 → flash 쓰기 4,693, GC 454번. GC 총 횟수만 보면 켰을 때가 더 많은데, 같은 시뮬레이션 시간 동안 캐시 덕분에 요청을 두 배 넘게 처리했기 때문이에요 - 그래서 요청 수로 나눠서 비교해야 해요 (WAF 도 1.27× → 1.58×).',
+        '캐시가 켜져 있으면 같은 page 에 대한 반복 쓰기를 DRAM 이 흡수해서, 요청 일부만 flash 에 닿아요. 끄면 거의 모든 요청이 flash 쓰기가 되니 요청 하나당 GC 가 약 1.4배가 됩니다. 기본 설정에서 끝까지 돌리면 켬: 요청 7,871 → flash 쓰기 4,088, GC 568번 / 끔: 요청 4,337 → flash 쓰기 2,945, GC 434번. GC 총 횟수만 보면 켰을 때가 더 많은데, 같은 시뮬레이션 시간 동안 캐시 덕분에 요청을 거의 두 배 처리했기 때문이에요 - 그래서 요청 수로 나눠서 비교해야 해요 (WAF 도 2.26× → 2.41×).',
       howToCheck: 'Workload 의 "DRAM 쓰기 캐시" 를 끄고 끝까지 재생해보세요. 통계의 "GC 실행 횟수" 를 "호스트 요청" 수로 나눈 값을 캐시를 켰을 때와 비교해보세요.',
     },
     {
@@ -63,9 +63,9 @@ const QUESTIONS: Partial<Record<PresetId, Question[]>> = {
     {
       prompt: '기본 설정에서, 다음 GC 알고리즘 중 WAF 가 가장 낮은 것은?',
       options: ['RGA', 'Greedy', 'Random', 'FIFO'],
-      answer: 0,
+      answer: 2,
       explanation:
-        '기본 설정에서는 RGA 가 1.27× 로 가장 낮아요 (Cost-Benefit 1.28×, Random 1.32×, Greedy 1.39×, FIFO 1.43×). 교과서대로라면 invalid 가 가장 많은 block 을 고르는 Greedy 가 제일 좋을 것 같지만, block 이 적은 작은 규모에서는 한 번의 선택이 다음 GC 들의 상황까지 바꿔서 순위가 설정마다 달라집니다 - 그래서 직접 돌려 비교해보는 게 중요해요.',
+        '기본 설정에서는 Random 이 2.06× 로 가장 낮아요 (Greedy 2.19×, RGA 2.26×, Cost-Benefit 2.28×, FIFO 2.51×). 교과서대로라면 invalid 가 가장 많은 block 을 고르는 Greedy 가 제일 좋을 것 같지만, Random 은 무작위로 고른 block 에 청소할 게 없으면 그 GC 기회를 건너뛰어서 GC 를 덜 해요(Random 520번 vs RGA 568번). block 이 적은 작은 규모에서는 한 번의 선택이 다음 GC 들의 상황까지 바꿔서 순위가 설정마다 달라집니다 - 작업 범위나 OP 를 바꾸고 직접 돌려 비교해보세요.',
       howToCheck: '오른쪽 "비교 실험실" 탭에서 "GC 알고리즘 비교" 버튼으로 7개를 직접 돌려 표로 확인해보세요.',
     },
   ],

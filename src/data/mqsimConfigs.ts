@@ -216,11 +216,24 @@ export interface WorkloadParams {
   // flash never sees. "마모평준화 시연"'s cold flow ignores this and always
   // runs uncached (see buildWlWorkloadXml).
   writeCache: boolean;
-  // Share of host requests that are reads (0-50, WorkloadPanel). Default 0 -
-  // the GC/WL demos are about writes; reads are there to show how GC slows
-  // them down (ReadLatencyChart). See READ_PERCENTAGE_MAX below.
+  // Share of host requests that are reads (0-50, WorkloadPanel). Default 30
+  // (see DEFAULT_WORKLOAD_PARAMS) - reads show how GC slows them down
+  // (ReadLatencyChart). See READ_PERCENTAGE_MAX below.
   readPercentage: number;
+  // "GC 시연" only (WorkloadPanel's 작업 범위): Working_Set_Percentage - the
+  // share of the logical address space the host's requests may touch, a
+  // contiguous range from LPN 0. The untouched rest behaves like extra OP.
+  // At this demo's scale MQSim keeps about half of each 12-block chip out of
+  // play (host/GC/mapping write frontiers + a 3-block GC floor), so only
+  // ~220 pages of live data fit: 60% still runs (WAF ~5.5), 70%+ fills the
+  // device within ~2k log lines (engine/tests/cache/workingset.mts). "매핑
+  // 기본" keeps 100% and "마모평준화 시연" its own two-flow layout.
+  workingSetPercent: number;
 }
+
+// WorkloadPanel's 작업 범위 choices. 80 is there on purpose: it shows the
+// device filling up (see workingSetPercent above).
+export const WORKING_SET_OPTIONS = [25, 40, 60, 80];
 
 export const DEFAULT_WORKLOAD_PARAMS: WorkloadParams = {
   addressDistribution: 'RANDOM_UNIFORM',
@@ -228,6 +241,9 @@ export const DEFAULT_WORKLOAD_PARAMS: WorkloadParams = {
   // 30, not 0 (Ryu, 2026-10-11): with no reads the grid's read outline and
   // the log's Read lines never appeared unless the slider was raised.
   readPercentage: 30,
+  // 40, not the original 25 (Ryu, 2026-10-11): GC has to move noticeably more
+  // valid pages (WAF ~2.3 vs ~1.3) while the run still finishes.
+  workingSetPercent: 40,
 };
 
 function cachingModeXml(workload: WorkloadParams): string {
@@ -389,7 +405,8 @@ export const DEFAULT_GC_PARAMS: SsdParams = {
 
 // Same synthetic write flow as buildMappingWorkloadXml, but tuned to
 // actually trigger GC live rather than just fill the mapping table:
-// - Working_Set_Percentage narrowed to 25% of the address space, so
+// - Working_Set_Percentage narrowed (originally 25%, now WorkloadParams'
+//   workingSetPercent - default 40%, choosable in WorkloadPanel) so
 //   RANDOM_UNIFORM writes collide (overwrite the same LPA) often enough to
 //   produce invalid pages - GC_and_WL_Unit_Page_Level::Check_gc_required()
 //   silently no-ops if its randomly-sampled candidate block has zero
@@ -429,7 +446,7 @@ export function buildGcWorkloadXml(params: SsdParams, workload: WorkloadParams =
 			<Die_IDs>0</Die_IDs>
 			<Plane_IDs>0</Plane_IDs>
 			<Initial_Occupancy_Percentage>0</Initial_Occupancy_Percentage>
-			<Working_Set_Percentage>25</Working_Set_Percentage>
+			<Working_Set_Percentage>${workload.workingSetPercent}</Working_Set_Percentage>
 			<Synthetic_Generator_Type>QUEUE_DEPTH</Synthetic_Generator_Type>
 			<Read_Percentage>${workload.readPercentage}</Read_Percentage>
 			<Address_Distribution>${workload.addressDistribution}</Address_Distribution>

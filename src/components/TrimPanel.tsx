@@ -30,7 +30,7 @@ const TRIM_CHUNK = 600;
 export function TrimPanel({ params, workload, onTrim, canTrim }: Props) {
   // 30, not 10: with the DRAM cache on and reads at 0%, a 10% TRIM's WAF
   // effect is within run-to-run noise (engine/tests/cache/trimwaf.mts) - see
-  // the caption below. At the default 30% reads 10% works too (1.27x -> 1.19x).
+  // the caption below. At the defaults (30% reads, 40% working set) 10% works too (2.26x -> 1.41x).
   const [percent, setPercent] = useState(30);
   const [lastTrim, setLastTrim] = useState<{ percent: number; pages: number } | null>(null);
   const [busy, setBusy] = useState(false);

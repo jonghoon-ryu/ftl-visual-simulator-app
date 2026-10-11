@@ -1,4 +1,5 @@
-import { READ_PERCENTAGE_MAX, type WorkloadParams } from '../data/mqsimConfigs';
+import { READ_PERCENTAGE_MAX, WORKING_SET_OPTIONS, type WorkloadParams } from '../data/mqsimConfigs';
+import type { PresetId } from '../types';
 
 // MQSim's Utils::Address_Distribution_Type only exposes STREAMING
 // ("sequential") and RANDOM_UNIFORM ("random") here - see WorkloadParams'
@@ -6,6 +7,7 @@ import { READ_PERCENTAGE_MAX, type WorkloadParams } from '../data/mqsimConfigs';
 // (MIXED_STREAMING_RANDOM, RANDOM_HOTCOLD) are left out.
 
 interface Props {
+  presetId: PresetId;
   workload: WorkloadParams;
   onChange: (next: WorkloadParams) => void;
   disabled: boolean;
@@ -23,7 +25,7 @@ interface Props {
 // lazy stand-in for the preconditioning pass this project skips), which is
 // confusing at this project's small demo scale and unrelated to what this
 // project's GC/WL demos are actually about.
-export function WorkloadPanel({ workload, onChange, disabled }: Props) {
+export function WorkloadPanel({ presetId, workload, onChange, disabled }: Props) {
   return (
     <div className="sim-panel">
       <div className="sim-panel-title">Workload</div>
@@ -48,6 +50,36 @@ export function WorkloadPanel({ workload, onChange, disabled }: Props) {
           <option value="STREAMING">Sequential</option>
         </select>
       </div>
+
+      {presetId === 'gc' && (
+        <div className="param-row">
+          <div className="param-label">
+            <span>작업 범위 (working set)</span>
+            <span>{workload.workingSetPercent}%</span>
+          </div>
+          <select
+            className="param-select"
+            aria-label="작업 범위"
+            disabled={disabled}
+            value={workload.workingSetPercent}
+            onChange={(e) => onChange({ ...workload, workingSetPercent: Number(e.target.value) })}
+          >
+            {WORKING_SET_OPTIONS.map((p) => (
+              <option key={p} value={p}>
+                LPN 의 {p}%{p === 80 ? ' (OP 10% 에서는 가득 참)' : ''}
+              </option>
+            ))}
+          </select>
+          <div className="param-hint">
+            호스트가 쓰고 읽는 LPN 의 범위. 40% 면 앞쪽 40% 의 LPN 만 계속 덮어써요. 한 번도 안 쓰는 나머지 LPN 은 그만큼
+            flash 에 여유를 남겨서 Over-provisioning 처럼 작동해요. 범위를 넓히면 GC 가 고르는 block 에 valid page 가
+            많아져 WAF 가 올라가고(25%: 약 1.3× · 40%: 약 2.3× · 60%: 약 5.5×), 80% 에서는 OP 10% 로는 장치가 가득 차서
+            멈춰요(OP 를 30% 로 올리면 돌아가요). 이 데모의
+            SSD 는 칩마다 block 이 12개뿐이라, MQSim 이 쓰기 위치용 block 과 GC 용 여유 block 으로 칩의 절반쯤을 늘 비워 두기
+            때문이에요 - 실제 SSD 는 block 이 수천 개라 이 몫이 아주 작아요.
+          </div>
+        </div>
+      )}
 
       <div className="param-row">
         <div className="param-label">
@@ -87,7 +119,7 @@ export function WorkloadPanel({ workload, onChange, disabled }: Props) {
         <div className="param-hint">
           켜면 SSD 안의 DRAM 이 쓰기를 먼저 받아서, 같은 page 에 대한 반복 쓰기를 흡수하고 작은 쓰기를 page 단위로
           모아서 flash 에 내려보내요(캐시 32 page, 가득 차면 가장 오래 안 쓴 page 부터). 통계의 "호스트 요청 → flash 쓰기"를
-          켰을 때와 껐을 때 비교해보세요 - 끄면 거의 모든 요청이 flash 쓰기가 되고 요청 하나당 GC 도 약 2배가 됩니다.
+          켰을 때와 껐을 때 비교해보세요 - 끄면 거의 모든 요청이 flash 쓰기가 되고 요청 하나당 GC 도 약 1.4배가 됩니다.
         </div>
       </div>
     </div>

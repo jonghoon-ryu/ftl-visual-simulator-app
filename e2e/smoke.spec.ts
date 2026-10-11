@@ -95,6 +95,17 @@ test('each preset keeps its own speed; GC 시연 starts at 1x', async ({ page })
   expect(problems).toEqual([]);
 });
 
+test('작업 범위 (working set) is a GC 시연 setting, 40% by default', async ({ page }) => {
+  const problems = await openApp(page);
+  const workingSet = page.getByRole('combobox', { name: '작업 범위' });
+  await expect(workingSet).toHaveCount(0);
+  await preset(page, 'GC 시연').click();
+  await expect(workingSet).toHaveValue('40');
+  await preset(page, '마모평준화 시연').click();
+  await expect(workingSet).toHaveCount(0);
+  expect(problems).toEqual([]);
+});
+
 test('glossary term shows a definition on hover', async ({ page }) => {
   await openApp(page);
   const waf = page.locator('.term', { has: page.locator('.term-pop strong', { hasText: 'WAF (Write' }) }).first();
