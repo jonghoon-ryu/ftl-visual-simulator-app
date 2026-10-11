@@ -65,7 +65,7 @@ const QUESTIONS: Partial<Record<PresetId, Question[]>> = {
       options: ['RGA', 'Greedy', 'Random', 'FIFO'],
       answer: 0,
       explanation:
-        '기본 설정에서는 RGA 가 1.27× 로 가장 낮아요 (Cost-Benefit 1.29×, Random 1.31×, Greedy 1.32×, FIFO 1.39×). 교과서대로라면 invalid 가 가장 많은 block 을 고르는 Greedy 가 제일 좋을 것 같지만, block 이 적은 작은 규모에서는 한 번의 선택이 다음 GC 들의 상황까지 바꿔서 순위가 설정마다 달라집니다 - 그래서 직접 돌려 비교해보는 게 중요해요.',
+        '기본 설정에서는 RGA 가 1.27× 로 가장 낮아요 (Cost-Benefit 1.28×, Random 1.32×, Greedy 1.39×, FIFO 1.43×). 교과서대로라면 invalid 가 가장 많은 block 을 고르는 Greedy 가 제일 좋을 것 같지만, block 이 적은 작은 규모에서는 한 번의 선택이 다음 GC 들의 상황까지 바꿔서 순위가 설정마다 달라집니다 - 그래서 직접 돌려 비교해보는 게 중요해요.',
       howToCheck: '오른쪽 "비교 실험실" 탭에서 "GC 알고리즘 비교" 버튼으로 7개를 직접 돌려 표로 확인해보세요.',
     },
   ],

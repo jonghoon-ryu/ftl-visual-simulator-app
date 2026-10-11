@@ -67,6 +67,23 @@ namespace SSD_Components
 						break;
 					case Transaction_Type::WRITE:
 						_my_instance->block_manager->Program_transaction_serviced(transaction->Address);
+						// BUG FIX (this project, upstream MQSim): a block with a user
+						// program in flight is never a safe GC victim. In GC urgent
+						// mode the TSU serves no user writes while any GC erase is
+						// queued, so user writes can sit for a long time holding
+						// their blocks' Ongoing_user_program_count up. If the GC
+						// check after the last erase lands in that window, every
+						// garbage-full block is still "unsafe", no retry is
+						// scheduled, and when the starved writes finish moments
+						// later nothing ever checks again: writes parked for free
+						// space stay parked forever beside blocks that are all
+						// invalid (found 2026-10-11: "GC 시연" at OP 0% + GC
+						// threshold 50% ended with 16 writes stuck). A finishing
+						// program can make its block a victim, so re-check here
+						// whenever this plane still has writes waiting for space.
+						if (_my_instance->address_mapping_unit->Has_writes_waiting_for_free_space(transaction->Address)) {
+							_my_instance->Request_gc_check(transaction->Address);
+						}
 						break;
 					default:
 						PRINT_ERROR("Unexpected situation in the GC_and_WL_Unit_Base function!")

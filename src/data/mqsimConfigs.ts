@@ -508,12 +508,12 @@ export const DEFAULT_WL_PARAMS: SsdParams = {
 };
 
 // ParamPanel's 마모평준화 임계값 slider range - only shown for this preset.
-// 1-35: measured at the preset defaults (32-page DRAM cache, 30% reads -
-// engine/tests/cache/wlth.mts): WL fires 367/151/85/57/25/13/9/10/3/0 times
-// at thresholds 1/2/3/5/10/15/20/25/30/35. 35 is kept as the one "doesn't
-// fire within this run" value. (With the old 256 MB cache and no reads the
-// range was 1-5: most writes never reached flash, so blocks barely wore.)
-export const STATIC_WL_THRESHOLD_RANGE = { min: 1, max: 35 };
+// 1-30: measured at the preset defaults (32-page DRAM cache, 30% reads -
+// engine/tests/cache/wlth.mts): WL fires 367/151/85/50/25/20/13/5/0 times at
+// thresholds 1/2/3/5/10/15/20/25/30. 30 is kept as the one "doesn't fire
+// within this run" value. (With the old 256 MB cache and no reads the range
+// was 1-5: most writes never reached flash, so blocks barely wore.)
+export const STATIC_WL_THRESHOLD_RANGE = { min: 1, max: 30 };
 
 // Share of each flow's own half of the address space it touches - see
 // DEFAULT_WL_PARAMS' comment.

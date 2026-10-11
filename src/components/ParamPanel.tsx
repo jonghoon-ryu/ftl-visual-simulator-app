@@ -210,7 +210,7 @@ export function ParamPanel({ presetId, params, onChange, disabled }: Props) {
           />
           <div className="param-hint">
             가장 많이 닳은 block 과 가장 적게 닳은 block 의 erase 횟수 차이가 이 값 이상이 되면 정적 마모평준화
-            발동 - 낮을수록 자주, 높을수록 드물게 발동합니다 (끝까지 돌리면 1: 약 370번 · 3(기본): 약 85번 · 10: 약 25번 · 35: 발동 안 함)
+            발동 - 낮을수록 자주, 높을수록 드물게 발동합니다 (끝까지 돌리면 1: 약 370번 · 3(기본): 약 85번 · 10: 약 25번 · 30: 발동 안 함)
           </div>
         </div>
       )}
