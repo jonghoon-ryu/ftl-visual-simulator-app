@@ -159,17 +159,25 @@ test('GC 시연 comparison experiments all return results', async ({ page }) => 
   expect(problems).toEqual([]);
 });
 
-test('side tabs: only GC 시연 has 비교 실험실, and 설정 · 통계 is its default', async ({ page }) => {
+test('side tabs: GC 시연 has 비교 실험실, 마모평준화 시연 has 실시간 차트, 설정 · 통계 is the default', async ({ page }) => {
   const problems = await openApp(page);
   const labTab = page.getByRole('tab', { name: '비교 실험실' });
+  const chartTab = page.getByRole('tab', { name: '실시간 차트' });
 
-  // 매핑 기본 and 마모평준화 시연: no tab strip, just settings + stats.
+  // 매핑 기본: no tab strip, just settings + stats.
   await expect(labTab).toHaveCount(0);
+  await expect(chartTab).toHaveCount(0);
   await expect(page.getByRole('tabpanel', { name: '설정 · 통계' })).toBeVisible();
   await expect(page.getByRole('tabpanel', { name: '설정 · 통계' }).locator('.stat-row').first()).toBeVisible();
+
+  // 마모평준화 시연: the free-block chart moved from under the erase-count list to its own tab.
   await preset(page, '마모평준화 시연').click();
   await expect(labTab).toHaveCount(0);
-  await expect(page.getByRole('tabpanel', { name: '설정 · 통계' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: '설정 · 통계' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.sim-grid-panel .free-chart-title')).toHaveCount(0);
+  await chartTab.click();
+  await expect(page.getByRole('tabpanel', { name: '실시간 차트' }).locator('.free-chart-title', { hasText: '빈 block 수 변화' })).toBeVisible();
+  await expect(page.getByRole('tabpanel', { name: '설정 · 통계' })).toBeHidden();
 
   // GC 시연: both tabs, settings first.
   await preset(page, 'GC 시연').click();

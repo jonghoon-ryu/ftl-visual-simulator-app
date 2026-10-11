@@ -89,16 +89,20 @@ export function UsageGuide({ onClose }: Props) {
                 <strong>가운데: 로그</strong> - 일어난 사건이 시간 순서로 쌓입니다. 줄을 클릭하면 그 데이터를 따라갑니다.
               </li>
               <li>
-                <strong>오른쪽: 두 개의 탭</strong>
+                <strong>오른쪽: 탭</strong>
                 <ul>
                   <li>
                     <strong>설정 · 통계</strong>(기본) - 파라미터, workload, 통계. 자주 안 쓰는 설정은 "고급 설정" 안에
                     접혀 있습니다.
                   </li>
                   <li>
-                    <strong>비교 실험실</strong> - <em>GC 시연에서만</em> 나타납니다(다른 프리셋에는 탭 자체가 없습니다).
+                    <strong>비교 실험실</strong> - <em>GC 시연에서만</em> 나타납니다.
                     같은 설정으로 시뮬레이션을 끝까지 다시 돌려 비교하는 실험들이 모여 있습니다. 아래 "비교 실험실"
                     참고.
+                  </li>
+                  <li>
+                    <strong>실시간 차트</strong> - <em>마모평준화 시연에서만</em> 나타납니다. 재생을 따라가는 "빈 block 수
+                    변화" 차트가 있습니다. 매핑 기본에는 두 번째 탭이 없습니다.
                   </li>
                 </ul>
               </li>
@@ -188,6 +192,20 @@ export function UsageGuide({ onClose }: Props) {
               <strong>⭐ 마모평준화 발동!</strong> 표시가 계속 남고, "발동 횟수" 열에 block 별로 몇 번 대상이 됐는지 쌓입니다.
               재생은 <em>첫 번째</em> 발동 때 한 번 자동으로 멈춰서 왜 발동했는지 보여주고, 그 뒤의 발동은 멈추지 않고
               횟수만 늘어납니다.
+            </p>
+            <p>
+              마모평준화가 옮길 block 은 <em>데이터가 들어 있는</em> block 중 erase 횟수가 가장 적은 것이고, 동률이면 번호가
+              가장 낮은 block 입니다. 빈 block(free pool)이나 아직 쓰는 중인 block 은 옮길 데이터가 없거나 안전하지 않아서
+              후보가 아닙니다. 막대와 숫자는 <em>지금</em> 값이라서, ⭐ block 은 데이터를 옮긴 뒤 지워지면서 erase 횟수가 1
+              늘어나 있습니다 - 그래서 0회인 block 이 남아 있는데도 1회인 block 이 선택된 것처럼 보일 수 있어요.
+            </p>
+            <p>
+              <strong>데이터 열 (cold / hot)</strong>은 그 block 에 지금 들어 있는 데이터를 어느 호스트 흐름이 썼는지입니다.
+              이 프리셋의 workload 는 흐름이 둘입니다: <b>cold</b> 흐름은 처음에 자기 영역을 한 번씩 순서대로 쓰고 끝나고,
+              <b>hot</b> 흐름은 끝날 때까지 자기 영역을 무작위로 계속 덮어씁니다. MQSim 은 흐름마다 쓰기 위치 block 을 따로
+              두므로 한 block 에는 한 흐름의 데이터만 들어갑니다. "-" 는 빈 block 입니다. 막대 색(🔥/❄️, 얼마나 닳았나)과는 다른
+              기준이라, hot 데이터가 많이 지워 놓은 block 에 마모평준화가 cold 데이터를 옮겨 넣으면 "cold" 인데 4회 erase 인
+              block 도 생깁니다.
             </p>
           </section>
 
@@ -362,8 +380,8 @@ export function UsageGuide({ onClose }: Props) {
                 확인하세요.
               </li>
               <li>
-                <strong>비교 실험실 탭이 안 보여요.</strong> 정상입니다 - GC 시연에서만 나타납니다. 위쪽 탭에서 GC 시연을
-                선택하세요.
+                <strong>비교 실험실 탭이 안 보여요.</strong> 정상입니다 - GC 시연에서만 나타납니다(마모평준화 시연의 두 번째
+                탭은 "실시간 차트"입니다). 위쪽 탭에서 GC 시연을 선택하세요.
               </li>
               <li>
                 <strong>GC block 라벨이 아직 GC 가 한 번도 안 켜졌는데 보여요.</strong> 정상입니다 - MQSim 은

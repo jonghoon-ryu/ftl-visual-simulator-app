@@ -106,8 +106,8 @@ function App() {
   // Speed last used in each preset - see selectPreset.
   const speedByPresetRef = useRef<Partial<Record<PresetId, number>>>({});
   const [showUsageGuide, setShowUsageGuide] = useState(false);
-  // Right-hand panel: the settings + stats are the default view; the comparison
-  // experiments (GC 시연 only) live on their own tab.
+  // Right-hand panel: the settings + stats are the default view; GC 시연's
+  // comparison experiments and 마모평준화 시연's live chart live on a second tab.
   const [sideTab, setSideTab] = useState<'settings' | 'lab'>('settings');
   // "↓ 실시간 차트" in 비교 실험실 scrolls here (the live charts sit below all the experiments).
   const liveChartsRef = useRef<HTMLDivElement>(null);
@@ -366,10 +366,12 @@ function App() {
   const logEntries = wired ? events.log : active.log;
   const caption = wired ? '' : active.caption;
 
-  // The comparison experiments only exist for "GC 시연", so the tab strip only
-  // shows there; elsewhere the right column is just settings + stats. Leaving
-  // GC 시연 also returns to the settings tab (selectPreset below).
-  const showLabTab = wired && configKey === 'gc';
+  // The second tab: "GC 시연"'s comparison experiments (비교 실험실) or
+  // "마모평준화 시연"'s live free-block chart (실시간 차트). "매핑 기본" has
+  // neither, so its right column is just settings + stats. Switching presets
+  // also returns to the settings tab (selectPreset below).
+  const showLabTab = wired && (configKey === 'gc' || configKey === 'wear-leveling');
+  const labTabLabel = configKey === 'gc' ? '비교 실험실' : '실시간 차트';
   const activeSideTab = showLabTab ? sideTab : 'settings';
   const selectPreset = (id: PresetId) => {
     setSideTab('settings');
@@ -429,7 +431,6 @@ function App() {
               caption={caption}
               trigger={wlTrigger}
               bannerVisible={wlBannerVisible}
-              footer={freeBlockChart}
               banner={wired ? <PredictQuiz key={configKey} presetId={configKey} /> : null}
             />
           )}
@@ -483,7 +484,7 @@ function App() {
                   className={activeSideTab === 'lab' ? 'active' : ''}
                   onClick={() => setSideTab('lab')}
                 >
-                  비교 실험실
+                  {labTabLabel}
                 </button>
               </div>
             )}
@@ -509,7 +510,12 @@ function App() {
                 <StatsPanel stats={statItems} />
               </div>
             </div>
-            {showLabTab && (
+            {showLabTab && configKey === 'wear-leveling' && (
+            <div className="side-tab-panel lab" role="tabpanel" id="panel-lab" aria-labelledby="tab-lab" hidden={activeSideTab !== 'lab'}>
+              <div className="lab-live">{freeBlockChart}</div>
+            </div>
+            )}
+            {showLabTab && configKey === 'gc' && (
             <div className="side-tab-panel lab" role="tabpanel" id="panel-lab" aria-labelledby="tab-lab" hidden={activeSideTab !== 'lab'}>
               <>
                 <div className="lab-intro">

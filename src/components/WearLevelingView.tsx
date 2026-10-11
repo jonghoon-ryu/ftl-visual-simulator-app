@@ -4,8 +4,6 @@ import type { WearRow, WlTriggerInfo } from '../types';
 
 interface Props {
   rows: WearRow[];
-  // Rendered at the bottom of this panel (e.g. FreeBlockChart).
-  footer?: ReactNode;
   // Rendered right under the caption (e.g. PredictQuiz).
   banner?: ReactNode;
   caption: string;
@@ -23,7 +21,7 @@ interface Props {
   bannerVisible: boolean;
 }
 
-export function WearLevelingView({ rows, caption, trigger, bannerVisible, footer, banner }: Props) {
+export function WearLevelingView({ rows, caption, trigger, bannerVisible, banner }: Props) {
   // Collapsed by default even once a trigger exists - showing it
   // automatically would fight with ▶ auto-pausing right when this becomes
   // available (see App.tsx's onRefresh / useSimulationPlayback's
@@ -66,6 +64,11 @@ export function WearLevelingView({ rows, caption, trigger, bannerVisible, footer
                 가장 적게 닳은 block 이 여러 개 동률일 수도 있는데, 그럴 땐 그 중{' '}
                 <strong>block 번호가 가장 낮은 block</strong>이 선택돼요 — Block {trigger.targetBlock}가 유일하게
                 특별해서가 아니라, 동률 중 번호가 가장 낮았기 때문일 수 있습니다.
+              </p>
+              <p>
+                후보는 데이터가 들어 있는 block 뿐이에요(빈 block · 쓰는 중인 block 제외). 아래 막대는 <strong>지금</strong>
+                값이라, ⭐ block 은 데이터를 옮긴 뒤 지워져서 erase 횟수가 1 늘어나 있을 수 있어요 — Block {trigger.targetBlock}도 선택될 때는{' '}
+                {trigger.minEraseCount}회였습니다.
               </p>
             </div>
           )}
@@ -111,7 +114,6 @@ export function WearLevelingView({ rows, caption, trigger, bannerVisible, footer
           계속 덮어쓰는 데이터. 막대 색(마모 정도)과는 다른 기준이에요.
         </div>
       )}
-      {footer}
     </div>
   );
 }
