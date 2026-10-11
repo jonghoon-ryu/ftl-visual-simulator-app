@@ -110,8 +110,13 @@ export function WearLevelingView({ rows, caption, trigger, bannerVisible, banner
       </div>
       {showDataKind && (
         <div className="sim-caption wl-data-caption">
-          데이터 열: <b>cold</b> = 한 번 쓰고 다시 안 건드리는 데이터 (정적 마모평준화가 옮기는 대상), <b>hot</b> =
-          계속 덮어쓰는 데이터. 막대 색(마모 정도)과는 다른 기준이에요.
+          데이터 열: <b>cold</b> = 한 번 쓰고 다시 안 건드리는 데이터, <b>hot</b> = 계속 덮어쓰는 데이터 (그 block 의 지금
+          데이터를 어느 호스트 흐름이 썼는지). 막대 색(마모 정도)과는 다른 기준이에요.
+          <br />
+          마모평준화는 이 표시를 <b>보지 않아요</b> - erase 횟수만 봅니다 (최대 - 최소 ≥ 임계값이면 발동, 데이터가 든 block 중
+          erase 가 가장 적은 block 을 고름). 그런데도 cold block 이 대상이 되는 건, cold 데이터는 덮어써지지 않아 invalid
+          page 가 안 생기고 → GC 가 그 block 을 고르지 않아 → erase 횟수가 0 에 머물기 때문이에요. 이 열은 그 이유를 보라고
+          붙여 둔 표시입니다.
         </div>
       )}
     </div>

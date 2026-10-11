@@ -206,6 +206,9 @@ export function UsageGuide({ onClose }: Props) {
               두므로 한 block 에는 한 흐름의 데이터만 들어갑니다. "-" 는 빈 block 입니다. 막대 색(🔥/❄️, 얼마나 닳았나)과는 다른
               기준이라, hot 데이터가 많이 지워 놓은 block 에 마모평준화가 cold 데이터를 옮겨 넣으면 "cold" 인데 4회 erase 인
               block 도 생깁니다.
+              마모평준화 자체는 이 표시를 보지 않고 erase 횟수만 봅니다. cold block 이 대상이 되는 건 cold 데이터는 덮어써지지
+              않아 GC 가 그 block 을 고르지 않고, 그래서 erase 횟수가 가장 낮게 남기 때문이에요. (옮긴 데이터는 같은 흐름의
+              쓰기 위치 block 으로 가서, cold 데이터는 cold 끼리 모입니다.)
             </p>
           </section>
 
