@@ -10,7 +10,7 @@ const presets = [
 ] as const;
 const policies = ['RGA', 'GREEDY', 'RANDOM', 'RANDOM_P', 'RANDOM_PP', 'FIFO', 'COST_BENEFIT'] as const;
 let runs = 0, bad = 0;
-for (const [id, base, wl] of presets) for (const policy of policies) for (const op of [0, 0.1, 0.3]) for (const th of [0.1, 0.3, 0.5, 0.7]) for (const cache of [true, false]) {
+for (const [id, base, wl] of presets) for (const policy of policies) for (const op of [0, 0.1, 0.2, 0.3]) for (const th of [0.1, 0.3, 0.5, 0.7]) for (const cache of [true, false]) {
   const p = { ...base, gcBlockSelectionPolicy: policy, overprovisioningRatio: op, gcExecThreshold: th } as any;
   const mod: any = await createModule({ print: () => {}, printErr: () => {} });
   runs++;

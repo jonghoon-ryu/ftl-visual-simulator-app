@@ -66,14 +66,14 @@ export function WorkloadPanel({ presetId, workload, onChange, disabled }: Props)
           >
             {WORKING_SET_OPTIONS.map((p) => (
               <option key={p} value={p}>
-                LPN 의 {p}%{p === 80 ? ' (OP 10% 에서는 가득 참)' : ''}
+                LPN 의 {p}%{p === 80 ? ' (OP 20% 에서는 가득 참)' : ''}
               </option>
             ))}
           </select>
           <div className="param-hint">
             호스트가 쓰고 읽는 LPN 의 범위. 40% 면 앞쪽 40% 의 LPN 만 계속 덮어써요. 한 번도 안 쓰는 나머지 LPN 은 그만큼
             flash 에 여유를 남겨서 Over-provisioning 처럼 작동해요. 범위를 넓히면 GC 가 고르는 block 에 valid page 가
-            많아져 WAF 가 올라가고(25%: 약 1.3× · 40%: 약 2.3× · 60%: 약 5.5×), 80% 에서는 OP 10% 로는 장치가 가득 차서
+            많아져 WAF 가 올라가고(25%: 약 1.1× · 40%: 약 1.4× · 60%: 약 2.9×), 80% 에서는 OP 20% 로는 장치가 가득 차서
             멈춰요(OP 를 30% 로 올리면 돌아가요). 이 데모의
             SSD 는 칩마다 block 이 12개뿐이라, MQSim 이 쓰기 위치용 block 과 GC 용 여유 block 으로 칩의 절반쯤을 늘 비워 두기
             때문이에요 - 실제 SSD 는 block 이 수천 개라 이 몫이 아주 작아요.

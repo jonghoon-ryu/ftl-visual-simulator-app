@@ -16,7 +16,7 @@ export const presets: PresetScenario[] = [
       { label: 'Block 1', pages: row('FFFFFFFFFFFFFFFF') },
     ],
     params: [
-      { label: 'Over-provisioning', value: '7%', hint: '여유 공간을 더 두면 GC 가 덜 급해져요', kind: 'slider', percent: 30 },
+      { label: 'Over-provisioning', value: '20%', hint: '여유 공간을 더 두면 GC 가 덜 급해져요', kind: 'slider', percent: 30 },
       { label: '매핑 방식', value: 'Page-level', hint: 'Hybrid 로 바꾸면 log-block 방식으로 동작', kind: 'select' },
     ],
     stats: [
@@ -38,8 +38,8 @@ export const presets: PresetScenario[] = [
       { label: 'Block 5 (GC 대상)', pages: row('FFFFFFFVFFFVFVFF') },
     ],
     params: [
-      { label: 'Over-provisioning', value: '7%', hint: '여유 공간을 더 두면 GC 가 덜 급해져요', kind: 'slider', percent: 30 },
-      { label: 'GC 임계값', value: '5%', hint: '빈 block 이 이 아래로 떨어지면 GC 시작', kind: 'slider', percent: 55 },
+      { label: 'Over-provisioning', value: '20%', hint: '여유 공간을 더 두면 GC 가 덜 급해져요', kind: 'slider', percent: 30 },
+      { label: 'GC 임계값', value: '30%', hint: '빈 block 이 이 아래로 떨어지면 GC 시작', kind: 'slider', percent: 55 },
       { label: '매핑 방식', value: 'Page-level', hint: 'Hybrid 로 바꾸면 log-block 방식으로 동작', kind: 'select' },
     ],
     stats: [
@@ -50,7 +50,7 @@ export const presets: PresetScenario[] = [
     log: [
       { index: 2, time: '12:03:41', text: 'Block 2 의 valid page 4개를 Block 5 로 이동 시작 (GC)' },
       { index: 1, time: '12:03:40', text: 'LPN 0x0F4 에 새 데이터가 쓰이면서 기존 페이지가 invalid 로 표시됨' },
-      { index: 0, time: '12:03:38', text: '빈 block 비율이 5% 아래로 떨어져 GC 트리거됨' },
+      { index: 0, time: '12:03:38', text: '빈 block 비율이 30% 아래로 떨어져 GC 트리거됨' },
     ],
   },
   {

@@ -67,18 +67,12 @@ const MIN_BLOCK_NO_PER_PLANE: Record<PresetId, number> = {
   'wear-leveling': 16,
 };
 
-// "매핑 기본" is deliberately tuned so GC never meaningfully fires (5%
-// threshold, 100% working set, short Stop_Time - see [[ftl_visual_simulator_project]]
-// memory for the full comparison against "GC 시연"'s opposite tuning). The
-// shared 1-95% slider range let a user push this preset's threshold well
-// past where "GC 시연" actually needs it, inviting exactly the confusion
-// Ryu ran into ("왜 매핑 기본과 GC 시연이 따로 있어야 하는지 모르겠다") -
-// a wide-open slider implies GC is this preset's concern too. Narrowed to
-// 1-10% here specifically so the range itself signals "not the focus of
-// this preset" - "GC 시연"/"마모평준화 시연" keep the full range, since
-// exploring where GC actually kicks in is the point there.
+// All presets share the full range. "매핑 기본" used to be narrowed to 1-10%
+// (its default was 5%), but since 2026-10-11 every preset defaults to 30% (Ryu)
+// - "매핑 기본" still never fires GC at its defaults because its short run
+// writes far too little to drain the free pool.
 const GC_THRESHOLD_RANGE: Record<PresetId, { min: number; max: number }> = {
-  mapping: { min: 1, max: 10 },
+  mapping: { min: 1, max: 95 },
   gc: { min: 1, max: 95 },
   'wear-leveling': { min: 1, max: 95 },
 };
@@ -188,7 +182,6 @@ export function ParamPanel({ presetId, params, onChange, disabled }: Props) {
         />
         <div className="param-hint">
           빈 block 비율이 이 아래로 떨어지면 GC 시작
-          {presetId === 'mapping' && ' - 이 프리셋은 GC 가 거의 발동하지 않도록 설계돼 있어 범위를 좁혀뒀습니다'}
         </div>
       </div>
 
@@ -210,7 +203,7 @@ export function ParamPanel({ presetId, params, onChange, disabled }: Props) {
           />
           <div className="param-hint">
             가장 많이 닳은 block 과 가장 적게 닳은 block 의 erase 횟수 차이가 이 값 이상이 되면 정적 마모평준화
-            발동 - 낮을수록 자주, 높을수록 드물게 발동합니다 (끝까지 돌리면 1: 약 370번 · 3(기본): 약 85번 · 10: 약 25번 · 30: 발동 안 함)
+            발동 - 낮을수록 자주, 높을수록 드물게 발동합니다 (끝까지 돌리면 1: 약 370번 · 3(기본): 약 90번 · 10: 약 30번 · 30: 발동 안 함)
           </div>
         </div>
       )}

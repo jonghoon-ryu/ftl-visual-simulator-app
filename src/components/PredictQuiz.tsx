@@ -11,11 +11,9 @@ interface Question {
   howToCheck: string;
 }
 
-// Numbers quoted below are this project's defaults, measured 2026-09-24
-// (native CLI and the WASM build agree): "GC 시연" runs 30 GCs with the
-// DRAM write cache on vs 497 with it off, and its lowest-WAF policy is
-// plain Random (1.19x vs RGA's 1.23x; re-measured after the suspend fix); "마모평준화 시연" fires static WL
-// 7 times at threshold 3 vs 341 at threshold 1. Re-measure if defaults change.
+// Numbers quoted below are this project's defaults (OP 20%, GC threshold 30%),
+// re-measured 2026-10-11 with engine/tests/cache/claims.mts + wlth.mts. Re-measure
+// if defaults change.
 const QUESTIONS: Partial<Record<PresetId, Question[]>> = {
   mapping: [
     {
@@ -49,7 +47,7 @@ const QUESTIONS: Partial<Record<PresetId, Question[]>> = {
       options: ['줄어든다', '거의 같다', '늘어난다'],
       answer: 2,
       explanation:
-        '캐시가 켜져 있으면 같은 page 에 대한 반복 쓰기를 DRAM 이 흡수해서, 요청 일부만 flash 에 닿아요. 끄면 거의 모든 요청이 flash 쓰기가 되니 요청 하나당 GC 가 약 1.4배가 됩니다. 기본 설정에서 끝까지 돌리면 켬: 요청 7,871 → flash 쓰기 4,088, GC 568번 / 끔: 요청 4,337 → flash 쓰기 2,945, GC 434번. GC 총 횟수만 보면 켰을 때가 더 많은데, 같은 시뮬레이션 시간 동안 캐시 덕분에 요청을 거의 두 배 처리했기 때문이에요 - 그래서 요청 수로 나눠서 비교해야 해요 (WAF 도 2.26× → 2.41×).',
+        '캐시가 켜져 있으면 같은 page 에 대한 반복 쓰기를 DRAM 이 흡수해서, 요청 일부만 flash 에 닿아요. 끄면 거의 모든 요청이 flash 쓰기가 되니 요청 하나당 GC 가 약 1.5배가 됩니다. 기본 설정에서 끝까지 돌리면 켬: 요청 12,679 → flash 쓰기 6,354, GC 536번 / 끔: 요청 6,771 → flash 쓰기 4,679, GC 431번. GC 총 횟수만 보면 켰을 때가 더 많은데, 같은 시뮬레이션 시간 동안 캐시 덕분에 요청을 거의 두 배 처리했기 때문이에요 - 그래서 요청 수로 나눠서 비교해야 해요 (WAF 도 1.38× → 1.51×).',
       howToCheck: 'Workload 의 "DRAM 쓰기 캐시" 를 끄고 끝까지 재생해보세요. 통계의 "GC 실행 횟수" 를 "호스트 요청" 수로 나눈 값을 캐시를 켰을 때와 비교해보세요.',
     },
     {
@@ -63,9 +61,9 @@ const QUESTIONS: Partial<Record<PresetId, Question[]>> = {
     {
       prompt: '기본 설정에서, 다음 GC 알고리즘 중 WAF 가 가장 낮은 것은?',
       options: ['RGA', 'Greedy', 'Random', 'FIFO'],
-      answer: 2,
+      answer: 1,
       explanation:
-        '기본 설정에서는 Random 이 2.06× 로 가장 낮아요 (Greedy 2.19×, RGA 2.26×, Cost-Benefit 2.28×, FIFO 2.51×). 교과서대로라면 invalid 가 가장 많은 block 을 고르는 Greedy 가 제일 좋을 것 같지만, Random 은 무작위로 고른 block 에 청소할 게 없으면 그 GC 기회를 건너뛰어서 GC 를 덜 해요(Random 520번 vs RGA 568번). block 이 적은 작은 규모에서는 한 번의 선택이 다음 GC 들의 상황까지 바꿔서 순위가 설정마다 달라집니다 - 작업 범위나 OP 를 바꾸고 직접 돌려 비교해보세요.',
+        '기본 설정에서는 invalid 가 가장 많은 block 을 고르는 Greedy 가 1.34× 로 가장 낮아요 (Cost-Benefit 1.37×, RGA 1.38×, FIFO 1.40×, Random 1.69×). Random 은 invalid 개수를 보지 않고 고르니 valid page 가 많은 block 이 뽑혀 옮길 게 많아져요. 다만 block 이 적은 작은 규모에서는 한 번의 선택이 다음 GC 들의 상황까지 바꿔서 순위가 설정마다 달라집니다 - 작업 범위나 OP 를 바꾸고 직접 돌려 비교해보세요.',
       howToCheck: '오른쪽 "비교 실험실" 탭에서 "GC 알고리즘 비교" 버튼으로 7개를 직접 돌려 표로 확인해보세요.',
     },
   ],
@@ -83,7 +81,7 @@ const QUESTIONS: Partial<Record<PresetId, Question[]>> = {
       options: ['줄어든다', '거의 같다', '크게 늘어난다'],
       answer: 2,
       explanation:
-        '임계값은 "가장 많이 닳은 block 과 가장 적게 닳은 block 의 erase 차이"의 기준이에요. 1 이면 차이가 조금만 벌어져도 발동해서, 기본 설정에서 85번 → 367번으로 늘어납니다 - 대부분은 불필요한 데이터 이동이라 WAF 도 올라가요.',
+        '임계값은 "가장 많이 닳은 block 과 가장 적게 닳은 block 의 erase 차이"의 기준이에요. 1 이면 차이가 조금만 벌어져도 발동해서, 기본 설정에서 92번 → 366번으로 늘어납니다 - 대부분은 불필요한 데이터 이동이라 WAF 도 올라가요.',
       howToCheck: '오른쪽 설정의 "마모평준화 임계값" 을 1 로 바꾸고 재생해 통계의 WL 실행 횟수를 비교해보세요.',
     },
   ],

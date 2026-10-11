@@ -100,9 +100,10 @@ export const DEFAULT_MAPPING_PARAMS: SsdParams = {
   // default too.
   blockNoPerPlane: 12,
   pageNoPerBlock: 16,
-  // 10%, not 7% (2026-09-20, see blockNoPerPlane's comment above for why).
-  overprovisioningRatio: 0.1,
-  gcExecThreshold: 0.05,
+  // 20% OP / 30% GC threshold - Ryu's choice (2026-10-11) for all three
+  // presets (was 10% / 5% here, 50% in GC 시연 and 마모평준화 시연).
+  overprovisioningRatio: 0.2,
+  gcExecThreshold: 0.3,
   staticWlThreshold: 100,
   addressMapping: 'PAGE_LEVEL',
   gcBlockSelectionPolicy: 'RGA',
@@ -382,25 +383,18 @@ function ioAddressAlignmentUnitSectors(params: SsdParams): number {
 export const mappingBasicSsdConfigXml = buildSsdConfigXml(DEFAULT_MAPPING_PARAMS);
 export const mappingBasicWorkloadXml = buildMappingWorkloadXml(DEFAULT_MAPPING_PARAMS);
 
-// "GC 시연" preset - same small geometry, but a much higher GC_Exec_Threshold
-// (block_pool_gc_threshold = floor(gcExecThreshold * blockNoPerPlane) - the
-// default 0.05 needs the pool down to its last 1-2 blocks before GC ever
-// looks at firing, unreachable in a demo-sized run).
+// "GC 시연" preset - same SSD settings as "매핑 기본" (OP 20%, GC threshold 30%
+// -> block_pool_gc_threshold = floor(0.3 * 12) = 3 free blocks); only the
+// workload differs (narrow working set, long Stop_Time).
 //
-// 0.5 (50%), not the earlier 0.8 (2026-09-20, alongside raising
-// blockNoPerPlane to 12 and max_ongoing_gc_reqs_per_plane's clamp down to 3
-// - see those defaults' own comments). Re-swept via native CLI at this new
-// geometry: 5-30% all fire GC but with Average_Page_Movement_For_GC=0.0
-// (every execution just reclaims an already-fully-invalid block - no
-// migration ever visible, the same failure mode this preset's threshold
-// was raised to fix once before). Real migrations start at 40% (0.45 avg)
-// and become clearly visible from 50% (4.3 avg) onward - chosen as the
-// lowest value where the moving-page highlight (useMqsimMigrations)
-// reliably has something to show, while leaving the slider's low end
-// (previously a total no-op at block=8) genuinely explorable.
+// History: was 0.5 (and 0.8 before that) because with the old 256 MB DRAM
+// cache, thresholds of 5-30% fired GC that only ever reclaimed fully-invalid
+// blocks - no migration to see. With DATA_CACHE_CAPACITY_PAGES, 30% migrates
+// ~4.5 pages per GC (536 GCs, WAF 1.38 - engine/tests/cache/claims.mts), so
+// Ryu's 2026-10-11 choice of one 30% default for every preset still shows
+// real migrations. First GC is at log line ~264 (was ~125 at 50%).
 export const DEFAULT_GC_PARAMS: SsdParams = {
   ...DEFAULT_MAPPING_PARAMS,
-  gcExecThreshold: 0.5,
 };
 
 // Same synthetic write flow as buildMappingWorkloadXml, but tuned to
@@ -520,14 +514,13 @@ export const DEFAULT_WL_PARAMS: SsdParams = {
   // 24, not the original 64 (2026-09-20) - Ryu found 64 rows in
   // WearLevelingView too many to scan at a glance.
   blockNoPerPlane: 24,
-  gcExecThreshold: 0.5,
   staticWlThreshold: 3,
 };
 
 // ParamPanel's 마모평준화 임계값 slider range - only shown for this preset.
-// 1-30: measured at the preset defaults (32-page DRAM cache, 30% reads -
-// engine/tests/cache/wlth.mts): WL fires 367/151/85/50/25/20/13/5/0 times at
-// thresholds 1/2/3/5/10/15/20/25/30. 30 is kept as the one "doesn't fire
+// 1-30: measured at the preset defaults (OP 20%, GC threshold 30%, 32-page DRAM
+// cache, 30% reads - engine/tests/cache/wlth.mts): WL fires 366/154/92/51/30/21/9/4/0
+// times at thresholds 1/2/3/5/10/15/20/25/30. 30 is kept as the one "doesn't fire
 // within this run" value. (With the old 256 MB cache and no reads the range
 // was 1-5: most writes never reached flash, so blocks barely wore.)
 export const STATIC_WL_THRESHOLD_RANGE = { min: 1, max: 30 };
