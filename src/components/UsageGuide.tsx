@@ -164,7 +164,7 @@ export function UsageGuide({ onClose }: Props) {
             <p>방금 일어난 동작은 한 스텝 동안 칸에 테두리로 표시됩니다 (같은 스텝의 로그 줄은 굵게):</p>
             <ul>
               <li><span className="swatch outline-write" /> <strong>흰 테두리</strong> - 방금 쓴 page. 덮어쓰기라면 무효가 된 이전 page 에도, GC/WL 이동이라면 옮기기 전·후 page 모두에 표시됩니다.</li>
-              <li><span className="swatch outline-read" /> <strong>하늘색 테두리</strong> - 방금 읽은 page (Workload 의 읽기 비율을 올리면 나타납니다).</li>
+              <li><span className="swatch outline-read" /> <strong>하늘색 테두리(빛나는)</strong> - 방금 읽은 page. 읽기 비율 기본값은 0% 라서, Workload 의 읽기 비율을 올려야 나타납니다.</li>
               <li>block 전체를 감싼 흰 테두리 - 방금 erase 된 block.</li>
             </ul>
             <p>
@@ -190,7 +190,9 @@ export function UsageGuide({ onClose }: Props) {
             <h3>로그 패널</h3>
             <p>
               일어난 사건을 시간 순서대로 보여줍니다. 가장 최근 스텝에서 생긴 줄은 <strong>굵게</strong> 표시돼서, 격자에서
-              테두리가 쳐진 칸과 짝을 맞춰 볼 수 있습니다. 대표적인 줄 형태:
+              테두리가 쳐진 칸과 짝을 맞춰 볼 수 있습니다. 줄 색으로 동작을 구분합니다: Write 는 기본 글자색,{' '}
+              <span className="log-entry-read">Read 는 하늘색</span>(격자의 읽기 테두리와 같은 색),{' '}
+              <span className="log-entry-erase">Erase 는 주황색</span>. 대표적인 줄 형태:
             </p>
             <ul>
               <li><code>LPN 0x0xx → Chip N, Block N, Page N, Write</code> - 호스트가 이 논리 주소(LPN)에 새로 씀</li>

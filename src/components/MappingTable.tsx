@@ -4,7 +4,17 @@ import type { LogEntry } from '../types';
 // last ", "-separated segment (e.g. "Chip 0, Block 0, Page 9, GC" or
 // "Chip 0, Block 0, Erase") - split on that rather than matching the
 // substring "GC" anywhere, which would also light up inside "GC Start".
-const DANGER_KEYWORDS = new Set(['GC Start', 'GC', 'Erase']);
+const DANGER_KEYWORDS = new Set(['GC Start', 'GC']);
+
+// Whole-line colour by operation, so read / write / erase can be told apart
+// at a glance (Ryu, 2026-10-11). Read matches the grid's read outline;
+// writes keep the default text colour. Same last-segment keyword as above.
+function lineKindClass(text: string): string {
+  const keyword = text.slice(text.lastIndexOf(', ') + 2);
+  if (keyword === 'Read') return ' log-entry-read';
+  if (keyword === 'Erase') return ' log-entry-erase';
+  return '';
+}
 
 // "[00000] " (8 chars) + "12:34:56 " (9 chars) - the fixed-width index/time
 // columns that precede the log text itself on every line (see the render
@@ -72,13 +82,21 @@ export function MappingTable({
     <div className="sim-panel">
       <div className="sim-panel-title">로그</div>
       {log.length === 0 && <div className="mini-table-empty">아직 기록된 로그가 없어요 - 재생 버튼을 눌러보세요</div>}
+      {log.length > 0 && (
+        <div className="log-color-key">
+          <span>Write</span>
+          <span className="log-entry-read">Read</span>
+          <span className="log-entry-erase">Erase</span>
+          <span>· 굵은 줄 = 방금 스텝</span>
+        </div>
+      )}
       {log.length > 0 && onSelectLpn && !trackedLpnKey && (
         <div className="log-hint">LPN 이 있는 줄을 클릭하면 그 데이터의 여정을 따라가요</div>
       )}
       <div className="log-list">
         {log.map((e) => (
           <div
-            className={`log-entry${freshFromIndex != null && e.index >= freshFromIndex ? ' log-entry-fresh' : ''}${e.lpnKey && onSelectLpn ? ' log-entry-clickable' : ''}${
+            className={`log-entry${lineKindClass(e.text)}${freshFromIndex != null && e.index >= freshFromIndex ? ' log-entry-fresh' : ''}${e.lpnKey && onSelectLpn ? ' log-entry-clickable' : ''}${
               e.lpnKey && e.lpnKey === trackedLpnKey ? ' log-entry-tracked' : ''
             }`}
             key={e.index}
