@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdexcept>
 
+#include <algorithm>
 #include "Address_Mapping_Unit_Page_Level.h"
 #include "Stats.h"
 #include "../utils/Logical_Address_Partitioning_Unit.h"
@@ -317,13 +318,13 @@ namespace SSD_Components
 		_my_instance = this;
 		domains = new AddressMappingDomain*[no_of_input_streams];
 
-		Write_transactions_for_overfull_planes = new std::set<NVM_Transaction_Flash_WR*>***[channel_count];
+		Write_transactions_for_overfull_planes = new std::list<NVM_Transaction_Flash_WR*>***[channel_count];
 		for (unsigned int channel_id = 0; channel_id < channel_count; channel_id++) {
-			Write_transactions_for_overfull_planes[channel_id] = new std::set<NVM_Transaction_Flash_WR*>**[chip_no_per_channel];
+			Write_transactions_for_overfull_planes[channel_id] = new std::list<NVM_Transaction_Flash_WR*>**[chip_no_per_channel];
 			for (unsigned int chip_id = 0; chip_id < chip_no_per_channel; chip_id++) {
-				Write_transactions_for_overfull_planes[channel_id][chip_id] = new std::set<NVM_Transaction_Flash_WR*>*[die_no_per_chip];
+				Write_transactions_for_overfull_planes[channel_id][chip_id] = new std::list<NVM_Transaction_Flash_WR*>*[die_no_per_chip];
 				for (unsigned int die_id = 0; die_id < die_no_per_chip; die_id++) {
-					Write_transactions_for_overfull_planes[channel_id][chip_id][die_id] = new std::set<NVM_Transaction_Flash_WR*>[plane_no_per_die];
+					Write_transactions_for_overfull_planes[channel_id][chip_id][die_id] = new std::list<NVM_Transaction_Flash_WR*>[plane_no_per_die];
 				}
 			}
 		}
@@ -537,6 +538,11 @@ namespace SSD_Components
 	LPA_type Address_Mapping_Unit_Page_Level::Get_total_logical_pages(stream_id_type stream_id)
 	{
 		return domains[stream_id]->Total_logical_pages_no;
+	}
+
+	bool Address_Mapping_Unit_Page_Level::Can_trim_lpa(stream_id_type stream_id, LPA_type lpa)
+	{
+		return lpa < domains[stream_id]->Total_logical_pages_no && !is_lpa_locked_for_gc(stream_id, lpa);
 	}
 
 	bool Address_Mapping_Unit_Page_Level::Trim_lpa(stream_id_type stream_id, LPA_type lpa)
@@ -2060,14 +2066,19 @@ namespace SSD_Components
 	void Address_Mapping_Unit_Page_Level::mange_unsuccessful_translation(NVM_Transaction_Flash* transaction)
 	{
 		//Currently, the only unsuccessfull translation would be for program translations that are accessing a plane that is running out of free pages
-		std::set<NVM_Transaction_Flash_WR*>& waiting_write_list = Write_transactions_for_overfull_planes[transaction->Address.ChannelID][transaction->Address.ChipID][transaction->Address.DieID][transaction->Address.PlaneID];
+		std::list<NVM_Transaction_Flash_WR*>& waiting_write_list = Write_transactions_for_overfull_planes[transaction->Address.ChannelID][transaction->Address.ChipID][transaction->Address.DieID][transaction->Address.PlaneID];
 		// BUG FIX (this project, upstream MQSim): make sure GC gets another
 		// look at a plane whose writes have started stalling - see
 		// GC_and_WL_Unit_Base::gc_retry_needed().
 		if (waiting_write_list.empty()) {
 			ftl->GC_and_WL_Unit->Request_gc_check(transaction->Address);
 		}
-		waiting_write_list.insert((NVM_Transaction_Flash_WR*)transaction);
+		// FIFO (this project): see Write_transactions_for_overfull_planes'
+		// declaration. The find() keeps upstream std::set's no-duplicates
+		// guarantee; these lists only ever hold a handful of writes.
+		if (std::find(waiting_write_list.begin(), waiting_write_list.end(), (NVM_Transaction_Flash_WR*)transaction) == waiting_write_list.end()) {
+			waiting_write_list.push_back((NVM_Transaction_Flash_WR*)transaction);
+		}
 	}
 
 	// Never does the release itself - always schedules it (see release_one_
@@ -2077,7 +2088,7 @@ namespace SSD_Components
 	// rather than bunching with whatever triggered it.
 	void Address_Mapping_Unit_Page_Level::Start_servicing_writes_for_overfull_plane(const NVM::FlashMemory::Physical_Page_Address plane_address)
 	{
-		std::set<NVM_Transaction_Flash_WR*>& waiting_write_list = Write_transactions_for_overfull_planes[plane_address.ChannelID][plane_address.ChipID][plane_address.DieID][plane_address.PlaneID];
+		std::list<NVM_Transaction_Flash_WR*>& waiting_write_list = Write_transactions_for_overfull_planes[plane_address.ChannelID][plane_address.ChipID][plane_address.DieID][plane_address.PlaneID];
 		if (waiting_write_list.empty()) {
 			return;
 		}
@@ -2089,7 +2100,7 @@ namespace SSD_Components
 	// in Address_Mapping_Unit_Page_Level.h.
 	void Address_Mapping_Unit_Page_Level::release_one_waiting_write(const NVM::FlashMemory::Physical_Page_Address& plane_address)
 	{
-		std::set<NVM_Transaction_Flash_WR*>& waiting_write_list = Write_transactions_for_overfull_planes[plane_address.ChannelID][plane_address.ChipID][plane_address.DieID][plane_address.PlaneID];
+		std::list<NVM_Transaction_Flash_WR*>& waiting_write_list = Write_transactions_for_overfull_planes[plane_address.ChannelID][plane_address.ChipID][plane_address.DieID][plane_address.PlaneID];
 		if (waiting_write_list.empty()) {
 			return;
 		}

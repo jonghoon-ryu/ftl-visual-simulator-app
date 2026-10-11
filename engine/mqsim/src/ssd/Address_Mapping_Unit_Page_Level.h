@@ -201,6 +201,10 @@ namespace SSD_Components
 		// cleared. Returns false - and does nothing - if the page was never
 		// written, was already trimmed, or is locked by an in-flight GC/WL move.
 		bool Trim_lpa(stream_id_type stream_id, LPA_type lpa);
+		// Whether Trim_lpa() would act on lpa at all: in range and not locked
+		// by an in-flight GC/WL migration. Lets the caller keep the DRAM data
+		// cache in step with it (see MQSim_Interface::Trim_lpa_range).
+		bool Can_trim_lpa(stream_id_type stream_id, LPA_type lpa);
 		LPA_type Get_total_logical_pages(stream_id_type stream_id);
 		void Translate_lpa_to_ppa_and_dispatch(const std::list<NVM_Transaction*>& transactionList);
 		void Get_data_mapping_info_for_gc(const stream_id_type stream_id, const LPA_type lpa, PPA_type& ppa, page_status_type& page_state);
@@ -276,7 +280,16 @@ namespace SSD_Components
 		bool request_mapping_entry(const stream_id_type streamID, const LPA_type lpn);
 		static void handle_transaction_serviced_signal_from_PHY(NVM_Transaction_Flash* transaction);
 		bool translate_lpa_to_ppa(stream_id_type streamID, NVM_Transaction_Flash* transaction);
-		std::set<NVM_Transaction_Flash_WR*>**** Write_transactions_for_overfull_planes;
+		// BUG FIX (this project, upstream MQSim): upstream kept these as
+		// std::set<NVM_Transaction_Flash_WR*>, so release_one_waiting_write()'s
+		// begin() released the write with the LOWEST HEAP ADDRESS first. That
+		// order depends on the allocator's state, so two runs of the same
+		// config in one process (the app's comparison worker, or ▶ after a
+		// restart) gave different results once writes started waiting for
+		// free space - first seen when the DRAM cache was shrunk enough to
+		// evict. A FIFO list releases the oldest waiting write first instead,
+		// which is both deterministic and the natural order.
+		std::list<NVM_Transaction_Flash_WR*>**** Write_transactions_for_overfull_planes;
 
 		void generate_flash_read_request_for_mapping_data(const stream_id_type streamID, const LPA_type lpn);
 		void generate_flash_writeback_request_for_mapping_data(const stream_id_type streamID, const LPA_type lpn);

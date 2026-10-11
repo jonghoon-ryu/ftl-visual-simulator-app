@@ -1,4 +1,5 @@
 #include "MQSim_Interface.h"
+#include "../ssd/Data_Cache_Manager_Flash_Advanced.h"
 #include <iostream>
 #include <fstream>
 #include <cstring>
@@ -299,8 +300,22 @@ namespace MQSim_Interface
 		SSD_Components::FTL* ftl = static_cast<SSD_Components::FTL*>(instance->Ssd->Firmware);
 		SSD_Components::Address_Mapping_Unit_Page_Level* amu =
 			static_cast<SSD_Components::Address_Mapping_Unit_Page_Level*>(ftl->Address_Mapping_Unit);
+		// The DRAM write cache may hold a newer, dirty copy of a trimmed page.
+		// Trim_lpa() only touches the flash mapping, so without this a later
+		// LRU eviction wrote the "deleted" data back to flash as a valid page
+		// that GC then had to keep moving - TRIM raised WAF instead of
+		// lowering it. (Hidden until the cache was shrunk enough to evict:
+		// the old 256 MB cache never did.)
+		SSD_Components::Data_Cache_Manager_Flash_Advanced* cache =
+			dynamic_cast<SSD_Components::Data_Cache_Manager_Flash_Advanced*>(instance->Ssd->Cache_manager);
 		unsigned int trimmed = 0;
 		for (LPA_type lpa = start_lpa; lpa < start_lpa + count; lpa++) {
+			if (!amu->Can_trim_lpa(stream_id, lpa)) {
+				continue;
+			}
+			if (cache) {
+				cache->Discard_cached_lpa(stream_id, lpa);
+			}
 			if (amu->Trim_lpa(stream_id, lpa)) {
 				trimmed++;
 			}

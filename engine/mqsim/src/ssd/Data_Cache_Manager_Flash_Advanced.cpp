@@ -273,6 +273,17 @@ namespace SSD_Components
 		}
 	}
 
+	bool Data_Cache_Manager_Flash_Advanced::Discard_cached_lpa(stream_id_type stream_id, LPA_type lpa)
+	{
+		if (!per_stream_cache[stream_id]->Exists(stream_id, lpa)) {
+			return false;
+		}
+		// Safe even if this slot's write-back is already in flight: the
+		// write-completion handler only removes the slot if it still Exists().
+		per_stream_cache[stream_id]->Remove_slot(stream_id, lpa);
+		return true;
+	}
+
 	void Data_Cache_Manager_Flash_Advanced::write_to_destage_buffer(User_Request* user_request)
 	{
 		//To eliminate race condition, MQSim assumes the management information and user data are stored in separate DRAM modules

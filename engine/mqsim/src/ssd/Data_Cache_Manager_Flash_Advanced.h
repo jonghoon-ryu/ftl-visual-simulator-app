@@ -38,6 +38,10 @@ namespace SSD_Components
 		void Execute_simulator_event(MQSimEngine::Sim_Event* ev);
 		void Setup_triggers();
 		void Do_warmup(std::vector<Utils::Workload_Statistics*> workload_stats);
+		// TRIM support (this project - see MQSim_Interface::Trim_lpa_range):
+		// drops lpa's cached copy so a later eviction cannot write the trimmed
+		// data back to flash. Returns whether a copy was cached.
+		bool Discard_cached_lpa(stream_id_type stream_id, LPA_type lpa);
 	private:
 		NVM_PHY_ONFI * flash_controller;
 		unsigned int capacity_in_bytes, capacity_in_pages;
