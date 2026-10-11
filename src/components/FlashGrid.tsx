@@ -94,10 +94,10 @@ export function FlashGrid({ blocks, caption, banner, footer, trackedCurrentKey, 
             {block.writeFrontier && <span className="row-flag row-flag-active">active block</span>}
             {block.programInFlight && (
               <span
-                className="row-flag row-flag-writing"
-                title="이미 할당된 페이지의 쓰기가 아직 끝나지 않았습니다. 끝날 때까지 GC/마모평준화 대상이 되지 않습니다."
+                className="row-flag row-flag-programming"
+                title="이 block 의 page 에 flash program(실제 쓰기, 약 0.75ms)이 아직 진행 중입니다. page 는 할당되는 순간 V 로 보이지만 program 은 그 뒤에 끝나요. 끝날 때까지 이 block 은 GC/마모평준화 대상이 되지 않습니다."
               >
-                Writing
+                Program 중
               </span>
             )}
           </div>

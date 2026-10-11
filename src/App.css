@@ -1,5 +1,7 @@
 .sim-app {
-  max-width: 1600px;
+  /* 1920, not 1600 (Ryu, 2026-10-11): on wide screens the flash grid's
+     row labels ("active block", "Program 중") were clipped at the panel edge. */
+  max-width: 1920px;
   margin: 0 auto;
   /* Left/right narrowed from 16px to 8px (2026-09-20) to claw back width
      for the log column after its index widened to 5 digits ("[00000]") -
@@ -109,7 +111,9 @@
 }
 
 .sim-grid-panel {
-  flex: 2 1 480px;
+  /* Grows 5 (was 2) so extra width goes mostly to the grid, whose rows
+     need room for their right-hand labels. */
+  flex: 5 1 480px;
   padding: 14px;
   border-right: 1px solid #33374a;
   /* A block row can have up to 64 pages (ParamPanel's max) - rather than
@@ -181,7 +185,7 @@
 .row-flag-victim { color: #f16d75; }
 .row-flag-gc-block { color: #f5b942; }
 .row-flag-active { color: #4a6cf7; }
-.row-flag-writing { color: #9b72e0; }
+.row-flag-programming { color: #9b72e0; }
 
 .chip-badge {
   width: 20px;

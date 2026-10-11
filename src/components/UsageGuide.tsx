@@ -173,7 +173,8 @@ export function UsageGuide({ onClose }: Props) {
               block 행 오른쪽에 붙는 라벨도 있습니다: <strong>active block</strong>(지금 host write 가 채워지고 있는
               block), <strong>GC block</strong>(다음 GC/WL 이동이 도착할 block - GC 가 아직 한 번도 안 켜졌어도
               항상 표시됩니다, MQSim 이 미리 예약해두기 때문), <strong>Victim</strong>(방금 GC 대상으로 선택된
-              block).
+              block), <strong>Program 중</strong>(이 block 의 page 에 flash program 이 아직 진행 중 - page 는 할당되는 순간 V 로
+              보이지만 실제 program(약 0.75ms)은 그 뒤에 끝나요. 끝날 때까지 GC/마모평준화 대상이 되지 않습니다).
             </p>
           </section>
 
