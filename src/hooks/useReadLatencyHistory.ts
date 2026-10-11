@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MqsimEngine } from './useMqsimEngine';
 
-// One sample per playback tick/step: reads completed during that tick,
-// their average and slowest device response time (µs), and how many GCs
-// started in the same tick.
+// One sample per playback tick/step: reads completed during that tick (on
+// every chip together - the engine only keeps device-wide read totals),
+// their average and slowest device response time (µs), and the chip of each
+// GC that started in the same tick.
 export interface ReadLatencySample {
   reads: number;
   avgUs: number;
   maxUs: number;
   gcStarts: number;
+  gcChips: number[];
 }
 
 const MAX_SAMPLES = 600;
@@ -20,18 +22,18 @@ const MAX_SAMPLES = 600;
 export function useReadLatencyHistory(subscribeEvents: MqsimEngine['subscribeEvents'], ready: boolean) {
   const [samples, setSamples] = useState<ReadLatencySample[]>([]);
   const prevRef = useRef({ reads: 0, sumNs: 0 });
-  const gcInTickRef = useRef(0);
+  const gcInTickRef = useRef<number[]>([]);
 
   const reset = useCallback(() => {
     prevRef.current = { reads: 0, sumNs: 0 };
-    gcInTickRef.current = 0;
+    gcInTickRef.current = [];
     setSamples([]);
   }, []);
 
   useEffect(() => {
     if (!ready) return;
     return subscribeEvents((event) => {
-      if (event.type === 'gc_started') gcInTickRef.current++;
+      if (event.type === 'gc_started') gcInTickRef.current.push(event.block?.chip ?? 0);
     });
   }, [subscribeEvents, ready]);
 
@@ -45,9 +47,10 @@ export function useReadLatencyHistory(subscribeEvents: MqsimEngine['subscribeEve
       reads,
       avgUs: reads > 0 ? sumNs / reads / 1000 : 0,
       maxUs: readResponseMaxNsSinceLastState / 1000,
-      gcStarts: gcInTickRef.current,
+      gcStarts: gcInTickRef.current.length,
+      gcChips: gcInTickRef.current,
     };
-    gcInTickRef.current = 0;
+    gcInTickRef.current = [];
     setSamples((prev) => {
       const next = [...prev, sample];
       return next.length > MAX_SAMPLES ? next.slice(next.length - MAX_SAMPLES) : next;
