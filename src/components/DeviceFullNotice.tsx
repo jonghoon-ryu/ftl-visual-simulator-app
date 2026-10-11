@@ -27,7 +27,7 @@ export function DeviceFullNotice({ state, chipCount }: { state: MqsimState; chip
         );
       })}
       <p>
-        격자에 보이는 빈 block 은 <b>GC 예비</b>·<b>매핑용</b>·쓰기 위치(active block, GC block)라 호스트 데이터를 받을 수
+        격자에 보이는 빈 block 은 <b>GC 예비</b>·쓰기 위치(active block, GC block)·매핑 테이블용으로 남겨 둔 block라 호스트 데이터를 받을 수
         없어요.
         {chipCount > 1 &&
           ` 그리고 각 LPN 은 번호로 정해진 칩에만 쓰여서(LPN 을 칩 개수 ${chipCount} 로 나눈 나머지가 칩 번호), 다른 칩에 빈 block 이 있어도 옮겨 쓸 수 없어요.`}{' '}

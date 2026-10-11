@@ -42,7 +42,6 @@ export function toBlockRows(
     gcDestination: block.isGcWriteFrontier,
     writeFrontier: block.isWriteFrontier,
     programInFlight: block.ongoingProgramCount > 0,
-    mappingReserved: block.isMappingFrontier,
     gcReserve: block.inFreePool && belowFloor(block.chip),
   }));
 }

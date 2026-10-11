@@ -92,11 +92,6 @@ export function FlashGrid({ blocks, caption, banner, footer, trackedCurrentKey, 
             {block.isVictim && <span className="row-flag row-flag-victim">Victim</span>}
             {block.gcDestination && <span className="row-flag row-flag-gc-block">GC block</span>}
             {block.writeFrontier && <span className="row-flag row-flag-active">active block</span>}
-            {block.mappingReserved && (
-              <span className="row-flag row-flag-reserved" title="매핑 테이블 page 를 쓰려고 남겨 둔 block 이에요. 이 데모에서는 매핑 테이블이 DRAM(CMT)에 다 들어가서 계속 비어 있지만, 호스트 데이터는 여기에 쓸 수 없어요.">
-                매핑용
-              </span>
-            )}
             {block.gcReserve && (
               <span className="row-flag row-flag-gc-reserve" title="이 칩의 빈 block 이 GC 예비분보다 적어져서 호스트 쓰기가 멈췄어요. 남은 빈 block 은 GC 가 page 를 옮길 때 쓰려고 남겨 둔 것이라 호스트 데이터는 쓸 수 없어요.">
                 GC 예비
