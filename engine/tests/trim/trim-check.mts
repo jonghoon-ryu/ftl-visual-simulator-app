@@ -49,7 +49,7 @@ check('out-of-range LPNs are ignored', mod.trimRange(total + 10, 5) === 0);
 // 2. Full runs: the engine must not crash/stall, and TRIM must lower WAF.
 // Same chunk as TrimPanel's TRIM_CHUNK. Checked where the effect is robust
 // (engine/tests/cache/trimwaf.mts): cache off at 10%, cache on at 30%. With the
-// cache on, a 10% TRIM is within run-to-run noise, so it isn't asserted.
+// cache on and reads at 0%, a 10% TRIM is within run-to-run noise, so it isn't asserted.
 async function fullRun(writeCache: boolean, trimPercent: number, chunk: number): Promise<number> {
   hostWrites = 0;
   moved = 0;

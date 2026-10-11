@@ -50,14 +50,6 @@ import type { PresetId } from './types';
 // on every slider-drag tick) - see the effect below.
 const PARAM_APPLY_DEBOUNCE_MS = 400;
 
-// ▶ pacing for "GC 시연"/"마모평준화 시연": log lines per tick at speed 8 -
-// a full run is ~11k / ~8.1k log lines (engine/tests/cache/loglines.mts,
-// about the same with the DRAM cache on or off), so this finishes in ~180
-// ticks at speed 8. Each speed step below halves it, down to one line every
-// ~2 ticks at speed 1 (Ryu, 2026-10-11: speed 1 was still far too fast to
-// follow when these presets were paced in raw event-groups - 96 per tick,
-// ~25 log lines/s). "매핑 기본" (~150 lines) keeps the hook's default linear
-// pace (speed 8 = one line per tick).
 // Starting ▶ speed per preset (others start at 8, useSimulationPlayback's
 // default). "GC 시연" starts at 1x so a first-time viewer can follow single
 // writes and GC steps (Ryu, 2026-10-11); 8x is one drag away.
@@ -65,6 +57,15 @@ const DEFAULT_SPEED: Partial<Record<PresetId, number>> = {
   gc: 1,
 };
 
+// ▶ pacing for "GC 시연"/"마모평준화 시연": log lines per tick at speed 8 -
+// a full run is ~13.9k / ~9.1k log lines at the default 30% reads
+// (engine/tests/cache/loglines.mts; ~10k / ~9.2k with the cache off), so
+// this finishes in ~215 / ~190 ticks (about a minute) at speed 8. Each
+// speed step below halves it, down to one line every ~2 ticks at speed 1
+// (Ryu, 2026-10-11: speed 1 was still far too fast to
+// follow when these presets were paced in raw event-groups - 96 per tick,
+// ~25 log lines/s). "매핑 기본" (~150 lines) keeps the hook's default linear
+// pace (speed 8 = one line per tick).
 const LOG_LINES_PER_TICK_AT_FULL_SPEED: Partial<Record<PresetId, number>> = {
   gc: 64,
   'wear-leveling': 48,

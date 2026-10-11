@@ -28,8 +28,9 @@ const TRIM_CHUNK = 600;
 // that runs the current settings to the end with and without a host that
 // keeps TRIMming, to show what it does to GC cost.
 export function TrimPanel({ params, workload, onTrim, canTrim }: Props) {
-  // 30, not 10: with the DRAM cache on, a 10% TRIM's WAF effect is within
-  // run-to-run noise (engine/tests/cache/trimwaf.mts) - see the caption below.
+  // 30, not 10: with the DRAM cache on and reads at 0%, a 10% TRIM's WAF
+  // effect is within run-to-run noise (engine/tests/cache/trimwaf.mts) - see
+  // the caption below. At the default 30% reads 10% works too (1.27x -> 1.19x).
   const [percent, setPercent] = useState(30);
   const [lastTrim, setLastTrim] = useState<{ percent: number; pages: number } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -175,9 +176,10 @@ export function TrimPanel({ params, workload, onTrim, canTrim }: Props) {
       <div className="free-chart-caption">
         같은 설정으로 끝까지 돌린 결과예요 (화면의 재생과는 별개). TRIM 을 모르는 FTL 은 호스트가 이미 지운 데이터도
         valid 로 믿고 GC 때마다 옮겨요. TRIM 하면 그 page 가 invalid 라서 옮길 page 가 줄고 WAF 가 내려가요. TRIM 하는 동안
-        호스트가 더 많이 쓸 수 있게 되므로 호스트 쓰기 수도 달라질 수 있어요. DRAM 캐시를 켠 채 LPN 10% 처럼 조금만
-        TRIM 하면 차이가 실행마다 오르내릴 만큼 작아요 - 캐시가 이미 덮어쓰기를 흡수해서 flash 에 남는 옛 데이터가 적기
-        때문이에요. 30% 이상이나 캐시를 끈 상태에서는 확실히 내려가요.
+        호스트가 더 많이 쓸 수 있게 되므로 호스트 쓰기 수도 달라질 수 있어요. 다만 읽기 비율을 0 으로
+        하고 DRAM 캐시를 켠 채 LPN 10% 처럼 조금만 TRIM 하면, 차이가 실행마다 오르내릴 만큼 작아요 - 캐시가 이미
+        덮어쓰기를 흡수해서 flash 에 남는 옛 데이터가 적기 때문이에요. 기본 설정(읽기 30%)이나 TRIM 30% 이상에서는 확실히
+        내려가요.
       </div>
     </div>
   );

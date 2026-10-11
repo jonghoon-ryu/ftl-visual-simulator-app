@@ -28,7 +28,7 @@ export function AccessPatternComparison({ params, workload }: Props) {
 
   // Results describe one exact set of settings - drop them when those change.
   const settingsKey = useMemo(
-    () => JSON.stringify({ params, workload: { ...workload, addressDistribution: null } }),
+    () => JSON.stringify({ params, workload: { ...workload, addressDistribution: null, readPercentage: null } }),
     [params, workload],
   );
   useEffect(() => {
@@ -65,7 +65,12 @@ export function AccessPatternComparison({ params, workload }: Props) {
       jobs: PATTERNS.map(({ id }) => ({
         label: id,
         ssdConfigXml: buildSsdConfigXml(params),
-        workloadXml: buildGcWorkloadXml(params, { ...workload, addressDistribution: id }),
+        // Reads off: this compares WRITE patterns. MQSim's STREAMING generator
+        // advances one shared address cursor for reads and writes, so with
+        // reads mixed in each pass only rewrites a random ~70% of addresses
+        // and "sequential" loses its effect (30% reads: 1.29x vs random
+        // 1.27x; no reads: 1.01x vs 1.25x - engine/tests/cache/claims.mts).
+        workloadXml: buildGcWorkloadXml(params, { ...workload, addressDistribution: id, readPercentage: 0 }),
       })),
     });
   };
@@ -124,7 +129,9 @@ export function AccessPatternComparison({ params, workload }: Props) {
       <div className="free-chart-caption">
         같은 설정으로 쓰기 패턴만 바꿔 각각 끝까지 돌린 결과예요 (화면의 재생과는 별개로 계산). 순차 쓰기는 block 단위로
         한꺼번에 invalid 가 되기 쉬워서 GC 1번에 옮기는 valid page 가 적고, 무작위 쓰기는 invalid page 가 모든 block 에
-        흩어져서 더 많이 옮겨야 해요. 차이의 크기는 설정(DRAM 캐시, Over-provisioning 등)에 따라 달라져요.
+        흩어져서 더 많이 옮겨야 해요. 차이의 크기는 설정(DRAM 캐시, Over-provisioning 등)에 따라 달라져요. 쓰기 패턴만 비교하려고 이 실험은 읽기를 끄고
+        돌립니다 - MQSim 의 순차 생성기는 읽기와 쓰기가 같은 주소를 차례로 나눠 써서, 읽기가 섞이면 쓰기가 더 이상 순차가
+        아니게 되거든요.
       </div>
     </div>
   );

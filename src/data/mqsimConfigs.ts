@@ -119,8 +119,8 @@ export const DEFAULT_MAPPING_PARAMS: SsdParams = {
 // flash writes), which made ▶ show long stretches with no flash change
 // followed by a burst every simulated second (~175 of 181 ticks idle). 32
 // pages is the measured sweet spot (engine/tests/cache/cache-sweep.mts): flash
-// traffic is steady, the cache still visibly absorbs repeat writes (GC 시연
-// ~12.7k requests -> ~7.9k flash writes), and the device never fills - at 16
+// traffic is steady, the cache still visibly absorbs repeat writes (GC 시연,
+// no reads: ~12.7k requests -> ~7.9k flash writes), and the device never fills - at 16
 // pages "GC 시연" ends with writes stuck waiting for free space.
 export const DATA_CACHE_CAPACITY_PAGES = 32;
 
@@ -225,7 +225,9 @@ export interface WorkloadParams {
 export const DEFAULT_WORKLOAD_PARAMS: WorkloadParams = {
   addressDistribution: 'RANDOM_UNIFORM',
   writeCache: true,
-  readPercentage: 0,
+  // 30, not 0 (Ryu, 2026-10-11): with no reads the grid's read outline and
+  // the log's Read lines never appeared unless the slider was raised.
+  readPercentage: 30,
 };
 
 function cachingModeXml(workload: WorkloadParams): string {
@@ -506,13 +508,12 @@ export const DEFAULT_WL_PARAMS: SsdParams = {
 };
 
 // ParamPanel's 마모평준화 임계값 slider range - only shown for this preset.
-// 1-30: re-measured after the DRAM cache shrank to DATA_CACHE_CAPACITY_PAGES
-// (engine/tests/cache/wlth.mts, preset defaults): WL fires 365/147/92/60/37/
-// 34/12/7/5/0 times at thresholds 1/2/3/5/8/10/15/20/25/30. 30 is kept as the
-// one "doesn't fire within this run" value. (With the old 256 MB cache the
-// range was 1-5: 341/30/7/5 times at 1-4 and never at 5 - most writes never
-// reached flash, so blocks barely wore.)
-export const STATIC_WL_THRESHOLD_RANGE = { min: 1, max: 30 };
+// 1-35: measured at the preset defaults (32-page DRAM cache, 30% reads -
+// engine/tests/cache/wlth.mts): WL fires 367/151/85/57/25/13/9/10/3/0 times
+// at thresholds 1/2/3/5/10/15/20/25/30/35. 35 is kept as the one "doesn't
+// fire within this run" value. (With the old 256 MB cache and no reads the
+// range was 1-5: most writes never reached flash, so blocks barely wore.)
+export const STATIC_WL_THRESHOLD_RANGE = { min: 1, max: 35 };
 
 // Share of each flow's own half of the address space it touches - see
 // DEFAULT_WL_PARAMS' comment.

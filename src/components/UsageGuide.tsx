@@ -139,7 +139,7 @@ export function UsageGuide({ onClose }: Props) {
                 <strong>속도 (1×~8×)</strong> - 0.3초마다 로그 몇 줄만큼 진행할지 정합니다. 매핑 기본은 8× 가 한 줄,
                 1× 가 여덟 번에 한 줄입니다. GC 시연/마모평준화 시연은 실행 전체가 로그 수천 줄이라 8× 에서 0.3초마다 수십 줄씩
                 진행하고(끝까지 약 1분), 한 단계 내릴 때마다 절반으로 느려져 1× 에서는 0.6초에 한 줄 정도입니다. GC 시연은
-                하나하나 따라가 볼 수 있게 <strong>1× 로 시작</strong>합니다 - 첫 GC 는 로그 약 126번째 줄이라 1× 로는 1분 반쯤
+                하나하나 따라가 볼 수 있게 <strong>1× 로 시작</strong>합니다 - 첫 GC 는 로그 약 145번째 줄이라 1× 로는 2분 가까이
                 걸리니, 빨리 보고 싶으면 속도를 올리세요. 프리셋마다 마지막에 쓴 속도를 따로 기억합니다.
               </li>
               <li>
@@ -166,7 +166,7 @@ export function UsageGuide({ onClose }: Props) {
             <p>방금 일어난 동작은 한 스텝 동안 칸에 테두리로 표시됩니다 (같은 스텝의 로그 줄은 굵게):</p>
             <ul>
               <li><span className="swatch outline-write" /> <strong>흰 테두리</strong> - 방금 쓴 page. 덮어쓰기라면 무효가 된 이전 page 에도, GC/WL 이동이라면 옮기기 전·후 page 모두에 표시됩니다.</li>
-              <li><span className="swatch outline-read" /> <strong>하늘색 테두리(빛나는)</strong> - 방금 읽은 page. 읽기 비율 기본값은 0% 라서, Workload 의 읽기 비율을 올려야 나타납니다.</li>
+              <li><span className="swatch outline-read" /> <strong>하늘색 테두리(빛나는)</strong> - 방금 읽은 page. 기본 읽기 비율은 30% 이고, Workload 의 읽기 비율을 0 으로 내리면 나타나지 않습니다. 아직 한 번도 안 쓴 LPN 을 읽거나 DRAM 캐시에서 바로 읽으면 flash 를 거치지 않아서 테두리가 없어요.</li>
               <li>block 전체를 감싼 흰 테두리 - 방금 erase 된 block.</li>
             </ul>
             <p>
@@ -296,8 +296,8 @@ export function UsageGuide({ onClose }: Props) {
               <li>
                 <strong>마모평준화 임계값</strong> (마모평준화 시연에서만) - 가장 많이 닳은 block 과 가장 적게 닳은
                 block 의 erase 횟수 차이가 이 값 이상이 되면 정적 마모평준화가 발동해, 가장 적게 닳은 block 의
-                (한 번 쓰고 안 건드리는) cold 데이터를 다른 곳으로 옮깁니다. 기본값 3 에서 약 90번 발동하고, 1 로 낮추면
-                차이가 조금만 벌어져도 발동해 약 360번으로 늘어나며(대부분 불필요한 이동이라 WAF 가 크게 올라요), 30 이면 이
+                (한 번 쓰고 안 건드리는) cold 데이터를 다른 곳으로 옮깁니다. 기본값 3 에서 약 85번 발동하고, 1 로 낮추면
+                차이가 조금만 벌어져도 발동해 약 370번으로 늘어나며(대부분 불필요한 이동이라 WAF 가 크게 올라요), 35 이면 이
                 데모의 실행 길이 안에서는 차이가 거기까지 벌어지지 않아 발동하지 않습니다.
               </li>
               <li>
