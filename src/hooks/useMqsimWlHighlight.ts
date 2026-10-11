@@ -3,8 +3,9 @@ import { blockKey } from '../lib/pageKey';
 import type { WlTriggerInfo } from '../types';
 import type { MqsimEngine } from './useMqsimEngine';
 
-// Static WL fires at most once or twice in a whole "마모평준화 시연" run
-// (see DEFAULT_WL_PARAMS' doc comment in mqsimConfigs.ts) - unlike GC's
+// Static WL used to fire only once or twice in a whole "마모평준화 시연" run
+// (it now fires ~90 times since the DRAM cache was shrunk to a realistic
+// size - see DATA_CACHE_CAPACITY_PAGES in mqsimConfigs.ts) - unlike GC's
 // transient one-step "moving"/"erasing" overlay (useMqsimMigrations/
 // useMqsimOverwrites, meant to be caught live, mid-step), a beginner has
 // essentially no realistic chance of noticing WL's single occurrence while
@@ -13,8 +14,8 @@ import type { MqsimEngine } from './useMqsimEngine';
 // the current run (accumulated, never cleared by commit() the way the GC
 // overlays are) - WearLevelingView's "발동 횟수" column can then show a
 // lasting record even after the moment has already passed. commit() also
-// returns whether a new trigger happened this call, so App.tsx can
-// auto-pause playback right at the moment a beginner most needs to look
+// returns whether this call committed the run's FIRST trigger, so App.tsx
+// can auto-pause playback right at the moment a beginner most needs to look
 // (found 2026-09-20: Ryu tested "마모평준화 시연" and couldn't tell whether
 // it had worked, then asked for exactly this: pause + an explanation of
 // what condition was satisfied).
@@ -40,6 +41,12 @@ export function useMqsimWlHighlight(subscribeEvents: MqsimEngine['subscribeEvent
   // stop and look), and re-showing "발동했어요" while the sim keeps running
   // reads as stuck/stale rather than historical.
   const [bannerVisible, setBannerVisible] = useState(false);
+  // Whether this run's first trigger has been committed. Only that one
+  // pauses ▶ and shows the banner - once WL fires dozens of times per run,
+  // pausing on every one would stop playback almost every tick, and a
+  // banner that reappears right after resuming reads as stuck (the reason
+  // Ryu asked for it to go away on resume in the first place).
+  const firstTriggerDoneRef = useRef(false);
 
   useEffect(() => {
     if (!ready) return;
@@ -65,7 +72,8 @@ export function useMqsimWlHighlight(subscribeEvents: MqsimEngine['subscribeEvent
 
   // Call once per step/tick after refresh() - same timing as useMqsimMigrations'
   // commit(), but adds the pending counts into the existing map instead of
-  // replacing it. Returns true if a new trigger happened this call.
+  // replacing it. Returns true only when this call committed the run's
+  // first trigger (see firstTriggerDoneRef).
   const commit = useCallback((): boolean => {
     const pendingCounts = pendingKeyCountsRef.current;
     const pendingTrigger = pendingTriggerRef.current;
@@ -82,6 +90,8 @@ export function useMqsimWlHighlight(subscribeEvents: MqsimEngine['subscribeEvent
       return next;
     });
     setLastTrigger(pendingTrigger);
+    if (firstTriggerDoneRef.current) return false;
+    firstTriggerDoneRef.current = true;
     setBannerVisible(true);
     return true;
   }, []);
@@ -90,6 +100,7 @@ export function useMqsimWlHighlight(subscribeEvents: MqsimEngine['subscribeEvent
 
   const reset = useCallback(() => {
     epochRef.current += 1;
+    firstTriggerDoneRef.current = false;
     pendingKeyCountsRef.current = new Map();
     pendingTriggerRef.current = null;
     setWlTargetCounts(new Map());

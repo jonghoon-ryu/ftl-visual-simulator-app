@@ -111,6 +111,19 @@ export const DEFAULT_MAPPING_PARAMS: SsdParams = {
   workloadSeed: 798,
 };
 
+// The SSD's DRAM data cache, in pages (Data_Cache_Capacity is bytes, so it
+// scales with Page_Capacity). Was a fixed 268435456 (256 MB) - ~170x this
+// demo's whole flash (384 pages x 4 KB at the defaults), so it never filled
+// and never evicted: in "GC 시연" only the bloom filter's once-per-LPA-per-
+// second cold-data write-through reached flash (2.2M host requests -> 504
+// flash writes), which made ▶ show long stretches with no flash change
+// followed by a burst every simulated second (~175 of 181 ticks idle). 32
+// pages is the measured sweet spot (engine/tests/cache/cache-sweep.mts): flash
+// traffic is steady, the cache still visibly absorbs repeat writes (GC 시연
+// ~12.7k requests -> ~7.9k flash writes), and the device never fills - at 16
+// pages "GC 시연" ends with writes stuck waiting for free space.
+export const DATA_CACHE_CAPACITY_PAGES = 32;
+
 export function buildSsdConfigXml(params: SsdParams): string {
   return `<?xml version="1.0" encoding="us-ascii"?>
 <Execution_Parameter_Set>
@@ -131,7 +144,7 @@ export function buildSsdConfigXml(params: SsdParams): string {
 		<Queue_Fetch_Size>512</Queue_Fetch_Size>
 		<Caching_Mechanism>ADVANCED</Caching_Mechanism>
 		<Data_Cache_Sharing_Mode>SHARED</Data_Cache_Sharing_Mode>
-		<Data_Cache_Capacity>268435456</Data_Cache_Capacity>
+		<Data_Cache_Capacity>${DATA_CACHE_CAPACITY_PAGES * params.pageCapacityBytes}</Data_Cache_Capacity>
 		<Data_Cache_DRAM_Row_Size>8192</Data_Cache_DRAM_Row_Size>
 		<Data_Cache_DRAM_Data_Rate>100</Data_Cache_DRAM_Data_Rate>
 		<Data_Cache_DRAM_Data_Busrt_Size>1</Data_Cache_DRAM_Data_Busrt_Size>
@@ -398,7 +411,10 @@ export const DEFAULT_GC_PARAMS: SsdParams = {
 //   useSimulationPlayback's ticksMultiplier). How many times GC executes
 //   depends on DEFAULT_MAPPING_PARAMS' block count/page size (smaller
 //   geometry = less occupancy pressure = fewer GC runs before Stop_Time) -
-//   re-measure if those defaults change again.
+//   re-measure if those defaults change again. (Those counts were all taken
+//   with the old 256 MB DRAM cache, which swallowed almost every write. At
+//   DATA_CACHE_CAPACITY_PAGES the same 6e9 gives ~138k event-groups and ~600
+//   GC executions - engine/tests/cache/cache-sweep.mts.)
 export function buildGcWorkloadXml(params: SsdParams, workload: WorkloadParams = DEFAULT_WORKLOAD_PARAMS): string {
   return `<?xml version="1.0" encoding="us-ascii"?>
 <MQSim_IO_Scenarios>
@@ -461,8 +477,8 @@ export function buildGcWorkloadXml(params: SsdParams, workload: WorkloadParams =
 // - flow 0 ("cold"): STREAMING over half its region, exactly one write per
 //   page, then stops for good (Stop_Time 0 makes Total_Requests_To_Generate
 //   the limit - see IO_Flow_Synthetic::Generate_next_request()). Caching
-//   TURNED_OFF, or the (huge, 256MB) DRAM write cache would absorb all of it
-//   and it would never reach flash at all.
+//   TURNED_OFF, so every one of its writes reaches flash at once instead of
+//   sitting in the DRAM write cache until evicted.
 // - flow 1 ("hot"): the same random overwrite traffic the preset always had
 //   (25% of the whole device = 50% of its own half), for the whole run.
 // Verified via native CLI at the defaults below (24 blocks, threshold 3):
@@ -490,12 +506,13 @@ export const DEFAULT_WL_PARAMS: SsdParams = {
 };
 
 // ParamPanel's 마모평준화 임계값 slider range - only shown for this preset.
-// 1-5, not 1-10: verified via native CLI at this preset's defaults (24
-// blocks, Stop_Time 8e9) that WL fires 341/30/7/5 times at thresholds 1-4 (re-measured after the 2026-09-24 suspend fix)
-// and 0 times for every value 5-10 - the erase-count gap never reaches 5
-// within this run length (at 4x Stop_Time threshold 5 does fire). 5 is
-// kept as the one "doesn't fire here" value; 6-10 would just repeat it.
-export const STATIC_WL_THRESHOLD_RANGE = { min: 1, max: 5 };
+// 1-30: re-measured after the DRAM cache shrank to DATA_CACHE_CAPACITY_PAGES
+// (engine/tests/cache/wlth.mts, preset defaults): WL fires 365/147/92/60/37/
+// 34/12/7/5/0 times at thresholds 1/2/3/5/8/10/15/20/25/30. 30 is kept as the
+// one "doesn't fire within this run" value. (With the old 256 MB cache the
+// range was 1-5: 341/30/7/5 times at 1-4 and never at 5 - most writes never
+// reached flash, so blocks barely wore.)
+export const STATIC_WL_THRESHOLD_RANGE = { min: 1, max: 30 };
 
 // Share of each flow's own half of the address space it touches - see
 // DEFAULT_WL_PARAMS' comment.

@@ -13,11 +13,14 @@ interface Props {
 
 const PERCENT_OPTIONS = [10, 30, 60];
 
-// Event-groups between TRIMs in the comparison run. The DRAM cache makes a run
-// ~350x longer in event-groups (see App.tsx's tick multipliers), so the chunk
-// is scaled to give a similar number (~80) of TRIM rounds either way.
-const CHUNK_CACHED = 200000;
-const CHUNK_UNCACHED = 600;
+// Event-groups between TRIMs in the comparison run. The same for the DRAM
+// cache on or off: at the 32-page cache both modes service ~0.1 host requests
+// per event-group (GC 시연: ~12.7k requests / ~138k groups cached, ~5.1k /
+// ~50k uncached), so one chunk gives the same TRIM rate per host request.
+// (Was 200000 cached / 600 uncached, normalised by TRIM rounds for the old
+// 256 MB cache's ~17M-group runs - at the new cache size 200000 would finish
+// the whole run inside the first chunk and never TRIM at all.)
+const TRIM_CHUNK = 600;
 
 // "GC 시연": TRIM, which upstream MQSim does not have - the engine got a
 // Trim_lpa() for this project. (1) a button that TRIMs part of the data on
@@ -25,7 +28,9 @@ const CHUNK_UNCACHED = 600;
 // that runs the current settings to the end with and without a host that
 // keeps TRIMming, to show what it does to GC cost.
 export function TrimPanel({ params, workload, onTrim, canTrim }: Props) {
-  const [percent, setPercent] = useState(10);
+  // 30, not 10: with the DRAM cache on, a 10% TRIM's WAF effect is within
+  // run-to-run noise (engine/tests/cache/trimwaf.mts) - see the caption below.
+  const [percent, setPercent] = useState(30);
   const [lastTrim, setLastTrim] = useState<{ percent: number; pages: number } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -84,7 +89,7 @@ export function TrimPanel({ params, workload, onTrim, canTrim }: Props) {
           label: 'trim',
           ssdConfigXml,
           workloadXml,
-          trim: { percent, chunk: workload.writeCache ? CHUNK_CACHED : CHUNK_UNCACHED },
+          trim: { percent, chunk: TRIM_CHUNK },
         },
       ],
     });
@@ -170,7 +175,9 @@ export function TrimPanel({ params, workload, onTrim, canTrim }: Props) {
       <div className="free-chart-caption">
         같은 설정으로 끝까지 돌린 결과예요 (화면의 재생과는 별개). TRIM 을 모르는 FTL 은 호스트가 이미 지운 데이터도
         valid 로 믿고 GC 때마다 옮겨요. TRIM 하면 그 page 가 invalid 라서 옮길 page 가 줄고 WAF 가 내려가요. TRIM 하는 동안
-        호스트가 더 많이 쓸 수 있게 되므로 호스트 쓰기 수도 달라질 수 있어요.
+        호스트가 더 많이 쓸 수 있게 되므로 호스트 쓰기 수도 달라질 수 있어요. DRAM 캐시를 켠 채 LPN 10% 처럼 조금만
+        TRIM 하면 차이가 실행마다 오르내릴 만큼 작아요 - 캐시가 이미 덮어쓰기를 흡수해서 flash 에 남는 옛 데이터가 적기
+        때문이에요. 30% 이상이나 캐시를 끈 상태에서는 확실히 내려가요.
       </div>
     </div>
   );

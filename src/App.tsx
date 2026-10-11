@@ -50,21 +50,22 @@ import type { PresetId } from './types';
 // on every slider-drag tick) - see the effect below.
 const PARAM_APPLY_DEBOUNCE_MS = 400;
 
-// "GC 시연"'s workload needs ~2.3M event-groups to reach its first GC (see
-// buildGcWorkloadXml's doc comment for why this got bigger, not smaller,
-// after the deadlock fix), and "마모평준화 시연"'s needs ~2.8M to reach its
-// one WL execution (both measured via a WASM/native step-count harness)
-// versus "매핑 기본"'s few dozen, so they get much larger per-speed-unit
-// multipliers. Only presets with a real engine config need an entry here;
-// anything else defaults to 1 in useSimulationPlayback.
+// "GC 시연" runs ~138k event-groups to the end and "마모평준화 시연" ~68k
+// (measured with engine/tests/cache/cache-sweep.mts at the 32-page DRAM cache
+// - see DATA_CACHE_CAPACITY_PAGES in mqsimConfigs.ts) versus "매핑 기본"'s few
+// dozen, so they get larger per-speed-unit multipliers: ~180 ticks at speed 8.
+// (With the old 256 MB cache these were ~17.7M / ~21M and the multipliers
+// 12000 / 15000 - almost all of those event-groups were DRAM hits that never
+// changed the screen.) Only presets with a real engine config need an entry
+// here; anything else defaults to 1 in useSimulationPlayback.
 const TICKS_MULTIPLIER: Partial<Record<PresetId, number>> = {
-  gc: 12000,
-  'wear-leveling': 15000,
+  gc: 96,
+  'wear-leveling': 47,
 };
 
 // Same idea for the DRAM write cache turned off (WorkloadPanel): measured
 // ~50k event-groups for "GC 시연" and ~40k for "마모평준화 시연" to finish
-// (vs ~17.4M / ~21M cached) - these keep a run at roughly the same ~180
+// (vs ~138k / ~68k cached) - these keep a run at roughly the same ~180
 // ticks at speed 8.
 const TICKS_MULTIPLIER_NO_CACHE: Partial<Record<PresetId, number>> = {
   gc: 35,
@@ -248,6 +249,9 @@ function App() {
   const prevConfigKeyRef = useRef(configKey);
   const isFirstConfigRenderRef = useRef(true);
   const prevReadyRef = useRef(false);
+  // The config useMqsimEngine's init() actually ran with - its mount effect
+  // captures the very first render's XML and never re-reads it.
+  const initConfigRef = useRef({ ssdConfigXml, workloadXml });
   useEffect(() => {
     if (isFirstConfigRenderRef.current) {
       isFirstConfigRenderRef.current = false;
@@ -260,7 +264,20 @@ function App() {
     // test, which clicks ▶ the instant it becomes enabled).
     const becameReady = engine.ready && !prevReadyRef.current;
     prevReadyRef.current = engine.ready;
-    if (!engine.ready || becameReady) return;
+    if (!engine.ready) return;
+    if (becameReady) {
+      prevConfigKeyRef.current = configKey;
+      // ...unless the preset or a param changed while the WASM was still
+      // loading: then init() ran with a stale config, and skipping here left
+      // it running under the new preset's name (found 2026-10-11: clicking
+      // "GC 시연" right after page load played 매핑 기본's workload - ~140
+      // writes, no GC - while the screen said GC 시연).
+      const init = initConfigRef.current;
+      if (init.ssdConfigXml !== ssdConfigXml || init.workloadXml !== workloadXml) {
+        void playback.restart();
+      }
+      return;
+    }
 
     const presetSwitched = prevConfigKeyRef.current !== configKey;
     prevConfigKeyRef.current = configKey;

@@ -47,10 +47,13 @@ check('trimming the same range again does nothing', mod.trimRange(0, Math.floor(
 check('out-of-range LPNs are ignored', mod.trimRange(total + 10, 5) === 0);
 
 // 2. Full runs: the engine must not crash/stall, and TRIM must lower WAF.
-async function fullRun(trimPercent: number, chunk: number): Promise<number> {
+// Same chunk as TrimPanel's TRIM_CHUNK. Checked where the effect is robust
+// (engine/tests/cache/trimwaf.mts): cache off at 10%, cache on at 30%. With the
+// cache on, a 10% TRIM is within run-to-run noise, so it isn't asserted.
+async function fullRun(writeCache: boolean, trimPercent: number, chunk: number): Promise<number> {
   hostWrites = 0;
   moved = 0;
-  mod.init(ssd, workload);
+  mod.init(ssd, buildGcWorkloadXml(DEFAULT_GC_PARAMS, { ...DEFAULT_WORKLOAD_PARAMS, writeCache }));
   const t = mod.totalLogicalPages();
   const perRound = Math.max(1, Math.floor((t * trimPercent) / 100));
   let round = 0;
@@ -63,8 +66,10 @@ async function fullRun(trimPercent: number, chunk: number): Promise<number> {
   }
   return (hostWrites + moved) / hostWrites;
 }
-const wafPlain = await fullRun(0, 200000);
-const wafTrim = await fullRun(10, 200000);
-check('TRIMming host gets a lower WAF', wafTrim < wafPlain, `${wafPlain.toFixed(3)} -> ${wafTrim.toFixed(3)}`);
+for (const [writeCache, percent] of [[false, 10], [true, 30]] as const) {
+  const wafPlain = await fullRun(writeCache, 0, 600);
+  const wafTrim = await fullRun(writeCache, percent, 600);
+  check(`TRIMming host gets a lower WAF (cache ${writeCache ? 'on' : 'off'}, ${percent}%)`, wafTrim < wafPlain, `${wafPlain.toFixed(3)} -> ${wafTrim.toFixed(3)}`);
+}
 
 process.exit(failures === 0 ? 0 : 1);

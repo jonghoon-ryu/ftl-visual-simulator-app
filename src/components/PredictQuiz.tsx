@@ -45,12 +45,12 @@ const QUESTIONS: Partial<Record<PresetId, Question[]>> = {
       howToCheck: 'GC 가 시작되면 격자 위에 뜨는 "왜 골랐는지 보기" 에서 victim 의 valid/invalid 수를 확인해보세요.',
     },
     {
-      prompt: 'DRAM 쓰기 캐시를 끄면 GC 횟수는 어떻게 될까요?',
+      prompt: 'DRAM 쓰기 캐시를 끄면 호스트 요청 하나당 GC 는 어떻게 될까요?',
       options: ['줄어든다', '거의 같다', '크게 늘어난다'],
       answer: 2,
       explanation:
-        '캐시가 켜져 있으면 같은 page 에 대한 반복 쓰기를 DRAM 이 흡수하고 작은 쓰기를 모아서 내려보내, flash 에 닿는 쓰기가 훨씬 적습니다. 끄면 거의 모든 요청이 flash 쓰기가 되니 빈 block 이 빨리 줄고 GC 가 훨씬 자주 일어나요. 기본 설정에서 끝까지 돌리면 30번 → 497번.',
-      howToCheck: 'Workload 의 "DRAM 쓰기 캐시" 를 끄고 재생해보세요. 통계의 "호스트 요청 → flash 쓰기" 와 GC 실행 횟수를 캐시를 켰을 때와 비교해보세요.',
+        '캐시가 켜져 있으면 같은 page 에 대한 반복 쓰기를 DRAM 이 흡수해서, 요청 일부만 flash 에 닿아요. 끄면 거의 모든 요청이 flash 쓰기가 되니 요청 하나당 GC 가 약 2배가 됩니다. 기본 설정에서 끝까지 돌리면 켬: 요청 12,692 → flash 7,873, GC 604번 / 끔: 요청 5,110 → flash 5,001, GC 497번. GC 총 횟수만 보면 켰을 때가 더 많은데, 같은 시뮬레이션 시간 동안 캐시 덕분에 요청을 두 배 넘게 처리했기 때문이에요 - 그래서 요청 수로 나눠서 비교해야 해요 (WAF 도 1.25× → 1.62×).',
+      howToCheck: 'Workload 의 "DRAM 쓰기 캐시" 를 끄고 끝까지 재생해보세요. 통계의 "GC 실행 횟수" 를 "호스트 요청" 수로 나눈 값을 캐시를 켰을 때와 비교해보세요.',
     },
     {
       prompt: '호스트가 어떤 데이터를 TRIM(삭제 알림)하면, 나중에 GC 는 어떻게 달라질까요?',
@@ -63,9 +63,9 @@ const QUESTIONS: Partial<Record<PresetId, Question[]>> = {
     {
       prompt: '기본 설정에서, 다음 GC 알고리즘 중 WAF 가 가장 낮은 것은?',
       options: ['RGA', 'Greedy', 'Random', 'FIFO'],
-      answer: 2,
+      answer: 0,
       explanation:
-        '교과서대로라면 invalid 를 보고 고르는 Greedy/RGA 가 유리할 것 같지만, 이 데모에서는 Random 이 1.19× 로 가장 낮아요 (RGA/Greedy 1.23×, Cost-Benefit 1.24×). Random 은 무작위로 고른 block 에 청소할 게 없으면 그 GC 기회를 건너뛰어서 GC 를 덜 하기 때문이에요. block 이 적은 작은 규모에서는 이런 일이 생깁니다.',
+        '기본 설정에서는 RGA 가 1.25× 로 가장 낮아요 (Random 1.30×, Greedy 1.34×, FIFO 1.36×, Cost-Benefit 1.37×). 교과서대로라면 invalid 가 가장 많은 block 을 고르는 Greedy 가 제일 좋을 것 같지만, block 이 적은 작은 규모에서는 한 번의 선택이 다음 GC 들의 상황까지 바꿔서 순위가 설정마다 달라집니다 - 그래서 직접 돌려 비교해보는 게 중요해요.',
       howToCheck: '오른쪽 "비교 실험실" 탭에서 "GC 알고리즘 비교" 버튼으로 7개를 직접 돌려 표로 확인해보세요.',
     },
   ],
@@ -83,7 +83,7 @@ const QUESTIONS: Partial<Record<PresetId, Question[]>> = {
       options: ['줄어든다', '거의 같다', '크게 늘어난다'],
       answer: 2,
       explanation:
-        '임계값은 "가장 많이 닳은 block 과 가장 적게 닳은 block 의 erase 차이"의 기준이에요. 1 이면 차이가 조금만 벌어져도 발동해서, 기본 설정에서 7번 → 341번으로 늘어납니다 - 대부분은 불필요한 데이터 이동이라 WAF 도 올라가요.',
+        '임계값은 "가장 많이 닳은 block 과 가장 적게 닳은 block 의 erase 차이"의 기준이에요. 1 이면 차이가 조금만 벌어져도 발동해서, 기본 설정에서 92번 → 365번으로 늘어납니다 - 대부분은 불필요한 데이터 이동이라 WAF 도 올라가요.',
       howToCheck: '오른쪽 설정의 "마모평준화 임계값" 을 1 로 바꾸고 재생해 통계의 WL 실행 횟수를 비교해보세요.',
     },
   ],

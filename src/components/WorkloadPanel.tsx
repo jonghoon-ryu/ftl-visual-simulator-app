@@ -86,8 +86,8 @@ export function WorkloadPanel({ workload, onChange, disabled }: Props) {
         </label>
         <div className="param-hint">
           켜면 SSD 안의 DRAM 이 쓰기를 먼저 받아서, 같은 page 에 대한 반복 쓰기를 흡수하고 작은 쓰기를 page 단위로
-          모아서 flash 에 내려보내요. 통계의 "호스트 요청 → flash 쓰기"를 켰을 때와 껐을 때 비교해보세요 - 끄면 거의 모든
-          요청이 flash 쓰기가 되고 GC 도 훨씬 자주 일어납니다.
+          모아서 flash 에 내려보내요(캐시 32 page, 가득 차면 가장 오래 안 쓴 page 부터). 통계의 "호스트 요청 → flash 쓰기"를
+          켰을 때와 껐을 때 비교해보세요 - 끄면 거의 모든 요청이 flash 쓰기가 되고 요청 하나당 GC 도 약 2배가 됩니다.
         </div>
       </div>
     </div>
