@@ -407,8 +407,8 @@ export const DEFAULT_GC_PARAMS: SsdParams = {
 //   Even with that fixed, 2.5e9 still isn't long enough for occupancy to
 //   reach GC's threshold at all - raised to 6e9 (~2.3M event-groups,
 //   measured via a WASM harness), giving ~5 GC executions - hence the much
-//   higher default playback speed App.tsx uses for this preset (see
-//   useSimulationPlayback's ticksMultiplier). How many times GC executes
+//   higher playback rate App.tsx used for this preset (▶ is now paced in
+//   log lines - see LOG_LINES_PER_TICK_AT_FULL_SPEED). How many times GC executes
 //   depends on DEFAULT_MAPPING_PARAMS' block count/page size (smaller
 //   geometry = less occupancy pressure = fewer GC runs before Stop_Time) -
 //   re-measure if those defaults change again. (Those counts were all taken

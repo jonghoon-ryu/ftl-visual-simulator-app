@@ -50,27 +50,23 @@ import type { PresetId } from './types';
 // on every slider-drag tick) - see the effect below.
 const PARAM_APPLY_DEBOUNCE_MS = 400;
 
-// "GC 시연" runs ~138k event-groups to the end and "마모평준화 시연" ~68k
-// (measured with engine/tests/cache/cache-sweep.mts at the 32-page DRAM cache
-// - see DATA_CACHE_CAPACITY_PAGES in mqsimConfigs.ts) versus "매핑 기본"'s few
-// dozen, so they get larger per-speed-unit multipliers: ~180 ticks at speed 8.
-// (With the old 256 MB cache these were ~17.7M / ~21M and the multipliers
-// 12000 / 15000 - almost all of those event-groups were DRAM hits that never
-// changed the screen.) Only presets with a real engine config need an entry
-// here; anything else defaults to 1 in useSimulationPlayback.
-const TICKS_MULTIPLIER: Partial<Record<PresetId, number>> = {
-  gc: 96,
-  'wear-leveling': 47,
+// ▶ pacing for "GC 시연"/"마모평준화 시연": log lines per tick at speed 8 -
+// a full run is ~11k / ~8.1k log lines (engine/tests/cache/loglines.mts,
+// about the same with the DRAM cache on or off), so this finishes in ~180
+// ticks at speed 8. Each speed step below halves it, down to one line every
+// ~2 ticks at speed 1 (Ryu, 2026-10-11: speed 1 was still far too fast to
+// follow when these presets were paced in raw event-groups - 96 per tick,
+// ~25 log lines/s). "매핑 기본" (~150 lines) keeps the hook's default linear
+// pace (speed 8 = one line per tick).
+const LOG_LINES_PER_TICK_AT_FULL_SPEED: Partial<Record<PresetId, number>> = {
+  gc: 64,
+  'wear-leveling': 48,
 };
 
-// Same idea for the DRAM write cache turned off (WorkloadPanel): measured
-// ~50k event-groups for "GC 시연" and ~40k for "마모평준화 시연" to finish
-// (vs ~138k / ~68k cached) - these keep a run at roughly the same ~180
-// ticks at speed 8.
-const TICKS_MULTIPLIER_NO_CACHE: Partial<Record<PresetId, number>> = {
-  gc: 35,
-  'wear-leveling': 28,
-};
+function logLinesPerTickFor(id: PresetId): ((speed: number) => number) | undefined {
+  const full = LOG_LINES_PER_TICK_AT_FULL_SPEED[id];
+  return full === undefined ? undefined : (speed) => full * 2 ** (speed - 8);
+}
 
 // Presets wired to the real WASM engine - each needs its own SsdParams
 // (block/page counts, GC threshold, ...) since "GC 시연" deliberately uses
@@ -218,16 +214,11 @@ function App() {
       lpnJourney.reset();
       readLatency.reset();
     },
-    // With the DRAM write cache off a run is ~350-500x fewer event-groups
-    // (every write goes to flash, so far fewer host requests fit before
-    // Stop_Time), so the cached multipliers would finish it in a tick or
-    // two - see TICKS_MULTIPLIER_NO_CACHE.
-    ticksMultiplier: (activeWorkload.writeCache ? TICKS_MULTIPLIER : TICKS_MULTIPLIER_NO_CACHE)[activeId] ?? 1,
-    // "매핑 기본" plays one log line at a time instead of a fixed number of
-    // event-groups - see useSimulationPlayback's playUnit. The other two
-    // presets keep event-group pacing: their log lines are dense enough,
-    // and TICKS_MULTIPLIER is tuned around it.
-    playUnit: activeId === 'mapping' ? 'logEvents' : 'eventGroups',
+    // Every wired preset plays whole log lines per tick (see
+    // useSimulationPlayback's playUnit) - what changes on screen per tick
+    // then matches what the log shows, at any speed.
+    playUnit: 'logEvents',
+    logLinesPerTick: logLinesPerTickFor(activeId),
   });
 
   // Reconfigures the engine whenever the active preset's params (or the

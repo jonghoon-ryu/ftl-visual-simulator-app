@@ -37,11 +37,15 @@ interface Options {
   // with 'eventGroups' the screen sat unchanged for a minute or more while
   // the DRAM write cache absorbed writes, which read as frozen.
   playUnit?: 'eventGroups' | 'logEvents';
+  // 'logEvents' only: log lines per tick at a given speed (1-8). Fractions
+  // accumulate across ticks. Defaults to defaultLogLinesPerTick.
+  logLinesPerTick?: (speed: number) => number;
 }
 
-// 'logEvents' pace: speed 8 (the default) = one log line per tick (~3/s at
-// TICK_INTERVAL_MS 300), speed 1 = one every 8 ticks.
+// Default 'logEvents' pace: speed 8 (the default) = one log line per tick
+// (~3/s at TICK_INTERVAL_MS 300), speed 1 = one every 8 ticks.
 const LOG_EVENTS_SPEED_DIVISOR = 8;
+const defaultLogLinesPerTick = (speed: number) => speed / LOG_EVENTS_SPEED_DIVISOR;
 
 // Drives step()/run() for Toolbar's playback controls, via the worker-
 // backed engine client (useMqsimEngine) - so this hook's own calls are all
@@ -54,6 +58,7 @@ export function useSimulationPlayback({
   onRestart,
   ticksMultiplier = 1,
   playUnit = 'eventGroups',
+  logLinesPerTick = defaultLogLinesPerTick,
 }: Options) {
   const [isPlaying, setIsPlaying] = useState(false);
   // Default 8 (the slider's max), not 1 - Ryu's ask (2026-09-20) for "매핑
@@ -69,12 +74,12 @@ export function useSimulationPlayback({
   // an effect (runs after commit), not during render - mutating a ref's
   // .current directly in the render body is unsafe under Concurrent/Strict
   // Mode.
-  const latestRef = useRef({ engine, onRefresh, ticksMultiplier, playUnit });
+  const latestRef = useRef({ engine, onRefresh, ticksMultiplier, playUnit, logLinesPerTick });
   useEffect(() => {
-    latestRef.current = { engine, onRefresh, ticksMultiplier, playUnit };
+    latestRef.current = { engine, onRefresh, ticksMultiplier, playUnit, logLinesPerTick };
   });
-  // Fractional log lines owed to 'logEvents' playback (speeds below
-  // LOG_EVENTS_SPEED_DIVISOR advance less than one line per tick).
+  // Fractional log lines owed to 'logEvents' playback (slow speeds advance
+  // less than one line per tick).
   const logEventBudgetRef = useRef(0);
   // Guards against a tick starting before the previous one's postMessage
   // round-trip has resolved - shouldn't normally happen at 300ms with this
@@ -137,10 +142,10 @@ export function useSimulationPlayback({
     logEventBudgetRef.current = 0;
     const id = setInterval(() => {
       if (tickInFlightRef.current) return;
-      const { engine: tickEngine, ticksMultiplier: multiplier, playUnit: unit } = latestRef.current;
+      const { engine: tickEngine, ticksMultiplier: multiplier, playUnit: unit, logLinesPerTick: linesFor } = latestRef.current;
       let tick: Promise<boolean>;
       if (unit === 'logEvents') {
-        logEventBudgetRef.current += speed / LOG_EVENTS_SPEED_DIVISOR;
+        logEventBudgetRef.current += linesFor(speed);
         const lines = Math.floor(logEventBudgetRef.current);
         if (lines < 1) return;
         logEventBudgetRef.current -= lines;
@@ -151,8 +156,8 @@ export function useSimulationPlayback({
       tickInFlightRef.current = true;
       tick
         .then(async (more) => {
-          // A play tick's run() call can process tens of thousands of
-          // event-groups at once (see ticksMultiplier in App.tsx) - when it
+          // A play tick can process many events at once (dozens of log
+          // lines at full speed in "GC 시연") - when it
           // runs all the way to the end of the simulation in one call, the
           // moving/erasing overlay hooks would otherwise show the union of
           // every migration/erase across that entire final batch, frozen on
