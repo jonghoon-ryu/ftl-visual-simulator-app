@@ -58,6 +58,13 @@ const PARAM_APPLY_DEBOUNCE_MS = 400;
 // follow when these presets were paced in raw event-groups - 96 per tick,
 // ~25 log lines/s). "매핑 기본" (~150 lines) keeps the hook's default linear
 // pace (speed 8 = one line per tick).
+// Starting ▶ speed per preset (others start at 8, useSimulationPlayback's
+// default). "GC 시연" starts at 1x so a first-time viewer can follow single
+// writes and GC steps (Ryu, 2026-10-11); 8x is one drag away.
+const DEFAULT_SPEED: Partial<Record<PresetId, number>> = {
+  gc: 1,
+};
+
 const LOG_LINES_PER_TICK_AT_FULL_SPEED: Partial<Record<PresetId, number>> = {
   gc: 64,
   'wear-leveling': 48,
@@ -94,6 +101,8 @@ function buildWorkloadXmlFor(presetId: PresetId, params: SsdParams, workload: Wo
 
 function App() {
   const [activeId, setActiveId] = useState<PresetId>('mapping');
+  // Speed last used in each preset - see selectPreset.
+  const speedByPresetRef = useRef<Partial<Record<PresetId, number>>>({});
   const [showUsageGuide, setShowUsageGuide] = useState(false);
   // Right-hand panel: the settings + stats are the default view; the comparison
   // experiments (GC 시연 only) live on their own tab.
@@ -362,6 +371,10 @@ function App() {
   const activeSideTab = showLabTab ? sideTab : 'settings';
   const selectPreset = (id: PresetId) => {
     setSideTab('settings');
+    // Each preset keeps its own ▶ speed: switching away remembers the one
+    // in use, switching back restores it (or the preset's default).
+    speedByPresetRef.current[activeId] = playback.speed;
+    playback.setSpeed(speedByPresetRef.current[id] ?? DEFAULT_SPEED[id] ?? 8);
     setActiveId(id);
   };
 

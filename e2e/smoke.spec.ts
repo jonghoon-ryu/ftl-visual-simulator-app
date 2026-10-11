@@ -81,6 +81,20 @@ test('one step outlines the page it wrote and bolds its log line', async ({ page
   expect(problems).toEqual([]);
 });
 
+test('each preset keeps its own speed; GC 시연 starts at 1x', async ({ page }) => {
+  const problems = await openApp(page);
+  const slider = page.getByRole('slider', { name: '재생 속도' });
+  await expect(slider).toHaveValue('8');
+  await preset(page, 'GC 시연').click();
+  await expect(slider).toHaveValue('1');
+  await slider.fill('3');
+  await preset(page, '매핑 기본').click();
+  await expect(slider).toHaveValue('8');
+  await preset(page, 'GC 시연').click();
+  await expect(slider).toHaveValue('3');
+  expect(problems).toEqual([]);
+});
+
 test('glossary term shows a definition on hover', async ({ page }) => {
   await openApp(page);
   const waf = page.locator('.term', { has: page.locator('.term-pop strong', { hasText: 'WAF (Write' }) }).first();
