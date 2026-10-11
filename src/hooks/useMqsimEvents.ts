@@ -126,12 +126,19 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
   // Next log index to hand out, in chronological order (0 for the very
   // first event ever logged) - MappingTable.tsx shows it zero-padded.
   const nextIndexRef = useRef(0);
+  // Index of the first log line the most recent step produced (every line
+  // from it up is "what just happened" - MappingTable bolds them), or null
+  // when that step logged nothing. Same one-step lifetime as the grid's
+  // outlines (useMqsimOverwrites/useMqsimMigrations), so the bold lines and
+  // the outlined cells always describe the same step.
+  const [freshFromIndex, setFreshFromIndex] = useState<number | null>(null);
 
   const reset = () => {
     pendingCountersRef.current = { hostWrites: 0, hostReads: 0, migrationWrites: 0 };
     pendingLogRef.current = [];
     lpaToAddressRef.current = new Map();
     nextIndexRef.current = 0;
+    setFreshFromIndex(null);
     setLog([]);
     setCounters({ hostWrites: 0, hostReads: 0, migrationWrites: 0 });
     dynamicWlSeenRef.current = 0;
@@ -151,6 +158,7 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
     }
 
     const pendingLog = pendingLogRef.current;
+    setFreshFromIndex(pendingLog.length > 0 ? nextIndexRef.current : null);
     if (pendingLog.length > 0) {
       // Accumulated in arrival order (oldest first); the log itself is
       // newest-first, so reverse this batch before prepending it. Indices
@@ -228,5 +236,9 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
     });
   }, [subscribeEvents, ready]);
 
-  return { log, counters, reset, commit };
+  // For ▶'s final batch, where App.tsx also clears the grid's outlines
+  // instead of committing them (see onRefresh's batchEnded).
+  const clearFresh = useCallback(() => setFreshFromIndex(null), []);
+
+  return { log, counters, freshFromIndex, reset, commit, clearFresh };
 }

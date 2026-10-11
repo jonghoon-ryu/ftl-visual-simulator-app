@@ -11,6 +11,9 @@ export interface PageCell {
   // the just-superseded copy is easy to spot instead of blending into
   // every other cell in that state.
   superseded?: boolean;
+  // Read by the host during the most recent step - outlined in its own
+  // colour (see useMqsimOverwrites' readKeys).
+  reading?: boolean;
 }
 
 export interface BlockRow {

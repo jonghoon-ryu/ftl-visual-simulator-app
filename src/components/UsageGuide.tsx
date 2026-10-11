@@ -161,6 +161,12 @@ export function UsageGuide({ onClose }: Props) {
               <li><span className="swatch moving" /> <strong>GC 로 이동 중 (노랑, →)</strong> - GC/WL 이 지금 이 페이지를 다른 곳으로 옮기고 있음 (한 스텝 동안만 표시)</li>
               <li><span className="swatch free" /> <strong>free (회색)</strong> - 아직 아무것도 쓰이지 않은 빈 페이지. 칩마다 살짝 다른 회색으로 표시돼서 어느 칩인지 구분됩니다.</li>
             </ul>
+            <p>방금 일어난 동작은 한 스텝 동안 칸에 테두리로 표시됩니다 (같은 스텝의 로그 줄은 굵게):</p>
+            <ul>
+              <li><span className="swatch outline-write" /> <strong>흰 테두리</strong> - 방금 쓴 page. 덮어쓰기라면 무효가 된 이전 page 에도, GC/WL 이동이라면 옮기기 전·후 page 모두에 표시됩니다.</li>
+              <li><span className="swatch outline-read" /> <strong>하늘색 테두리</strong> - 방금 읽은 page (Workload 의 읽기 비율을 올리면 나타납니다).</li>
+              <li>block 전체를 감싼 흰 테두리 - 방금 erase 된 block.</li>
+            </ul>
             <p>
               block 행 오른쪽에 붙는 라벨도 있습니다: <strong>active block</strong>(지금 host write 가 채워지고 있는
               block), <strong>GC block</strong>(다음 GC/WL 이동이 도착할 block - GC 가 아직 한 번도 안 켜졌어도
@@ -182,7 +188,10 @@ export function UsageGuide({ onClose }: Props) {
 
           <section>
             <h3>로그 패널</h3>
-            <p>일어난 사건을 시간 순서대로 보여줍니다. 대표적인 줄 형태:</p>
+            <p>
+              일어난 사건을 시간 순서대로 보여줍니다. 가장 최근 스텝에서 생긴 줄은 <strong>굵게</strong> 표시돼서, 격자에서
+              테두리가 쳐진 칸과 짝을 맞춰 볼 수 있습니다. 대표적인 줄 형태:
+            </p>
             <ul>
               <li><code>LPN 0x0xx → Chip N, Block N, Page N, Write</code> - 호스트가 이 논리 주소(LPN)에 새로 씀</li>
               <li><code>LPN 0x0xx: 이전 위치 → 새 위치, Write</code> - 이미 매핑돼 있던 LPN 을 덮어씀 (이전 페이지는 invalid 가 됨)</li>

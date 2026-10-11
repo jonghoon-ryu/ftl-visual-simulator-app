@@ -2,18 +2,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { blockKey, pageKey, streamLpaKey } from '../lib/pageKey';
 import type { MqsimEngine } from './useMqsimEngine';
 
-// Tracks pages/blocks whose data just got copied elsewhere or erased, so
-// the resulting plain 'invalid'/'free' cells - indistinguishable from any
-// other page/block in that state by the time a snapshot is polled - can be
-// outlined for one render instead of blending in. Three distinct event
-// sources feed this, all superseding-or-erasing something that just
-// happened rather than a state a snapshot can see on its own:
+// Tracks pages/blocks that a host read/write, a GC/WL move or an erase just
+// touched, so they can be outlined for one render instead of blending in
+// with every other page in the same state. Four event sources feed this:
 //
-// 1. A host write reusing an already-mapped LPA (an overwrite): tracked via
-//    a running LPA -> physical-page-key map built from mapping_updated
-//    write events, so a later write to the same LPA reveals which old page
-//    it just superseded. Reads never touch this map (they don't change a
-//    mapping).
+// 1. A host write: the newly written page is always outlined white (Ryu,
+//    2026-10-11: a first write deserves the same marker as an overwrite).
+//    If the LPA was already mapped (an overwrite), the old page it just
+//    superseded is outlined too - found via a running LPA -> physical-page-
+//    key map built from mapping_updated write events. Reads never touch
+//    this map (they don't change a mapping).
 // 2. A GC/WL page migration: gc_page_migrated/wl_page_migrated already name
 //    both the *source* page (`block`) and the *destination* page
 //    (`newBlock`) directly (see GC_and_WL_Unit_Base.cpp - fired once both
@@ -27,6 +25,10 @@ import type { MqsimEngine } from './useMqsimEngine';
 //    on a later overwrite.
 // 3. A GC/WL block erase: gc_block_erased/wl_block_erased names the whole
 //    block, fired at the erase transaction's actual completion.
+// 4. A host read: the page it read is outlined in a separate colour
+//    (readKeys) - mapping_updated with isWrite false names it directly. A
+//    read of a never-written LPA has no address (it returns zeros without
+//    touching flash), so nothing is outlined.
 //
 // Same one-step-overlay lifecycle as useMqsimMigrations' movingKeys - see
 // its comment for why each pending ref is captured into a local before
@@ -38,7 +40,9 @@ export function useMqsimOverwrites(subscribeEvents: MqsimEngine['subscribeEvents
   const lpaToPageKeyRef = useRef(new Map<string, string>());
   const pendingPagesRef = useRef(new Set<string>());
   const pendingBlocksRef = useRef(new Set<string>());
+  const pendingReadsRef = useRef(new Set<string>());
   const [supersededKeys, setSupersededKeys] = useState<Set<string>>(new Set());
+  const [readKeys, setReadKeys] = useState<Set<string>>(new Set());
   const [erasingBlockKeys, setErasingBlockKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -62,18 +66,21 @@ export function useMqsimOverwrites(subscribeEvents: MqsimEngine['subscribeEvents
         }
         return;
       }
-      if (event.type !== 'mapping_updated' || !event.isWrite || event.lpa === undefined || !event.address) return;
-      const lpa = streamLpaKey(event.streamId, event.lpa);
-      const newKey = pageKey(event.address.chip, event.address.block, event.address.page);
-      const oldKey = lpaToPageKeyRef.current.get(lpa);
-      // Only an overwrite (a previous PPA for this LPA existed) gets
-      // outlined - a first-ever write to an LPA has no "old" page to
-      // contrast it with, so it's just a plain write.
-      if (oldKey !== undefined && oldKey !== newKey) {
-        pendingPagesRef.current.add(oldKey);
-        pendingPagesRef.current.add(newKey);
+      if (event.type !== 'mapping_updated' || event.lpa === undefined || !event.address) return;
+      const key = pageKey(event.address.chip, event.address.block, event.address.page);
+      if (!event.isWrite) {
+        pendingReadsRef.current.add(key);
+        return;
       }
-      lpaToPageKeyRef.current.set(lpa, newKey);
+      const lpa = streamLpaKey(event.streamId, event.lpa);
+      const oldKey = lpaToPageKeyRef.current.get(lpa);
+      pendingPagesRef.current.add(key);
+      // An overwrite also outlines the page it just superseded - a first-
+      // ever write to an LPA has no old page to point at.
+      if (oldKey !== undefined && oldKey !== key) {
+        pendingPagesRef.current.add(oldKey);
+      }
+      lpaToPageKeyRef.current.set(lpa, key);
     });
   }, [subscribeEvents, ready]);
 
@@ -81,6 +88,10 @@ export function useMqsimOverwrites(subscribeEvents: MqsimEngine['subscribeEvents
     const pendingPages = pendingPagesRef.current;
     pendingPagesRef.current = new Set();
     setSupersededKeys((prev) => (pendingPages.size === 0 && prev.size === 0 ? prev : pendingPages));
+
+    const pendingReads = pendingReadsRef.current;
+    pendingReadsRef.current = new Set();
+    setReadKeys((prev) => (pendingReads.size === 0 && prev.size === 0 ? prev : pendingReads));
 
     const pendingBlocks = pendingBlocksRef.current;
     pendingBlocksRef.current = new Set();
@@ -91,9 +102,11 @@ export function useMqsimOverwrites(subscribeEvents: MqsimEngine['subscribeEvents
     lpaToPageKeyRef.current = new Map();
     pendingPagesRef.current = new Set();
     pendingBlocksRef.current = new Set();
+    pendingReadsRef.current = new Set();
     setSupersededKeys(new Set());
+    setReadKeys(new Set());
     setErasingBlockKeys(new Set());
   }, []);
 
-  return { supersededKeys, erasingBlockKeys, commit, reset };
+  return { supersededKeys, readKeys, erasingBlockKeys, commit, reset };
 }

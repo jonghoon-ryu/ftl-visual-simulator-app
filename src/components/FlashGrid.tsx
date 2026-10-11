@@ -76,11 +76,12 @@ export function FlashGrid({ blocks, caption, banner, footer, trackedCurrentKey, 
                 return (
                   <div
                     key={i}
-                    className={`cell ${page.state}${page.superseded ? ' superseded' : ''}${tracked}`}
+                    className={`cell ${page.state}${page.reading ? ' reading' : ''}${page.superseded ? ' superseded' : ''}${tracked}`}
                     style={page.state === 'free' ? { background: freeGray, color: freeGray } : undefined}
                     title={
                       `Chip ${block.chip} · ${block.label} / Page ${i} — ${page.state}` +
-                      (page.superseded ? ' (다른 페이지로 옮겨짐 - 이전 데이터)' : '')
+                      (page.superseded ? ' (방금 쓰거나 옮긴 page, 또는 덮어써져 무효가 된 이전 page)' : '') +
+                      (page.reading ? ' (방금 읽은 page)' : '')
                     }
                   >
                     {page.state === 'valid' ? 'V' : page.state === 'invalid' ? 'X' : page.state === 'moving' ? '→' : ''}
@@ -109,6 +110,14 @@ export function FlashGrid({ blocks, caption, banner, footer, trackedCurrentKey, 
             {LABELS[state]}
           </span>
         ))}
+        <span>
+          <span className="swatch outline-write" />
+          방금 쓴 page (덮어쓰기·GC 이동이면 이전 page 도)
+        </span>
+        <span>
+          <span className="swatch outline-read" />
+          방금 읽은 page
+        </span>
       </div>
       {footer}
     </div>

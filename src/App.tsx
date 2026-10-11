@@ -193,6 +193,7 @@ function App() {
       if (opts?.batchEnded) {
         migrations.reset();
         overwrites.reset();
+        events.clearFresh();
       } else {
         migrations.commit();
         overwrites.commit();
@@ -341,7 +342,7 @@ function App() {
   const isWearPreset = activeId === 'wear-leveling';
   const blockRows =
     wired && !isWearPreset
-      ? toBlockRows(engine.state, migrations.movingKeys, overwrites.supersededKeys, overwrites.erasingBlockKeys)
+      ? toBlockRows(engine.state, migrations.movingKeys, overwrites.supersededKeys, overwrites.erasingBlockKeys, overwrites.readKeys)
       : active.blocks;
   const wearRows = wired && isWearPreset ? toWearRows(engine.state, wlHighlight.wlTargetCounts) : active.wearRows;
   const wlTrigger = wired ? wlHighlight.lastTrigger : (active.wlTrigger ?? null);
@@ -447,6 +448,7 @@ function App() {
               )}
               <MappingTable
                 log={logEntries}
+                freshFromIndex={wired ? events.freshFromIndex : null}
                 trackedLpnKey={lpnJourney.journey?.lpnKey ?? null}
                 onSelectLpn={(key, label) => lpnJourney.select(key, label)}
               />

@@ -223,6 +223,10 @@
 /* Outline (not border) so it never shifts the tightly-packed 1px cell
    grid - a page whose data was just copied elsewhere (host overwrite or
    GC/WL migration), still showing its old 'invalid'/'moving' fill. */
+/* Read comes first so a page read and written in the same step shows the
+   write's white outline. Sky blue stays clear of every other marker:
+   white = write/move, yellow = moving / WL target, red/green = page fill. */
+.cell.reading { outline: 2px solid #5ec8ff; outline-offset: -2px; }
 .cell.superseded { outline: 2px solid #ffffff; outline-offset: -2px; }
 
 .grid-header-row {
@@ -262,6 +266,9 @@
   border-radius: 3px;
   display: inline-block;
 }
+
+.swatch.outline-write { background: transparent; box-shadow: inset 0 0 0 2px #ffffff; }
+.swatch.outline-read { background: transparent; box-shadow: inset 0 0 0 2px #5ec8ff; }
 
 .swatch.valid { background: #4fd18b; }
 .swatch.invalid { background: #f16d75; }
@@ -1102,6 +1109,12 @@
 
 .log-entry-tracked {
   background: #4a6cf726;
+}
+
+/* Lines from the most recent step - the same step the grid's outlines show. */
+.log-entry-fresh {
+  font-weight: 700;
+  color: #f0f2fa;
 }
 
 .log-hint {

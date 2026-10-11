@@ -13,6 +13,7 @@ export function toBlockRows(
   movingKeys?: Set<string>,
   supersededKeys?: Set<string>,
   erasingBlockKeys?: Set<string>,
+  readKeys?: Set<string>,
 ): BlockRow[] {
   if (!state) return [];
 
@@ -28,6 +29,7 @@ export function toBlockRows(
       return {
         state: movingKeys?.has(key) ? 'moving' : pageState,
         superseded: supersededKeys?.has(key) ?? false,
+        reading: readKeys?.has(key) ?? false,
       };
     }),
     chip: block.chip,

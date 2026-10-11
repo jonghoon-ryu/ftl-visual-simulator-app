@@ -55,10 +55,14 @@ function renderLogText(rawText: string) {
 // interleaved newest-first with gc_started/gc_block_erased/wl_* lines.
 export function MappingTable({
   log,
+  freshFromIndex,
   trackedLpnKey,
   onSelectLpn,
 }: {
   log: LogEntry[];
+  // Lines with index >= this were produced by the most recent step - shown
+  // bold, matching the cells the grid outlines for that same step.
+  freshFromIndex?: number | null;
   // "Follow one write" (useLpnJourney): lines about an LPN are clickable,
   // and every line about the tracked LPN is highlighted.
   trackedLpnKey?: string | null;
@@ -74,7 +78,7 @@ export function MappingTable({
       <div className="log-list">
         {log.map((e) => (
           <div
-            className={`log-entry${e.lpnKey && onSelectLpn ? ' log-entry-clickable' : ''}${
+            className={`log-entry${freshFromIndex != null && e.index >= freshFromIndex ? ' log-entry-fresh' : ''}${e.lpnKey && onSelectLpn ? ' log-entry-clickable' : ''}${
               e.lpnKey && e.lpnKey === trackedLpnKey ? ' log-entry-tracked' : ''
             }`}
             key={e.index}

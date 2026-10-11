@@ -66,6 +66,21 @@ test('매핑 기본 plays: pages get written and logged', async ({ page }) => {
   expect(problems).toEqual([]);
 });
 
+test('one step outlines the page it wrote and bolds its log line', async ({ page }) => {
+  const problems = await openApp(page);
+  const stepOne = page.getByRole('button', { name: /로그 한 줄씩 실행/ });
+  await stepOne.click();
+  await expect(page.locator('.log-entry')).toHaveCount(1);
+  await expect(page.locator('.log-entry-fresh')).toHaveCount(1);
+  await expect(page.locator('.cell.superseded')).toHaveCount(1);
+  // The next step's line becomes the bold one; the first goes back to normal.
+  await stepOne.click();
+  await expect(page.locator('.log-entry')).toHaveCount(2);
+  await expect(page.locator('.log-entry-fresh')).toHaveCount(1);
+  await expect(page.locator('.log-entry').first()).toHaveClass(/log-entry-fresh/);
+  expect(problems).toEqual([]);
+});
+
 test('glossary term shows a definition on hover', async ({ page }) => {
   await openApp(page);
   const waf = page.locator('.term', { has: page.locator('.term-pop strong', { hasText: 'WAF (Write' }) }).first();
