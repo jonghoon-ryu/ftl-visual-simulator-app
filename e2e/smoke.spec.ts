@@ -17,7 +17,7 @@ async function openApp(page: Page, { skipIntro = true } = {}) {
 }
 
 async function play(page: Page, ms: number) {
-  await page.getByRole('button', { name: '재생', exact: true }).click();
+  await page.getByRole('button', { name: '자동 실행', exact: true }).click();
   await page.waitForTimeout(ms);
   // A short run (e.g. 매핑 기본) can finish by itself and flip back to ▶.
   const pause = page.getByRole('button', { name: '일시정지' });
@@ -252,7 +252,7 @@ test('⏪ undoes stepped log lines exactly, through a GC', async ({ page }) => {
 
   // Run (not step) to just before the first GC, then step through it.
   await page.getByRole('slider', { name: '재생 속도' }).fill('8');
-  await page.getByRole('button', { name: '재생', exact: true }).click();
+  await page.getByRole('button', { name: '자동 실행', exact: true }).click();
   await expect.poll(async () => Number((await lastIndex())?.replace(/\D/g, '') ?? 0), { timeout: 60_000 }).toBeGreaterThan(200);
   await page.getByRole('button', { name: '일시정지' }).click();
   await expect(back).toBeDisabled(); // ▶ leaves nothing to undo

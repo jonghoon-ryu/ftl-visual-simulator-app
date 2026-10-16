@@ -81,7 +81,7 @@ export function MappingTable({
   return (
     <div className="sim-panel">
       <div className="sim-panel-title">로그</div>
-      {log.length === 0 && <div className="mini-table-empty">아직 기록된 로그가 없어요 - 재생 버튼을 눌러보세요</div>}
+      {log.length === 0 && <div className="mini-table-empty">아직 기록된 로그가 없어요 - 자동 실행 버튼을 눌러보세요</div>}
       {log.length > 0 && (
         <div className="log-color-key">
           <span>Write</span>

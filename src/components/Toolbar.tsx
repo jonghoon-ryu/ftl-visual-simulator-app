@@ -59,16 +59,16 @@ export function Toolbar({ presets, activeId, onSelect, playback, hideStepButtons
         className="sim-playback"
         title={disabled ? '이 프리셋은 아직 실제 엔진에 연결되지 않았어요' : !hasMore ? '워크로드 이벤트가 모두 처리됐어요' : undefined}
       >
-        <button type="button" aria-label="처음부터 다시 시작" disabled={disabled} onClick={onRestart}>
-          ⏮
+        <button type="button" aria-label="처음으로" title="처음부터 다시 시작해요" disabled={disabled} onClick={onRestart}>
+          처음으로
         </button>
         <button
           type="button"
-          aria-label={isPlaying ? '일시정지' : '재생'}
+          aria-label={isPlaying ? '일시정지' : '자동 실행'}
           disabled={disabled || !hasMore}
           onClick={onTogglePlay}
         >
-          {isPlaying ? '⏸' : '▶'}
+          {isPlaying ? '일시정지' : '자동 실행'}
         </button>
         <span>속도</span>
         <input
@@ -88,11 +88,11 @@ export function Toolbar({ presets, activeId, onSelect, playback, hideStepButtons
             <button
               type="button"
               aria-label="1 step 되돌리기 (← 키로도 가능)"
-              title="1 step/5 steps 로 실행한 것을 한 step 씩 되돌려요 (최대 30 step). ▶ 재생이나 ⏮ 를 누르면 되돌릴 기록이 지워져요. ← 키를 눌러도 똑같이 동작해요"
+              title="1 step/5 steps 로 실행한 것을 한 step 씩 되돌려요 (최대 30 step). 자동 실행이나 처음으로를 누르면 되돌릴 기록이 지워져요. ← 키를 눌러도 똑같이 동작해요"
               disabled={disabled || !canStepBack || isPlaying}
               onClick={onStepBack}
             >
-              {'\u23EA\uFE0E'} 1 step
+              &lt; 1 step
             </button>
             <button
               type="button"
@@ -101,7 +101,7 @@ export function Toolbar({ presets, activeId, onSelect, playback, hideStepButtons
               disabled={disabled || !hasMore || isPlaying}
               onClick={onStepEventOnce}
             >
-              1 step
+              1 step &gt;
             </button>
             <button
               type="button"
@@ -110,7 +110,7 @@ export function Toolbar({ presets, activeId, onSelect, playback, hideStepButtons
               disabled={disabled || !hasMore || isPlaying}
               onClick={onStepEventMany}
             >
-              5 steps
+              5 steps &gt;&gt;
             </button>
           </div>
         )}

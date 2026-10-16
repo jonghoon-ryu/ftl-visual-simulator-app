@@ -129,7 +129,7 @@ export function TrimPanel({ params, workload, onTrim, canTrim }: Props) {
       )}
       {!lastTrim && (
         <div className="free-chart-caption">
-          ▶ 로 어느 정도 진행한 뒤 눌러보세요. 아직 쓰지 않은 LPN 은 TRIM 할 게 없어요.
+          자동 실행으로 어느 정도 진행한 뒤 눌러보세요. 아직 쓰지 않은 LPN 은 TRIM 할 게 없어요.
         </div>
       )}
 
