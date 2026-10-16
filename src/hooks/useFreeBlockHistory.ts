@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { useMirroredState } from './useMirroredState';
 import type { MqsimEngine } from './useMqsimEngine';
 
 // One sample per playback tick/step: each plane's free-block pool size
@@ -49,8 +50,8 @@ const EMPTY: FreeBlockHistory = { samples: [], markers: [], gcThresholdBlocks: 0
 // Feeds FreeBlockChart - "빈 block 수가 임계값 아래로 떨어지면 GC 가
 // 시작된다" as a picture rather than a slider number.
 export function useFreeBlockHistory(subscribeEvents: MqsimEngine['subscribeEvents'], ready: boolean) {
-  const [history, setHistory] = useState<FreeBlockHistory>(EMPTY);
-  const [lastGc, setLastGc] = useState<LastGcInfo | null>(null);
+  const [history, setHistory, historyRef] = useMirroredState<FreeBlockHistory>(EMPTY);
+  const [lastGc, setLastGc, lastGcRef] = useMirroredState<LastGcInfo | null>(null);
   const pendingLastGcRef = useRef<LastGcInfo | null>(null);
   const gcCountRef = useRef(0);
   const pendingMarkersRef = useRef<Omit<FreeBlockMarker, 'sampleIndex'>[]>([]);
@@ -61,7 +62,7 @@ export function useFreeBlockHistory(subscribeEvents: MqsimEngine['subscribeEvent
     gcCountRef.current = 0;
     setHistory(EMPTY);
     setLastGc(null);
-  }, []);
+  }, [setHistory, setLastGc]);
 
   useEffect(() => {
     if (!ready) return;
@@ -121,7 +122,23 @@ export function useFreeBlockHistory(subscribeEvents: MqsimEngine['subscribeEvent
       }
       return { samples, markers, gcThresholdBlocks: state.stats.gcThresholdBlocks };
     });
-  }, []);
+  }, [setHistory, setLastGc]);
 
-  return { history, lastGc, commit, reset };
+  // Step-back: history and lastGc are replaced on every commit, never mutated.
+  const snapshot = useCallback(
+    () => ({ history: historyRef.current, lastGc: lastGcRef.current, gcCount: gcCountRef.current }),
+    [historyRef, lastGcRef],
+  );
+  const restore = useCallback(
+    (snap: ReturnType<typeof snapshot>) => {
+      pendingMarkersRef.current = [];
+      pendingLastGcRef.current = null;
+      gcCountRef.current = snap.gcCount;
+      setHistory(snap.history);
+      setLastGc(snap.lastGc);
+    },
+    [setHistory, setLastGc],
+  );
+
+  return { history, lastGc, commit, reset, snapshot, restore };
 }

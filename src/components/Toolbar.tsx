@@ -5,6 +5,8 @@ export interface PlaybackState {
   speed: number; // event-groups executed per playback tick, 1-8
   hasMore: boolean; // false once the workload's event queue is empty
   disabled: boolean; // true while the engine for the active preset isn't wired/ready yet
+  canStepBack: boolean; // a stepped log line can be undone (see useSimulationPlayback's stepBack)
+  onStepBack: () => void;
   onStepEventOnce: () => void;
   onStepEventMany: () => void;
   onTogglePlay: () => void;
@@ -29,6 +31,8 @@ export function Toolbar({ presets, activeId, onSelect, playback, hideStepButtons
     speed,
     hasMore,
     disabled,
+    canStepBack,
+    onStepBack,
     onStepEventOnce,
     onStepEventMany,
     onTogglePlay,
@@ -81,6 +85,15 @@ export function Toolbar({ presets, activeId, onSelect, playback, hideStepButtons
         <span>{speed}×</span>
         {!hideStepButtons && (
           <div className="sim-step-buttons">
+            <button
+              type="button"
+              aria-label="로그 1줄 되돌리기 (← 키로도 가능)"
+              title="마지막으로 한 줄씩 실행한 것을 하나 되돌려요 (최대 30줄). ▶ 재생이나 ⏮ 를 누르면 되돌릴 기록이 지워져요. ← 키를 눌러도 똑같이 동작해요"
+              disabled={disabled || !canStepBack || isPlaying}
+              onClick={onStepBack}
+            >
+              {'\u23EA\uFE0E'} 1줄
+            </button>
             <button
               type="button"
               aria-label="로그 한 줄씩 실행 (→ 키로도 가능)"

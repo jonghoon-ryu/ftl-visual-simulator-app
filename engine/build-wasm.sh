@@ -46,11 +46,14 @@ em++ -std=c++17 -fexceptions -O2 \
 	-sMODULARIZE=1 \
 	-sEXPORT_ES6=1 \
 	-sEXPORT_NAME=createMQSimModule \
+	-sEXPORTED_RUNTIME_METHODS=HEAPU8 \
 	-sENVIRONMENT=web,worker,node \
 	-o "$OUT_DIR/mqsim.mjs"
 # -sMAXIMUM_MEMORY=4GB: WASM32's actual hard ceiling - large-occupancy
 # configs can legitimately need close to 2GB (verified against
 # AddressMappingDomain's own allocation size), so don't set this lower.
+# -sEXPORTED_RUNTIME_METHODS=HEAPU8: the worker copies linear memory for
+# the step-back (⏪) snapshots - see memory_layout() in bindings.cpp.
 # -fexceptions: without it, a thrown C++ exception (e.g. std::bad_alloc)
 # aborts with no message at all instead of being catchable/diagnosable.
 

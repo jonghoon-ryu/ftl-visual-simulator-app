@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { useMirroredState } from './useMirroredState';
 import type { LogEntry } from '../types';
 import { streamLpaKey } from '../lib/pageKey';
 import type { MqsimEngine } from './useMqsimEngine';
@@ -111,8 +112,8 @@ function formatClockTime(d: Date): string {
 // commit(), which the caller runs once per step/tick after refresh() - so
 // a whole tick's worth of events now costs one render, not thousands.
 export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], ready: boolean) {
-  const [log, setLog] = useState<LogEntry[]>([]);
-  const [counters, setCounters] = useState<SimulationCounters>({ hostWrites: 0, hostReads: 0, migrationWrites: 0 });
+  const [log, setLog, logRef] = useMirroredState<LogEntry[]>([]);
+  const [counters, setCounters, countersRef] = useMirroredState<SimulationCounters>({ hostWrites: 0, hostReads: 0, migrationWrites: 0 });
   const dynamicWlSeenRef = useRef(0);
   const pendingCountersRef = useRef({ hostWrites: 0, hostReads: 0, migrationWrites: 0 });
   const pendingLogRef = useRef<{ text: string; lpnKey?: string; lpnLabel?: string }[]>([]);
@@ -131,9 +132,9 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
   // when that step logged nothing. Same one-step lifetime as the grid's
   // outlines (useMqsimOverwrites/useMqsimMigrations), so the bold lines and
   // the outlined cells always describe the same step.
-  const [freshFromIndex, setFreshFromIndex] = useState<number | null>(null);
+  const [freshFromIndex, setFreshFromIndex, freshFromIndexRef] = useMirroredState<number | null>(null);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     pendingCountersRef.current = { hostWrites: 0, hostReads: 0, migrationWrites: 0 };
     pendingLogRef.current = [];
     lpaToAddressRef.current = new Map();
@@ -142,7 +143,7 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
     setLog([]);
     setCounters({ hostWrites: 0, hostReads: 0, migrationWrites: 0 });
     dynamicWlSeenRef.current = 0;
-  };
+  }, [setFreshFromIndex, setLog, setCounters]);
 
   // Call once right after a step's refresh() - flushes whatever accumulated
   // during that step into render state in a single setCounters/setLog pair.
@@ -169,7 +170,7 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
       setLog((prev) => [...newEntries, ...prev].slice(0, MAX_LOG_ENTRIES));
       pendingLogRef.current = [];
     }
-  }, []);
+  }, [setCounters, setFreshFromIndex, setLog]);
 
   useEffect(() => {
     if (!ready) return;
@@ -234,11 +235,38 @@ export function useMqsimEvents(subscribeEvents: MqsimEngine['subscribeEvents'], 
           : { text },
       );
     });
-  }, [subscribeEvents, ready]);
+  }, [subscribeEvents, ready, reset]);
 
   // For ▶'s final batch, where App.tsx also clears the grid's outlines
   // instead of committing them (see onRefresh's batchEnded).
-  const clearFresh = useCallback(() => setFreshFromIndex(null), []);
+  const clearFresh = useCallback(() => setFreshFromIndex(null), [setFreshFromIndex]);
 
-  return { log, counters, freshFromIndex, reset, commit, clearFresh };
+  // Step-back: everything committed so far (taken between steps, when
+  // nothing is pending). The LPN map is copied - events keep mutating it.
+  const snapshot = useCallback(
+    () => ({
+      log: logRef.current,
+      counters: countersRef.current,
+      freshFromIndex: freshFromIndexRef.current,
+      lpaToAddress: new Map(lpaToAddressRef.current),
+      nextIndex: nextIndexRef.current,
+      dynamicWlSeen: dynamicWlSeenRef.current,
+    }),
+    [logRef, countersRef, freshFromIndexRef],
+  );
+  const restore = useCallback(
+    (snap: ReturnType<typeof snapshot>) => {
+      pendingCountersRef.current = { hostWrites: 0, hostReads: 0, migrationWrites: 0 };
+      pendingLogRef.current = [];
+      lpaToAddressRef.current = new Map(snap.lpaToAddress);
+      nextIndexRef.current = snap.nextIndex;
+      dynamicWlSeenRef.current = snap.dynamicWlSeen;
+      setLog(snap.log);
+      setCounters(snap.counters);
+      setFreshFromIndex(snap.freshFromIndex);
+    },
+    [setLog, setCounters, setFreshFromIndex],
+  );
+
+  return { log, counters, freshFromIndex, reset, commit, clearFresh, snapshot, restore };
 }

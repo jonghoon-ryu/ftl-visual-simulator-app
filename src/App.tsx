@@ -181,6 +181,16 @@ function App() {
   const freeBlocks = useFreeBlockHistory(engine.subscribeEvents, engine.ready);
   const lpnJourney = useLpnJourney(engine.subscribeEvents, engine.ready);
   const readLatency = useReadLatencyHistory(engine.subscribeEvents, engine.ready);
+  type UiSnapshot = {
+    trimCursor: number;
+    events: ReturnType<typeof events.snapshot>;
+    migrations: ReturnType<typeof migrations.snapshot>;
+    overwrites: ReturnType<typeof overwrites.snapshot>;
+    wlHighlight: ReturnType<typeof wlHighlight.snapshot>;
+    freeBlocks: ReturnType<typeof freeBlocks.snapshot>;
+    lpnJourney: ReturnType<typeof lpnJourney.snapshot>;
+    readLatency: ReturnType<typeof readLatency.snapshot>;
+  };
   const playback = useSimulationPlayback({
     engine,
     onRefresh: async (opts) => {
@@ -224,6 +234,29 @@ function App() {
       freeBlocks.reset();
       lpnJourney.reset();
       readLatency.reset();
+    },
+    // ⏪: everything on screen that was built up from past events, plus
+    // the TRIM cursor (a TRIM between two steps is undone with them).
+    captureUi: () => ({
+      trimCursor: trimCursorRef.current,
+      events: events.snapshot(),
+      migrations: migrations.snapshot(),
+      overwrites: overwrites.snapshot(),
+      wlHighlight: wlHighlight.snapshot(),
+      freeBlocks: freeBlocks.snapshot(),
+      lpnJourney: lpnJourney.snapshot(),
+      readLatency: readLatency.snapshot(),
+    }),
+    restoreUi: (snapshot) => {
+      const ui = snapshot as UiSnapshot;
+      trimCursorRef.current = ui.trimCursor;
+      events.restore(ui.events);
+      migrations.restore(ui.migrations);
+      overwrites.restore(ui.overwrites);
+      wlHighlight.restore(ui.wlHighlight);
+      freeBlocks.restore(ui.freeBlocks);
+      lpnJourney.restore(ui.lpnJourney);
+      readLatency.restore(ui.readLatency);
     },
     // Every wired preset plays whole log lines per tick (see
     // useSimulationPlayback's playUnit) - what changes on screen per tick
@@ -319,23 +352,35 @@ function App() {
   // focus is on an <input>/<select> (a param slider, the chip-count radios,
   // the speed slider) so ArrowRight keeps doing that control's own native
   // thing (nudging a slider/radio) instead of being hijacked into a step.
-  const stepShortcutRef = useRef({ canStep: false, stepEventOnce: playback.stepEventOnce });
+  // ← goes back one line (⏪), under the same conditions as its button.
+  const stepShortcutRef = useRef({
+    canStep: false,
+    canStepBack: false,
+    stepEventOnce: playback.stepEventOnce,
+    stepBack: playback.stepBack,
+  });
   useEffect(() => {
     stepShortcutRef.current = {
       // Same "마모평준화 시연" exclusion as Toolbar's step buttons below -
       // pointless there (see hideStepButtons' doc comment), so the → key
       // shouldn't silently do it either.
       canStep: wired && activeId !== 'wear-leveling' && playback.hasMore && !playback.isPlaying,
+      canStepBack: wired && activeId !== 'wear-leveling' && playback.canStepBack && !playback.isPlaying,
       stepEventOnce: playback.stepEventOnce,
+      stepBack: playback.stepBack,
     };
   });
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'ArrowRight' || e.repeat || !stepShortcutRef.current.canStep) return;
+      if (e.repeat) return;
+      const shortcut = stepShortcutRef.current;
+      const forward = e.key === 'ArrowRight' && shortcut.canStep;
+      const back = e.key === 'ArrowLeft' && shortcut.canStepBack;
+      if (!forward && !back) return;
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
       e.preventDefault();
-      void stepShortcutRef.current.stepEventOnce();
+      void (forward ? shortcut.stepEventOnce() : shortcut.stepBack());
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -396,6 +441,8 @@ function App() {
             speed: playback.speed,
             hasMore: playback.hasMore,
             disabled: !wired,
+            canStepBack: playback.canStepBack,
+            onStepBack: playback.stepBack,
             onStepEventOnce: playback.stepEventOnce,
             onStepEventMany: () => playback.stepEventMany(5),
             onTogglePlay: () => {

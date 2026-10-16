@@ -1,4 +1,6 @@
 #include <emscripten/bind.h>
+#include <emscripten/stack.h>
+#include <unistd.h>
 #include <fstream>
 #include <string>
 #include "../exec/MQSim_Interface.h"
@@ -483,6 +485,21 @@ void configure(const std::string& ssd_config_xml, const std::string& workload_xm
 	init(ssd_config_xml, workload_xml);
 }
 
+// Where the live parts of WASM linear memory are, for the UI's step-back
+// snapshots (see mqsim.worker.ts): everything below heapEnd (sbrk's break)
+// except the C++ stack [stackLow, stackHigh), which is unused whenever no
+// call into the module is running - the only time JS takes or restores a
+// snapshot. All engine state (MQSim objects, the event queue, statics,
+// malloc's own bookkeeping, the break pointer itself) lives in that range.
+val memory_layout()
+{
+	val layout = val::object();
+	layout.set("stackLow", (double)emscripten_stack_get_end());
+	layout.set("stackHigh", (double)emscripten_stack_get_base());
+	layout.set("heapEnd", (double)(uintptr_t)sbrk(0));
+	return layout;
+}
+
 EMSCRIPTEN_BINDINGS(mqsim_module)
 {
 	function("init", &init);
@@ -496,4 +513,5 @@ EMSCRIPTEN_BINDINGS(mqsim_module)
 	function("totalLogicalPages", &total_logical_pages);
 	function("setEventCallback", &set_event_callback);
 	function("getState", &get_state);
+	function("memoryLayout", &memory_layout);
 }

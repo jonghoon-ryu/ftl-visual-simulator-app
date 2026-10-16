@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { useMirroredState } from './useMirroredState';
 import { blockKey, pageKey, streamLpaKey } from '../lib/pageKey';
 import type { MqsimEngine } from './useMqsimEngine';
 
@@ -41,9 +42,9 @@ export function useMqsimOverwrites(subscribeEvents: MqsimEngine['subscribeEvents
   const pendingPagesRef = useRef(new Set<string>());
   const pendingBlocksRef = useRef(new Set<string>());
   const pendingReadsRef = useRef(new Set<string>());
-  const [supersededKeys, setSupersededKeys] = useState<Set<string>>(new Set());
-  const [readKeys, setReadKeys] = useState<Set<string>>(new Set());
-  const [erasingBlockKeys, setErasingBlockKeys] = useState<Set<string>>(new Set());
+  const [supersededKeys, setSupersededKeys, supersededKeysRef] = useMirroredState<Set<string>>(new Set());
+  const [readKeys, setReadKeys, readKeysRef] = useMirroredState<Set<string>>(new Set());
+  const [erasingBlockKeys, setErasingBlockKeys, erasingBlockKeysRef] = useMirroredState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!ready) return;
@@ -96,7 +97,7 @@ export function useMqsimOverwrites(subscribeEvents: MqsimEngine['subscribeEvents
     const pendingBlocks = pendingBlocksRef.current;
     pendingBlocksRef.current = new Set();
     setErasingBlockKeys((prev) => (pendingBlocks.size === 0 && prev.size === 0 ? prev : pendingBlocks));
-  }, []);
+  }, [setSupersededKeys, setReadKeys, setErasingBlockKeys]);
 
   const reset = useCallback(() => {
     lpaToPageKeyRef.current = new Map();
@@ -106,7 +107,31 @@ export function useMqsimOverwrites(subscribeEvents: MqsimEngine['subscribeEvents
     setSupersededKeys(new Set());
     setReadKeys(new Set());
     setErasingBlockKeys(new Set());
-  }, []);
+  }, [setSupersededKeys, setReadKeys, setErasingBlockKeys]);
 
-  return { supersededKeys, readKeys, erasingBlockKeys, commit, reset };
+  // Step-back: the committed sets are replaced, never mutated; the LPA map
+  // is mutated by every write, so it is copied.
+  const snapshot = useCallback(
+    () => ({
+      lpaToPageKey: new Map(lpaToPageKeyRef.current),
+      supersededKeys: supersededKeysRef.current,
+      readKeys: readKeysRef.current,
+      erasingBlockKeys: erasingBlockKeysRef.current,
+    }),
+    [supersededKeysRef, readKeysRef, erasingBlockKeysRef],
+  );
+  const restore = useCallback(
+    (snap: ReturnType<typeof snapshot>) => {
+      lpaToPageKeyRef.current = new Map(snap.lpaToPageKey);
+      pendingPagesRef.current = new Set();
+      pendingBlocksRef.current = new Set();
+      pendingReadsRef.current = new Set();
+      setSupersededKeys(snap.supersededKeys);
+      setReadKeys(snap.readKeys);
+      setErasingBlockKeys(snap.erasingBlockKeys);
+    },
+    [setSupersededKeys, setReadKeys, setErasingBlockKeys],
+  );
+
+  return { supersededKeys, readKeys, erasingBlockKeys, commit, reset, snapshot, restore };
 }

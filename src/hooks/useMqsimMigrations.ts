@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { useMirroredState } from './useMirroredState';
 import { pageKey } from '../lib/pageKey';
 import type { MqsimEngine } from './useMqsimEngine';
 
@@ -16,7 +17,7 @@ import type { MqsimEngine } from './useMqsimEngine';
 // the step where GC ran, instead of only ever seeing before/after.
 export function useMqsimMigrations(subscribeEvents: MqsimEngine['subscribeEvents'], ready: boolean) {
   const pendingRef = useRef(new Set<string>());
-  const [movingKeys, setMovingKeys] = useState<Set<string>>(new Set());
+  const [movingKeys, setMovingKeys, movingKeysRef] = useMirroredState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!ready) return;
@@ -39,14 +40,25 @@ export function useMqsimMigrations(subscribeEvents: MqsimEngine['subscribeEvents
     const pending = pendingRef.current;
     pendingRef.current = new Set();
     setMovingKeys((prev) => (pending.size === 0 && prev.size === 0 ? prev : pending));
-  }, []);
+  }, [setMovingKeys]);
 
   // Call on restart - clears both the in-flight accumulator and whatever
   // was still highlighted from before the restart.
   const reset = useCallback(() => {
     pendingRef.current = new Set();
     setMovingKeys(new Set());
-  }, []);
+  }, [setMovingKeys]);
 
-  return { movingKeys, commit, reset };
+  // Step-back: the committed set is replaced on every commit, never
+  // mutated, so it can be kept as is.
+  const snapshot = useCallback(() => ({ movingKeys: movingKeysRef.current }), [movingKeysRef]);
+  const restore = useCallback(
+    (snap: ReturnType<typeof snapshot>) => {
+      pendingRef.current = new Set();
+      setMovingKeys(snap.movingKeys);
+    },
+    [setMovingKeys],
+  );
+
+  return { movingKeys, commit, reset, snapshot, restore };
 }

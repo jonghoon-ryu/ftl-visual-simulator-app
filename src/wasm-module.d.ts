@@ -162,4 +162,8 @@ interface MqsimModule {
   trimRange(start: number, count: number): number;
   totalLogicalPages(): number;
   setEventCallback(callback: ((event: MqsimEvent) => void) | null): void;
+  // Byte offsets of the live parts of linear memory - see memory_layout()
+  // in bindings.cpp. Used with HEAPU8 for step-back snapshots.
+  memoryLayout(): { stackLow: number; stackHigh: number; heapEnd: number };
+  HEAPU8: Uint8Array;
 }

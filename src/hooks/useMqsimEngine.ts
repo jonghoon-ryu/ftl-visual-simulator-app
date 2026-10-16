@@ -93,6 +93,12 @@ export function useMqsimEngine(ssdConfigXml: string, workloadXml: string) {
     (start: number, count: number) => call<{ trimmed: number; total: number }>({ type: 'trimRange', start, count }),
     [call],
   );
+  // Step-back snapshots of the engine, kept inside the worker (see
+  // mqsim.worker.ts). Each resolves with how many snapshots remain;
+  // popSnapshot() also puts the engine back to the newest one.
+  const pushSnapshot = useCallback((max: number) => call<number>({ type: 'pushSnapshot', max }), [call]);
+  const popSnapshot = useCallback(() => call<number>({ type: 'popSnapshot' }), [call]);
+  const clearSnapshots = useCallback(() => call<number>({ type: 'clearSnapshots' }), [call]);
   const configure = useCallback(
     () => call<void>({ type: 'configure', ssdConfigXml, workloadXml }),
     [call, ssdConfigXml, workloadXml],
@@ -124,7 +130,23 @@ export function useMqsimEngine(ssdConfigXml: string, workloadXml: string) {
     };
   }, []);
 
-  return { ready, error, state, refresh, step, run, stepIo, stepEvent, runEvents, trimRange, configure, subscribeEvents };
+  return {
+    ready,
+    error,
+    state,
+    refresh,
+    step,
+    run,
+    stepIo,
+    stepEvent,
+    runEvents,
+    trimRange,
+    configure,
+    subscribeEvents,
+    pushSnapshot,
+    popSnapshot,
+    clearSnapshots,
+  };
 }
 
 export type MqsimEngine = ReturnType<typeof useMqsimEngine>;

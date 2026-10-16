@@ -15,8 +15,16 @@ interface RefreshResult {
   shouldPause?: boolean;
 }
 
+// How many log lines ⏪ can go back. Each one keeps a copy of the engine's
+// memory in the worker (~2.5 MB for "GC 시연"/"매핑 기본" - measured by
+// engine/tests/cache/stepback.mts), so this caps that at well under 100 MB.
+export const MAX_STEP_BACK = 30;
+
 interface Options {
-  engine: Pick<MqsimEngine, 'ready' | 'step' | 'run' | 'stepEvent' | 'runEvents' | 'configure'>;
+  engine: Pick<
+    MqsimEngine,
+    'ready' | 'step' | 'run' | 'stepEvent' | 'runEvents' | 'configure' | 'refresh' | 'pushSnapshot' | 'popSnapshot' | 'clearSnapshots'
+  >;
   // `batchEnded` is true only for the ▶ play loop's tick when that tick's
   // run() call itself reached the end of the simulation (no more events) -
   // see its call site below for why this needs to be distinguished from an
@@ -40,6 +48,11 @@ interface Options {
   // 'logEvents' only: log lines per tick at a given speed (1-8). Fractions
   // accumulate across ticks. Defaults to defaultLogLinesPerTick.
   logLinesPerTick?: (speed: number) => number;
+  // Step-back: copies everything the UI built from past events (log, grid
+  // outlines, chart histories...) and puts such a copy back. Taken right
+  // before each stepped log line, alongside the engine's own snapshot.
+  captureUi?: () => unknown;
+  restoreUi?: (snapshot: unknown) => void;
 }
 
 // Default 'logEvents' pace: speed 8 (the default) = one log line per tick
@@ -59,6 +72,8 @@ export function useSimulationPlayback({
   ticksMultiplier = 1,
   playUnit = 'eventGroups',
   logLinesPerTick = defaultLogLinesPerTick,
+  captureUi,
+  restoreUi,
 }: Options) {
   const [isPlaying, setIsPlaying] = useState(false);
   // Default 8 (the slider's max), not 1 - Ryu's ask (2026-09-20) for "매핑
@@ -74,10 +89,56 @@ export function useSimulationPlayback({
   // an effect (runs after commit), not during render - mutating a ref's
   // .current directly in the render body is unsafe under Concurrent/Strict
   // Mode.
-  const latestRef = useRef({ engine, onRefresh, ticksMultiplier, playUnit, logLinesPerTick });
-  useEffect(() => {
-    latestRef.current = { engine, onRefresh, ticksMultiplier, playUnit, logLinesPerTick };
+  const latestRef = useRef({
+    engine,
+    onRefresh,
+    ticksMultiplier,
+    playUnit,
+    logLinesPerTick,
+    captureUi,
+    restoreUi,
   });
+  useEffect(() => {
+    latestRef.current = {
+      engine,
+      onRefresh,
+      ticksMultiplier,
+      playUnit,
+      logLinesPerTick,
+      captureUi,
+      restoreUi,
+    };
+  });
+  // Step-back: UI snapshots, one per stepped log line, newest last - kept
+  // in step with the engine snapshots in the worker (same cap, pushed and
+  // popped together). backDepth is how many ⏪ presses are available.
+  const uiSnapshotsRef = useRef<unknown[]>([]);
+  const [backDepth, setBackDepth] = useState(0);
+  // Steps and step-backs run one after another, never interleaved - a ⏪
+  // pressed while a step is still in flight waits for it, so each press
+  // undoes exactly one line no matter how fast the buttons are clicked.
+  const opChainRef = useRef<Promise<void>>(Promise.resolve());
+  const enqueue = useCallback((op: () => Promise<void>) => {
+    const next = opChainRef.current.then(op).catch((err: unknown) => console.error(err));
+    opChainRef.current = next;
+    return next;
+  }, []);
+
+  // Before one stepped log line: remember where the engine and the UI are.
+  const pushSnapshot = useCallback(async () => {
+    const { engine: e, captureUi: capture } = latestRef.current;
+    if (!capture) return;
+    const depth = await e.pushSnapshot(MAX_STEP_BACK);
+    uiSnapshotsRef.current.push(capture());
+    if (uiSnapshotsRef.current.length > depth) uiSnapshotsRef.current.splice(0, uiSnapshotsRef.current.length - depth);
+    setBackDepth(depth);
+  }, []);
+
+  const clearSnapshots = useCallback(async () => {
+    uiSnapshotsRef.current = [];
+    setBackDepth(0);
+    await latestRef.current.engine.clearSnapshots();
+  }, []);
   // Fractional log lines owed to 'logEvents' playback (slow speeds advance
   // less than one line per tick).
   const logEventBudgetRef = useRef(0);
@@ -96,32 +157,60 @@ export function useSimulationPlayback({
   // inside it) used to sit alongside this - removed since it only ever
   // behaved differently from this one during a GC/WL cycle, which made it
   // a confusing near-duplicate the rest of the time.
-  const stepEventOnce = useCallback(async () => {
-    if (!engine.ready) return;
-    const more = await engine.stepEvent();
-    const result = await latestRef.current.onRefresh();
-    setHasMore(more);
-    if (!more || result?.shouldPause) setIsPlaying(false);
-  }, [engine]);
+  const stepEventOnce = useCallback(
+    () =>
+      enqueue(async () => {
+        if (!engine.ready) return;
+        await pushSnapshot();
+        const more = await engine.stepEvent();
+        const result = await latestRef.current.onRefresh();
+        setHasMore(more);
+        if (!more || result?.shouldPause) setIsPlaying(false);
+      }),
+    [engine, enqueue, pushSnapshot],
+  );
 
   // Backs the "5 steps" button - just stepEventOnce run n times in a row,
   // sequentially awaited (not fired concurrently) so each call's worker
   // round-trip and onRefresh complete before the next stepEvent() starts,
   // same overlap concern tickInFlightRef guards against for the ▶ loop.
+  // Each of the n lines gets its own snapshot, so ⏪ always goes back one
+  // line - also after "로그 5줄".
   const stepEventMany = useCallback(
-    async (n: number) => {
-      if (!engine.ready) return;
-      for (let i = 0; i < n; i++) {
-        const more = await engine.stepEvent();
-        const result = await latestRef.current.onRefresh();
-        setHasMore(more);
-        if (!more || result?.shouldPause) {
-          setIsPlaying(false);
-          break;
+    (n: number) =>
+      enqueue(async () => {
+        if (!engine.ready) return;
+        for (let i = 0; i < n; i++) {
+          await pushSnapshot();
+          const more = await engine.stepEvent();
+          const result = await latestRef.current.onRefresh();
+          setHasMore(more);
+          if (!more || result?.shouldPause) {
+            setIsPlaying(false);
+            break;
+          }
         }
-      }
-    },
-    [engine],
+      }),
+    [engine, enqueue, pushSnapshot],
+  );
+
+  // ⏪: puts the engine and the UI back to just before the most recent
+  // stepped log line. Only steps taken with the step buttons/→ can be undone
+  // - ▶ and ⏮ clear the history (see clearSnapshots' callers).
+  const stepBack = useCallback(
+    () =>
+      enqueue(async () => {
+        const { engine: e, restoreUi: restore } = latestRef.current;
+        const ui = uiSnapshotsRef.current.pop();
+        if (!e.ready || ui === undefined || !restore) return;
+        const depth = await e.popSnapshot();
+        await e.refresh();
+        restore(ui);
+        setBackDepth(depth);
+        // Every snapshot was taken with events still to run.
+        setHasMore(true);
+      }),
+    [enqueue],
   );
 
   const togglePlay = useCallback(() => {
@@ -131,11 +220,20 @@ export function useSimulationPlayback({
   const restart = useCallback(async () => {
     if (!engine.ready) return;
     setIsPlaying(false);
+    // configure() also drops the worker's engine snapshots.
+    uiSnapshotsRef.current = [];
+    setBackDepth(0);
     await engine.configure();
     setHasMore(true);
     onRestart();
     await latestRef.current.onRefresh();
   }, [engine, onRestart]);
+
+  // ▶ runs many lines per tick without snapshots, so the step-back history
+  // no longer leads anywhere sensible once it starts - drop it.
+  useEffect(() => {
+    if (isPlaying && engine.ready) void enqueue(clearSnapshots);
+  }, [isPlaying, engine.ready, enqueue, clearSnapshots]);
 
   useEffect(() => {
     if (!isPlaying || !engine.ready) return;
@@ -181,5 +279,17 @@ export function useSimulationPlayback({
     await latestRef.current.onRefresh();
   }, []);
 
-  return { isPlaying, speed, hasMore, setSpeed, stepEventOnce, stepEventMany, togglePlay, restart, refreshNow };
+  return {
+    isPlaying,
+    speed,
+    hasMore,
+    setSpeed,
+    stepEventOnce,
+    stepEventMany,
+    stepBack,
+    canStepBack: backDepth > 0,
+    togglePlay,
+    restart,
+    refreshNow,
+  };
 }

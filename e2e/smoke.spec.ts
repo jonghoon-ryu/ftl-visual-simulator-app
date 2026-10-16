@@ -227,3 +227,61 @@ test('마모평준화 시연 plays and shows per-block erase counts', async ({ p
   expect(await page.locator('.stat-row').count()).toBeGreaterThan(0);
   expect(problems).toEqual([]);
 });
+
+// Everything the step-back has to put back: grid cell states and outlines,
+// the log (minus its wall-clock time), the stats.
+async function screenFingerprint(page: Page) {
+  return page.evaluate(() => {
+    const cells = [...document.querySelectorAll('.cell')].map((c) => c.className).join('|');
+    const log = [...document.querySelectorAll('.log-entry')]
+      .map((e) => `${e.className}:${[...e.childNodes].filter((n) => !(n as Element).classList?.contains('log-time')).map((n) => n.textContent).join('')}`)
+      .join('\n');
+    const stats = [...document.querySelectorAll('.stat-row')].map((r) => r.textContent).join('|');
+    return { cells, log, stats };
+  });
+}
+
+test('⏪ undoes stepped log lines exactly, through a GC', async ({ page }) => {
+  test.setTimeout(240_000);
+  const problems = await openApp(page);
+  await preset(page, 'GC 시연').click();
+  const back = page.getByRole('button', { name: /로그 1줄 되돌리기/ });
+  const five = page.getByRole('button', { name: '로그 다섯 줄 실행' });
+  const lastIndex = () => page.locator('.log-entry .log-index').first().textContent();
+  await expect(back).toBeDisabled();
+
+  // Run (not step) to just before the first GC, then step through it.
+  await page.getByRole('slider', { name: '재생 속도' }).fill('8');
+  await page.getByRole('button', { name: '재생', exact: true }).click();
+  await expect.poll(async () => Number((await lastIndex())?.replace(/\D/g, '') ?? 0), { timeout: 60_000 }).toBeGreaterThan(200);
+  await page.getByRole('button', { name: '일시정지' }).click();
+  await expect(back).toBeDisabled(); // ▶ leaves nothing to undo
+
+  const before: Awaited<ReturnType<typeof screenFingerprint>>[] = [];
+  let sawGc = false;
+  for (let i = 0; i < 6; i++) {
+    before.push(await screenFingerprint(page));
+    const index = await lastIndex();
+    await five.click();
+    await expect(page.locator('.log-entry .log-index').first()).not.toHaveText(index ?? '');
+    await page.waitForTimeout(300);
+    if (/GC/.test((await page.locator('.log-list').textContent()) ?? '')) sawGc = true;
+  }
+  const after = await screenFingerprint(page);
+
+  // 30 lines back, 5 at a time (← key for the last batch).
+  for (let i = 5; i >= 0; i--) {
+    for (let k = 0; k < 5; k++) {
+      if (i === 0) await page.keyboard.press('ArrowLeft');
+      else await back.click();
+    }
+    await expect.poll(() => screenFingerprint(page)).toEqual(before[i]);
+  }
+  await expect(back).toBeDisabled();
+
+  // And forward again lands on the very same screen.
+  for (let i = 0; i < 6; i++) await five.click();
+  await expect.poll(() => screenFingerprint(page)).toEqual(after);
+  expect(sawGc).toBe(true);
+  expect(problems).toEqual([]);
+});

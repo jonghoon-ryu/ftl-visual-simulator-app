@@ -26,6 +26,10 @@ export interface LpnJourney {
   erasedCount: number;
 }
 
+function copyHistory(from: Map<string, JourneyStep[]>) {
+  return new Map([...from].map(([key, steps]) => [key, [...steps]]));
+}
+
 // Keeps a short history per LPN; older steps beyond this are dropped.
 const MAX_STEPS = 12;
 
@@ -125,5 +129,22 @@ export function useLpnJourney(subscribeEvents: MqsimEngine['subscribeEvents'], r
     [build],
   );
 
-  return { journey, select, commit, reset };
+  // Step-back: per-LPN step arrays are pushed to in place, so both maps are
+  // copied deeply enough to be unaffected by later events. Which LPN is
+  // being followed is a viewer choice, not simulation state - it stays, and
+  // its journey is rebuilt from the restored history.
+  const snapshot = useCallback(
+    () => ({ history: copyHistory(historyRef.current), eraseSeq: new Map(eraseSeqRef.current) }),
+    [],
+  );
+  const restore = useCallback(
+    (snap: ReturnType<typeof snapshot>) => {
+      historyRef.current = copyHistory(snap.history);
+      eraseSeqRef.current = new Map(snap.eraseSeq);
+      if (tracked) setJourney(build(tracked.key, tracked.label));
+    },
+    [tracked, build],
+  );
+
+  return { journey, select, commit, reset, snapshot, restore };
 }

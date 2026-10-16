@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { useMirroredState } from './useMirroredState';
 import { blockKey } from '../lib/pageKey';
 import type { WlTriggerInfo } from '../types';
 import type { MqsimEngine } from './useMqsimEngine';
@@ -30,8 +31,8 @@ export function useMqsimWlHighlight(subscribeEvents: MqsimEngine['subscribeEvent
   const pendingEpochRef = useRef(0);
   const pendingKeyCountsRef = useRef(new Map<string, number>());
   const pendingTriggerRef = useRef<WlTriggerInfo | null>(null);
-  const [wlTargetCounts, setWlTargetCounts] = useState<Map<string, number>>(new Map());
-  const [lastTrigger, setLastTrigger] = useState<WlTriggerInfo | null>(null);
+  const [wlTargetCounts, setWlTargetCounts, wlTargetCountsRef] = useMirroredState<Map<string, number>>(new Map());
+  const [lastTrigger, setLastTrigger, lastTriggerRef] = useMirroredState<WlTriggerInfo | null>(null);
   // Whether the "⭐ 마모평준화가 발동했어요" banner (and its explanation
   // button) should currently show - true from the moment a trigger commits
   // until dismissBanner() is called. Kept separate from lastTrigger/
@@ -40,7 +41,7 @@ export function useMqsimWlHighlight(subscribeEvents: MqsimEngine['subscribeEvent
   // resumes past the pause it caused - it did its job (getting a beginner to
   // stop and look), and re-showing "발동했어요" while the sim keeps running
   // reads as stuck/stale rather than historical.
-  const [bannerVisible, setBannerVisible] = useState(false);
+  const [bannerVisible, setBannerVisible, bannerVisibleRef] = useMirroredState(false);
   // Whether this run's first trigger has been committed. Only that one
   // pauses ▶ and shows the banner - once WL fires dozens of times per run,
   // pausing on every one would stop playback almost every tick, and a
@@ -94,9 +95,9 @@ export function useMqsimWlHighlight(subscribeEvents: MqsimEngine['subscribeEvent
     firstTriggerDoneRef.current = true;
     setBannerVisible(true);
     return true;
-  }, []);
+  }, [setWlTargetCounts, setLastTrigger, setBannerVisible]);
 
-  const dismissBanner = useCallback(() => setBannerVisible(false), []);
+  const dismissBanner = useCallback(() => setBannerVisible(false), [setBannerVisible]);
 
   const reset = useCallback(() => {
     epochRef.current += 1;
@@ -106,7 +107,29 @@ export function useMqsimWlHighlight(subscribeEvents: MqsimEngine['subscribeEvent
     setWlTargetCounts(new Map());
     setLastTrigger(null);
     setBannerVisible(false);
-  }, []);
+  }, [setWlTargetCounts, setLastTrigger, setBannerVisible]);
 
-  return { wlTargetCounts, lastTrigger, bannerVisible, dismissBanner, commit, reset };
+  // Step-back: the committed map is replaced on every commit, never mutated.
+  const snapshot = useCallback(
+    () => ({
+      wlTargetCounts: wlTargetCountsRef.current,
+      lastTrigger: lastTriggerRef.current,
+      bannerVisible: bannerVisibleRef.current,
+      firstTriggerDone: firstTriggerDoneRef.current,
+    }),
+    [wlTargetCountsRef, lastTriggerRef, bannerVisibleRef],
+  );
+  const restore = useCallback(
+    (snap: ReturnType<typeof snapshot>) => {
+      pendingKeyCountsRef.current = new Map();
+      pendingTriggerRef.current = null;
+      firstTriggerDoneRef.current = snap.firstTriggerDone;
+      setWlTargetCounts(snap.wlTargetCounts);
+      setLastTrigger(snap.lastTrigger);
+      setBannerVisible(snap.bannerVisible);
+    },
+    [setWlTargetCounts, setLastTrigger, setBannerVisible],
+  );
+
+  return { wlTargetCounts, lastTrigger, bannerVisible, dismissBanner, commit, reset, snapshot, restore };
 }

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { useMirroredState } from './useMirroredState';
 import type { MqsimEngine } from './useMqsimEngine';
 
 // One sample per playback tick/step: reads completed during that tick (on
@@ -20,7 +21,7 @@ const MAX_SAMPLES = 600;
 // the slowest read since the previous getState() call, so each sample is
 // the difference from the previous refresh.
 export function useReadLatencyHistory(subscribeEvents: MqsimEngine['subscribeEvents'], ready: boolean) {
-  const [samples, setSamples] = useState<ReadLatencySample[]>([]);
+  const [samples, setSamples, samplesRef] = useMirroredState<ReadLatencySample[]>([]);
   const prevRef = useRef({ reads: 0, sumNs: 0 });
   const gcInTickRef = useRef<number[]>([]);
 
@@ -28,7 +29,7 @@ export function useReadLatencyHistory(subscribeEvents: MqsimEngine['subscribeEve
     prevRef.current = { reads: 0, sumNs: 0 };
     gcInTickRef.current = [];
     setSamples([]);
-  }, []);
+  }, [setSamples]);
 
   useEffect(() => {
     if (!ready) return;
@@ -55,7 +56,18 @@ export function useReadLatencyHistory(subscribeEvents: MqsimEngine['subscribeEve
       const next = [...prev, sample];
       return next.length > MAX_SAMPLES ? next.slice(next.length - MAX_SAMPLES) : next;
     });
-  }, []);
+  }, [setSamples]);
 
-  return { samples, commit, reset };
+  // Step-back: samples is replaced on every commit, never mutated.
+  const snapshot = useCallback(() => ({ samples: samplesRef.current, prev: prevRef.current }), [samplesRef]);
+  const restore = useCallback(
+    (snap: ReturnType<typeof snapshot>) => {
+      gcInTickRef.current = [];
+      prevRef.current = snap.prev;
+      setSamples(snap.samples);
+    },
+    [setSamples],
+  );
+
+  return { samples, commit, reset, snapshot, restore };
 }
