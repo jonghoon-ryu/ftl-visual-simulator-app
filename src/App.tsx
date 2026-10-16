@@ -65,14 +65,20 @@ const DEFAULT_SPEED: Partial<Record<PresetId, number>> = {
 // speed step below halves it, down to one line every ~2 ticks at speed 1
 // (Ryu, 2026-10-11: speed 1 was still far too fast to
 // follow when these presets were paced in raw event-groups - 96 per tick,
-// ~25 log lines/s). "매핑 기본" (~150 lines) keeps the hook's default linear
-// pace (speed 8 = one line per tick).
+// ~25 log lines/s). "매핑 기본" (161 lines with the cache on) is paced
+// linearly instead - see MAPPING_LOG_LINES_PER_TICK below.
 const LOG_LINES_PER_TICK_AT_FULL_SPEED: Partial<Record<PresetId, number>> = {
   gc: 64,
   'wear-leveling': 48,
 };
 
+// "매핑 기본": two lines per tick at speed 8 (a full run in ~25 s), one
+// every four ticks at speed 1. One line per tick at 8 (the hook's default,
+// ~50 s) felt slow (Ryu, 2026-10-16).
+const MAPPING_LOG_LINES_PER_TICK = (speed: number) => speed / 4;
+
 function logLinesPerTickFor(id: PresetId): ((speed: number) => number) | undefined {
+  if (id === 'mapping') return MAPPING_LOG_LINES_PER_TICK;
   const full = LOG_LINES_PER_TICK_AT_FULL_SPEED[id];
   return full === undefined ? undefined : (speed) => full * 2 ** (speed - 8);
 }

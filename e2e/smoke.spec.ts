@@ -245,7 +245,7 @@ test('⏪ undoes stepped log lines exactly, through a GC', async ({ page }) => {
   test.setTimeout(240_000);
   const problems = await openApp(page);
   await preset(page, 'GC 시연').click();
-  const back = page.getByRole('button', { name: /로그 1줄 되돌리기/ });
+  const back = page.getByRole('button', { name: /1 step 되돌리기/ });
   const five = page.getByRole('button', { name: '로그 다섯 줄 실행' });
   const lastIndex = () => page.locator('.log-entry .log-index').first().textContent();
   await expect(back).toBeDisabled();

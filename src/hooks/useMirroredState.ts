@@ -2,8 +2,8 @@ import { useCallback, useRef, useState } from 'react';
 
 // useState plus a ref that always holds the latest value set - updated
 // synchronously by the setter, not on the next render. The step-back
-// snapshots (useSimulationPlayback's stepBack) read hook state between two
-// steps of "로그 5줄", before React has necessarily rendered the first one's
+// snapshots (useSimulationPlayback's stepBack) read hook state between the
+// five steps of "5 steps", before React has necessarily rendered the first one's
 // updates, so a plain useState value (or a ref synced in an effect) could
 // still be a step behind there. Functional updates run against the ref
 // right away instead of being queued.

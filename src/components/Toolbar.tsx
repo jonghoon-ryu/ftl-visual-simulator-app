@@ -87,12 +87,12 @@ export function Toolbar({ presets, activeId, onSelect, playback, hideStepButtons
           <div className="sim-step-buttons">
             <button
               type="button"
-              aria-label="로그 1줄 되돌리기 (← 키로도 가능)"
-              title="마지막으로 한 줄씩 실행한 것을 하나 되돌려요 (최대 30줄). ▶ 재생이나 ⏮ 를 누르면 되돌릴 기록이 지워져요. ← 키를 눌러도 똑같이 동작해요"
+              aria-label="1 step 되돌리기 (← 키로도 가능)"
+              title="1 step/5 steps 로 실행한 것을 한 step 씩 되돌려요 (최대 30 step). ▶ 재생이나 ⏮ 를 누르면 되돌릴 기록이 지워져요. ← 키를 눌러도 똑같이 동작해요"
               disabled={disabled || !canStepBack || isPlaying}
               onClick={onStepBack}
             >
-              {'\u23EA\uFE0E'} 1줄
+              {'\u23EA\uFE0E'} 1 step
             </button>
             <button
               type="button"
@@ -101,7 +101,7 @@ export function Toolbar({ presets, activeId, onSelect, playback, hideStepButtons
               disabled={disabled || !hasMore || isPlaying}
               onClick={onStepEventOnce}
             >
-              로그 1줄
+              1 step
             </button>
             <button
               type="button"
@@ -110,7 +110,7 @@ export function Toolbar({ presets, activeId, onSelect, playback, hideStepButtons
               disabled={disabled || !hasMore || isPlaying}
               onClick={onStepEventMany}
             >
-              로그 5줄
+              5 steps
             </button>
           </div>
         )}

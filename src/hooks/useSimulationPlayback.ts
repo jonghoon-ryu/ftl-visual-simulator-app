@@ -175,7 +175,7 @@ export function useSimulationPlayback({
   // round-trip and onRefresh complete before the next stepEvent() starts,
   // same overlap concern tickInFlightRef guards against for the ▶ loop.
   // Each of the n lines gets its own snapshot, so ⏪ always goes back one
-  // line - also after "로그 5줄".
+  // line - also after "5 steps".
   const stepEventMany = useCallback(
     (n: number) =>
       enqueue(async () => {
