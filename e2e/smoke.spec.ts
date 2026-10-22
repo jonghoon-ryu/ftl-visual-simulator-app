@@ -285,3 +285,22 @@ test('⏪ undoes stepped log lines exactly, through a GC', async ({ page }) => {
   expect(sawGc).toBe(true);
   expect(problems).toEqual([]);
 });
+
+test('⏮ during "5 steps" restarts cleanly', async ({ page }) => {
+  const problems = await openApp(page);
+  const five = page.getByRole('button', { name: '로그 다섯 줄 실행' });
+  const back = page.getByRole('button', { name: /1 step 되돌리기/ });
+  for (let i = 0; i < 3; i++) {
+    await five.click();
+    await page.getByRole('button', { name: '처음으로' }).click();
+    // The rest of the 5 steps must not run on the restarted engine.
+    await page.waitForTimeout(1500);
+    await expect(page.locator('.log-entry')).toHaveCount(0);
+    await expect(page.locator('.cell.valid')).toHaveCount(0);
+    await expect(back).toBeDisabled();
+  }
+  // And stepping still works afterwards.
+  await five.click();
+  await expect(page.locator('.log-entry')).toHaveCount(5);
+  expect(problems).toEqual([]);
+});

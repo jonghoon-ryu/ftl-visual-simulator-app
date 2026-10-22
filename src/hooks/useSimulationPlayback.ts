@@ -114,15 +114,25 @@ export function useSimulationPlayback({
   // popped together). backDepth is how many ⏪ presses are available.
   const uiSnapshotsRef = useRef<unknown[]>([]);
   const [backDepth, setBackDepth] = useState(0);
-  // Steps and step-backs run one after another, never interleaved - a ⏪
-  // pressed while a step is still in flight waits for it, so each press
-  // undoes exactly one line no matter how fast the buttons are clicked.
-  const opChainRef = useRef<Promise<void>>(Promise.resolve());
-  const enqueue = useCallback((op: () => Promise<void>) => {
-    const next = opChainRef.current.then(op).catch((err: unknown) => console.error(err));
+  // Steps, step-backs, restarts and TRIMs run one after another, never
+  // interleaved - a ⏪ pressed while a step is still in flight waits for it,
+  // so each press undoes exactly one line no matter how fast the buttons are
+  // clicked.
+  const opChainRef = useRef<Promise<unknown>>(Promise.resolve());
+  const enqueue = useCallback(<T,>(op: () => Promise<T>): Promise<T | undefined> => {
+    const next = opChainRef.current.then(op).catch((err: unknown) => {
+      console.error(err);
+      return undefined;
+    });
     opChainRef.current = next;
     return next;
   }, []);
+  // Bumped by every restart() the moment it is requested. A step queued (or
+  // a "5 steps" loop already running) before that restart sees the change
+  // and stops, instead of stepping the freshly configured engine (found
+  // 2026-10-23: ⏮ pressed during "5 steps" left the "restarted" screen with
+  // a log line already on it).
+  const generationRef = useRef(0);
 
   // Before one stepped log line: remember where the engine and the UI are.
   const pushSnapshot = useCallback(async () => {
@@ -157,30 +167,31 @@ export function useSimulationPlayback({
   // inside it) used to sit alongside this - removed since it only ever
   // behaved differently from this one during a GC/WL cycle, which made it
   // a confusing near-duplicate the rest of the time.
-  const stepEventOnce = useCallback(
-    () =>
-      enqueue(async () => {
-        if (!engine.ready) return;
-        await pushSnapshot();
-        const more = await engine.stepEvent();
-        const result = await latestRef.current.onRefresh();
-        setHasMore(more);
-        if (!more || result?.shouldPause) setIsPlaying(false);
-      }),
-    [engine, enqueue, pushSnapshot],
-  );
+  const stepEventOnce = useCallback(() => {
+    const generation = generationRef.current;
+    return enqueue(async () => {
+      if (!engine.ready || generationRef.current !== generation) return;
+      await pushSnapshot();
+      const more = await engine.stepEvent();
+      const result = await latestRef.current.onRefresh();
+      setHasMore(more);
+      if (!more || result?.shouldPause) setIsPlaying(false);
+    });
+  }, [engine, enqueue, pushSnapshot]);
 
   // Backs the "5 steps" button - just stepEventOnce run n times in a row,
   // sequentially awaited (not fired concurrently) so each call's worker
   // round-trip and onRefresh complete before the next stepEvent() starts,
   // same overlap concern tickInFlightRef guards against for the ▶ loop.
   // Each of the n lines gets its own snapshot, so ⏪ always goes back one
-  // line - also after "5 steps".
+  // line - also after "5 steps". A restart() requested mid-loop ends it.
   const stepEventMany = useCallback(
-    (n: number) =>
-      enqueue(async () => {
+    (n: number) => {
+      const generation = generationRef.current;
+      return enqueue(async () => {
         if (!engine.ready) return;
         for (let i = 0; i < n; i++) {
+          if (generationRef.current !== generation) break;
           await pushSnapshot();
           const more = await engine.stepEvent();
           const result = await latestRef.current.onRefresh();
@@ -190,7 +201,8 @@ export function useSimulationPlayback({
             break;
           }
         }
-      }),
+      });
+    },
     [engine, enqueue, pushSnapshot],
   );
 
@@ -201,8 +213,9 @@ export function useSimulationPlayback({
     () =>
       enqueue(async () => {
         const { engine: e, restoreUi: restore } = latestRef.current;
+        // Checked before popping, so the UI and engine histories stay paired.
+        if (!e.ready || !restore || uiSnapshotsRef.current.length === 0) return;
         const ui = uiSnapshotsRef.current.pop();
-        if (!e.ready || ui === undefined || !restore) return;
         const depth = await e.popSnapshot();
         await e.refresh();
         restore(ui);
@@ -217,17 +230,26 @@ export function useSimulationPlayback({
     setIsPlaying((playing) => !playing);
   }, []);
 
+  // Queued behind any step in flight (which the generation bump makes stop
+  // early), so the engine is reconfigured only once nothing else is using it.
   const restart = useCallback(async () => {
     if (!engine.ready) return;
+    generationRef.current += 1;
     setIsPlaying(false);
-    // configure() also drops the worker's engine snapshots.
-    uiSnapshotsRef.current = [];
-    setBackDepth(0);
-    await engine.configure();
-    setHasMore(true);
-    onRestart();
-    await latestRef.current.onRefresh();
-  }, [engine, onRestart]);
+    await enqueue(async () => {
+      // configure() also drops the worker's engine snapshots.
+      uiSnapshotsRef.current = [];
+      setBackDepth(0);
+      await latestRef.current.engine.configure();
+      setHasMore(true);
+      onRestart();
+      await latestRef.current.onRefresh();
+    });
+  }, [engine, enqueue, onRestart]);
+
+  // Runs op in the same queue as steps and restarts - for engine changes made
+  // from outside playback (TRIM), so they never land between a step's calls.
+  const runExclusive = useCallback(<T,>(op: () => Promise<T>) => enqueue(op), [enqueue]);
 
   // ▶ runs many lines per tick without snapshots, so the step-back history
   // no longer leads anywhere sensible once it starts - drop it.
@@ -291,5 +313,6 @@ export function useSimulationPlayback({
     togglePlay,
     restart,
     refreshNow,
+    runExclusive,
   };
 }
