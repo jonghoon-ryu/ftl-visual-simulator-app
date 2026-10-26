@@ -22,9 +22,10 @@ const LABELS: Record<SsdParams['gcBlockSelectionPolicy'], string> = {
 // end, in a separate worker (compare.worker.ts - never touches the run on
 // screen), and puts the results side by side. The point is to let the
 // numbers answer "which victim-selection rule is cheaper?" rather than a
-// textbook claim - at this demo's scale plain Random can even come out
-// cheapest (it skips GC chances whose random pick has nothing to reclaim),
-// which is itself worth seeing.
+// textbook claim. At the defaults Greedy is cheapest (1.34x) and plain
+// Random most expensive (1.69x), but with this few blocks one pick changes
+// the next GCs' choices too, so the order shifts with the settings
+// (engine/tests/cache/claims.mts).
 export function GcPolicyComparison({ params, workload }: Props) {
   const [results, setResults] = useState<CompareResult[]>([]);
   const [running, setRunning] = useState(false);
@@ -126,8 +127,9 @@ export function GcPolicyComparison({ params, workload }: Props) {
       )}
       <div className="free-chart-caption">
         같은 설정·같은 워크로드로 알고리즘만 바꿔 각각 끝까지 돌린 결과예요 (화면의 재생과는 별개로 계산). 옮긴 page 가
-        적을수록 GC 가 싸고 WAF 가 낮아요. 이 데모처럼 block 이 적으면 교과서 설명과 다른 결과가 나오기도 합니다 - 예를
-        들어 Random 은 무작위로 고른 block 에 청소할 게 없으면 그 GC 기회를 건너뛰기 때문에 오히려 적게 옮길 수 있어요.
+        적을수록 GC 가 싸고 WAF 가 낮아요. 기본 설정에서는 invalid page 가 가장 많은 block 을 고르는 Greedy 가 가장
+        싸고, invalid 개수를 보지 않고 고르는 Random 이 가장 비싸요. 다만 이 데모처럼 block 이 적으면 한 번의 선택이 다음
+        GC 들의 상황까지 바꿔서 순위가 설정마다 달라질 수 있어요 - 작업 범위나 OP 를 바꿔 다시 비교해보세요.
       </div>
     </div>
   );
