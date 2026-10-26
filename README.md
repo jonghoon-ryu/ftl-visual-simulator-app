@@ -50,11 +50,14 @@ concept visible:
   valid/invalid page counts and how the selected policy picked it.
 - **GC policy comparison** (GC demo) — runs the current settings once per
   policy (all 7, including this project's Cost-Benefit) in a background worker and tabulates GC runs, pages moved
-  and WAF. At the defaults plain Random comes out cheapest, which the app
-  says plainly rather than repeating the textbook claim.
-- **Sequential vs random writes** (GC demo) — the same settings run with each write pattern; sequential comes out cheaper (WAF 1.14x vs 1.23x at the defaults).
+  and WAF. At the defaults Greedy comes out cheapest (1.34x; Cost-Benefit
+  1.37x, RGA 1.38x, FIFO 1.40x) and plain Random most expensive (1.69x), but
+  with this few blocks the ranking changes with the settings, so the app
+  lets the numbers answer rather than repeating the textbook claim.
+- **Sequential vs random writes** (GC demo) — the same settings run with each write pattern; sequential comes out cheaper (WAF 1.14x vs 1.40x at the defaults).
 - **WAF vs over-provisioning curve** (GC demo) — OP 0-30% measured with the
-  current settings (1.49x -> 1.05x at the defaults).
+  current settings (1.84x -> 1.22x at the defaults; 2.04x -> 1.34x with the
+  DRAM write cache off).
 - **Follow one write** (all presets) — click an LPN in the log to see every
   physical page its data has occupied (write -> overwrite -> GC move ...),
   outlined on the grid: the out-of-place update in one picture.
@@ -63,7 +66,7 @@ concept visible:
   its physical page turns invalid and GC no longer has to move it. A button
   TRIMs part of the data on the run on screen (valid pages visibly turn
   invalid), and a comparison runs the current settings with and without a
-  TRIMming host (WAF 1.23x -> 1.03x at the defaults). Checked by
+  TRIMming host (WAF 1.38x -> 1.06x at the defaults). Checked by
   `npm run test:engine:trim`.
 - **Hot/cold separation** (GC demo) — the same data (20% hot taking 80% of
   the writes, 80% cold taking 20%) is written through one stream, so hot and
@@ -72,9 +75,11 @@ concept visible:
   the end; WAF 1.28x mixed vs 1.20x separated (3-seed average ~1.28 vs
   ~1.19). The gap is modest because MQSim already writes GC-migrated data to
   a separate frontier.
-- **DRAM write-cache toggle** — with the cache on, GC 시연 sends ~2.2M host
-  requests but only ~500 page writes reach flash; off, nearly every request
-  does and GC runs ~16x more (30 -> 497).
+- **DRAM write-cache toggle** — the cache (32 pages) absorbs repeated writes
+  to the same page: with it on, a full GC 시연 run serves 12,679 host requests
+  with 6,354 flash writes; off, 6,771 requests take 4,679. Per request that is
+  ~1.5x more GC with the cache off (536 vs 431 GC runs in total, but the
+  cached run serves almost twice the requests), WAF 1.38x -> 1.51x.
 - **예측해보기 quiz** (all presets) — predict, then see the answer and where
   on the screen to check it.
 - A "장치가 가득 찼어요" notice when a tiny configuration fills the device.
@@ -124,8 +129,9 @@ concept visible:
    It needs `src/wasm-build` (see `engine/build-wasm.sh`). Not part of the
    deploy workflow.
 
-28 real, pre-existing MQSim bugs were found and fixed along the way -
-portability/UB issues, a use-after-free, uninitialized fields, dropped
+31 real, pre-existing MQSim bugs were found and fixed along the way -
+portability/UB issues, a use-after-free, a per-run memory leak of every
+transaction the DRAM cache absorbed, uninitialized fields, dropped
 config parameters, a scheduler suspend/resume deadlock chain, static
 wear-leveling target selection, several simulations that silently stalled
 (barrier-released writes never reaching the DRAM cache, a parked GC that

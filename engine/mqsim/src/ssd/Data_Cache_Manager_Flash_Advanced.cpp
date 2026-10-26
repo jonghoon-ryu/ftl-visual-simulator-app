@@ -218,6 +218,10 @@ namespace SSD_Components
 							if (available_sectors_bitmap == tr->read_sectors_bitmap) {
 								user_request->Sectors_serviced_from_cache += count_sector_no_from_status_bitmap(tr->read_sectors_bitmap);
 								user_request->Transaction_list.erase(it++);//the ++ operation should happen here, otherwise the iterator will be part of the list after erasing it from the list
+								// Served entirely from DRAM, so it never reaches the PHY,
+								// whose broadcastTransactionServicedSignal() is the only
+								// place a transaction is deleted - upstream leaked it here.
+								delete tr;
 							} else if (available_sectors_bitmap != 0) {
 								user_request->Sectors_serviced_from_cache += count_sector_no_from_status_bitmap(available_sectors_bitmap);
 								tr->read_sectors_bitmap = (tr->read_sectors_bitmap & ~available_sectors_bitmap);
@@ -334,8 +338,18 @@ namespace SSD_Components
 				flash_written_back_write_size_in_sectors += count_sector_no_from_status_bitmap(tr->write_sectors_bitmap);
 				bloom_filter[user_request->Stream_id].insert(tr->LPA);
 				writeback_transactions.push_back(tr);
+				user_request->Transaction_list.erase(it++);
+			} else {
+				// Absorbed by the cache: its data is now in the slot (and
+				// reaches flash later as a separate CACHE-sourced transaction
+				// on eviction), so nothing references this one any more and
+				// the PHY will never delete it. Upstream leaked it - ~1.6 MB
+				// per run at the app's defaults, ~380 MB with a 256 MB cache,
+				// which ran the 4 GB WASM heap out after ~11 runs in one module
+				// (engine/tests/cache/claims.mts 'old').
+				user_request->Transaction_list.erase(it++);
+				delete tr;
 			}
-			user_request->Transaction_list.erase(it++);
 		}
 		
 		user_request->Sectors_serviced_from_cache += dram_write_size_in_sectors;//This is very important update. It is used to decide when all data sectors of a user request are serviced
